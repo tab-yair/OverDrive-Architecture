@@ -22,34 +22,26 @@ std::string RLECompressor::compress(const std::string& data) {
 }
 
 std::string RLECompressor::decompress(const std::string& data) {
-    if(data.empty()) return "";
+    if (data.empty()) return "";
 
     std::ostringstream decompressed;
-    
-    for(size_t i = 0; i < data.size(); ) {
-        char currentChar = data[i++];
-        if (i >= data.size()) {
-            return ""; // malformed input - no count after character
-        }
+    size_t i = 0;
 
-        int count = 0;
-        bool foundDigit = false;
-        while (i < data.size() && isdigit(data[i])) {
-            count = count * 10 + (data[i++] - '0'); 
-            foundDigit = true; //     
-        }
+    while (i < data.size()) {
+        char ch = data[i++];
+        if (i >= data.size() || !isdigit(data[i])) return "";
 
-        if (!foundDigit) {
-            return ""; // malformed input: character without a count
-        }
+        std::string countStr;
+        while (i < data.size() && isdigit(data[i])) countStr += data[i++];
 
-        if (count <= 0) {
-            return ""; // malformed input: count must be positive
-        }
+        if (countStr.size() > 1 && countStr[0] == '0') return "";
 
-        decompressed << std::string(count, currentChar);
+        int count = std::stoi(countStr);
+        if (count <= 0) return "";
+
+        decompressed << std::string(count, ch);
     }
+
     return decompressed.str();
 }
-
         
