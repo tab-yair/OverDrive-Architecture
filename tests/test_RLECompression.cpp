@@ -15,7 +15,7 @@ void testRLECase(const std::string& input, const std::string& expectedCompressed
 
 // Test basic RLE encoding and decoding with repeated characters
 TEST(RLECompressionTest, BasicEncodingDecoding) {
-    testRLECase("AAAABBBCCDAA", "4A3B2C1D2A");
+    testRLECase("AAAABBBCCDAA", "A4B3C2D1A2");
 }
 
 // Test encoding and decoding of an empty string
@@ -25,20 +25,20 @@ TEST(RLECompressionTest, EmptyString) {
 
 // Test encoding and decoding of a single character string
 TEST(RLECompressionTest, SingleCharacter) {
-    testRLECase("A", "1A");
+    testRLECase("A", "A1");
 }
 
 // Test encoding and decoding of a string with all unique characters
 TEST(RLECompressionTest, AllUniqueCharacters) {
-    testRLECase("ABCDEFG", "1A1B1C1D1E1F1G");
+    testRLECase("ABCDEFG", "A1B1C1D1E1F1G1");
 }
 
 // Test encoding and decoding of a long repeated sequence
 TEST(RLECompressionTest, LongRepeatedSequence) {
-    testRLECase(std::string(50, 'X'), "50X"); // 50 times 'X'
+    testRLECase(std::string(50, 'X'), "X50"); // 50 times 'X'
 }
 
 // Test encoding and decoding of a string with whitespace and control characters (space, tab, newline)
 TEST(RLECompressionTest, WhitespaceAndControlCharacters) {
-    testRLECase("AA \t\nBB", "2A1 1\t1\n2B");
+    testRLECase("AA \t\nBB", "A2 1\t1\n1B2");
 }

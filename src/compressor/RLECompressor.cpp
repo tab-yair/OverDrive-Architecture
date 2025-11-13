@@ -29,16 +29,22 @@ std::string RLECompressor::decompress(const std::string& data) {
     for(size_t i = 0; i < data.size(); ) {
         char currentChar = data[i++];
         if (i >= data.size()) {
-            return ""; // malformed input
+            return ""; // malformed input - no count after character
         }
 
         int count = 0;
+        bool foundDigit = false;
         while (i < data.size() && isdigit(data[i])) {
-            count = count * 10 + (data[i++] - '0');     
+            count = count * 10 + (data[i++] - '0'); 
+            foundDigit = true; //     
+        }
+
+        if (!foundDigit) {
+            return ""; // malformed input: character without a count
         }
 
         if (count <= 0) {
-            return ""; // malformed input
+            return ""; // malformed input: count must be positive
         }
 
         decompressed << std::string(count, currentChar);
