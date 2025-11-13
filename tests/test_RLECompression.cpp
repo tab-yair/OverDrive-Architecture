@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "RLECompressor.h"
 
+// ---------------- HELPER FUNCTION ----------------
 // Helper function to test compression and decompression
 void testRLECase(const std::string& input, const std::string& expectedCompressed) {
     RLECompressor rle;
@@ -11,7 +12,7 @@ void testRLECase(const std::string& input, const std::string& expectedCompressed
     EXPECT_EQ(decompressed, input);
 }
 
-// ---------------- TESTS ----------------
+// ---------------- VALID INPUT TESTS ----------------
 
 // Test basic RLE encoding and decoding with repeated characters
 TEST(RLECompressionTest, BasicEncodingDecoding) {
@@ -42,3 +43,22 @@ TEST(RLECompressionTest, LongRepeatedSequence) {
 TEST(RLECompressionTest, WhitespaceAndControlCharacters) {
     testRLECase("AA \t\nBB", "A2 1\t1\n1B2");
 }
+
+// ---------------- INVALID INPUT TESTS ----------------
+
+// All invalid inputs should cause the functions to return an empty string.
+
+
+// Test decompress rejects malformed compressed strings
+TEST(RLECompressionInvalidInput, DecompressRejectsMalformedCompressedStrings) {
+    RLECompressor rle;
+    EXPECT_EQ(rle.decompress("A0"), "");      // count zero invalid
+    EXPECT_EQ(rle.decompress("A01"), "");     // leading zero in count invalid
+    EXPECT_EQ(rle.decompress("1A"), "");      // starts with digit (no leading character)
+    EXPECT_EQ(rle.decompress("A-1"), "");     // negative count invalid (hyphen)
+    EXPECT_EQ(rle.decompress("AB"), "");      // missing numeric counts entirely
+    EXPECT_EQ(rle.decompress("A2B"), "");     // missing count for last character
+    EXPECT_EQ(rle.decompress("A2B03"), "");   // B count has leading zero
+}
+
+
