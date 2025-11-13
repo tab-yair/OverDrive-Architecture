@@ -12,12 +12,13 @@ std::string RLECompressor::compress(const std::string& data) {
         if(data[i] == currentChar){
             count++;
         } else {
-            compressed << count << currentChar;
+            compressed << currentChar << count;
             currentChar = data[i];
             count = 1;
         }
-        compressed << currentChar << count; // last run
-        return compressed.str();
+    }
+    compressed << currentChar << count; // last run
+    return compressed.str();
 }
 
 std::string RLECompressor::decompress(const std::string& data) {
