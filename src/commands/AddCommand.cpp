@@ -1,7 +1,7 @@
 #include "AddCommand.h"
-#include <cstdlib>      // std::getenv
-#include <sstream>      // std::stringstream
-#include <utility>      // std::move
+#include <cstdlib>
+#include <sstream>
+#include <utility>
 
 // Define the fixed subdirectory name for storing files.
 const std::string OVERDRIVE_SUBDIR = "overdrive_files/"; 
