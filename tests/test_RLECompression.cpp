@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "RLECompressor.h"
+#include "compressor/RLECompressor.h"
 
 // ---------------- HELPER FUNCTION ----------------
 // Helper function to test compression and decompression
