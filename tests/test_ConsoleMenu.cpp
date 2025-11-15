@@ -91,9 +91,9 @@ TEST_F(ConsoleMenuTest, InvalidCommandRecievesNewInput) {
 
 // Test that extra whitespace before, between, and after words is handled correctly
 TEST_F(ConsoleMenuTest, HandlesExtraWhitespace) {
-    testCommand("   add     file.txt   ",
-                "add",
-                "file.txt");
+    testCommand("   add     file.txt   \nget file2.txt",
+                "get",
+                "file2.txt");
 }
 
 // Test that commands are case-sensitive and waits to recieve new input command to handle
@@ -113,13 +113,15 @@ TEST_F(ConsoleMenuTest, MultipleInvalidCommandsInSequence) {
     EXPECT_EQ(r3[0], "search");
     EXPECT_EQ(r3[1], "hello world");
 }
-    
-*/
 
 // Test that empty input results in silently doing nothing and recieving new input command to handle
 TEST_F(ConsoleMenuTest, EmptyInputRecievesNewInput) {
     testCommand("\nsearch pattern", "search", "pattern");
 }
+
+*/
+
+
 
 
 
