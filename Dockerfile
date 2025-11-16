@@ -2,7 +2,6 @@
 FROM gcc:latest AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
-# התקנת build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -14,10 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /src
 COPY . /src
 
-# Configure and build the project
-RUN mkdir -p build && cd build \
- && cmake .. -DCMAKE_BUILD_TYPE=Release \
- && cmake --build . -- -j$(nproc)
+# Clean build
+RUN rm -rf build
+
+# Configure and build
+RUN mkdir build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build . --clean-first -- -j$(nproc)
 
 # --- Runtime stage ---
 FROM gcc:latest AS runtime
@@ -29,6 +31,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy binaries
 COPY --from=builder /src/build/bin /app/bin
 ENV PATH="/app/bin:${PATH}"
+
+# Set default OverDrive path for file operations
+ENV OVERDRIVE_PATH=/app/files
 
 # Default: run all tests (adjust if needed)
 CMD ["bash", "-c", "for t in /app/bin/*; do echo Running $t; $t; done"]

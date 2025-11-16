@@ -1,6 +1,8 @@
 #include "RLECompressor.h"
 #include <sstream>
 #include <stdexcept>
+#include <cctype>
+#include <string>
 
 std::string RLECompressor::compress(const std::string& data) {
     if (data.empty()) return ""; // Return empty string if input is empty
@@ -35,22 +37,22 @@ std::string RLECompressor::decompress(const std::string& data) {
         char ch = data[i++]; // Read character
 
         // Next characters must be digits representing count
-        if (i >= data.size() || !isdigit(data[i])) {
-            return "";
+        if (i >= data.size() || !std::isdigit(data[i])) {
+            throw std::invalid_argument("Invalid format: expected count after character");
         }
 
         std::string countStr;
-        while (i < data.size() && isdigit(data[i])) {
+        while (i < data.size() && std::isdigit(data[i])) {
             countStr += data[i++]; // Read full count
         }
 
         if (countStr.size() > 1 && countStr[0] == '0') {
-            return ""; // Leading zeros not allowed
+            throw std::invalid_argument("Invalid format: leading zeros not allowed in count");
         }
 
         int count = std::stoi(countStr);
         if (count <= 0) {
-            return ""; // Count must be positive
+            throw std::invalid_argument("Invalid format: count must be positive");
         }
 
         decompressed << std::string(count, ch); 
