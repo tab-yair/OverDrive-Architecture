@@ -52,13 +52,13 @@ TEST(RLECompressionTest, WhitespaceAndControlCharacters) {
 // Test decompress rejects malformed compressed strings
 TEST(RLECompressionInvalidInput, DecompressRejectsMalformedCompressedStrings) {
     RLECompressor rle;
-    EXPECT_EQ(rle.decompress("A0"), "");      // count zero invalid
-    EXPECT_EQ(rle.decompress("A01"), "");     // leading zero in count invalid
-    EXPECT_EQ(rle.decompress("1A"), "");      // starts with digit (no leading character)
-    EXPECT_EQ(rle.decompress("A-1"), "");     // negative count invalid (hyphen)
-    EXPECT_EQ(rle.decompress("AB"), "");      // missing numeric counts entirely
-    EXPECT_EQ(rle.decompress("A2B"), "");     // missing count for last character
-    EXPECT_EQ(rle.decompress("A2B03"), "");   // B count has leading zero
+    EXPECT_THROW(rle.decompress("A0"), std::invalid_argument);      // count zero invalid
+    EXPECT_THROW(rle.decompress("A01"), std::invalid_argument);     // leading zero in count invalid
+    EXPECT_THROW(rle.decompress("1A"), std::invalid_argument);      // starts with digit (no leading character)
+    EXPECT_THROW(rle.decompress("A-1"), std::invalid_argument);     // negative count invalid (hyphen)
+    EXPECT_THROW(rle.decompress("AB"), std::invalid_argument);      // missing numeric counts entirely
+    EXPECT_THROW(rle.decompress("A2B"), std::invalid_argument);     // missing count for last character
+    EXPECT_THROW(rle.decompress("A2B03"), std::invalid_argument);   // B count has leading zero
 }
 
 
