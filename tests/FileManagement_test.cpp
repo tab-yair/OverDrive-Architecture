@@ -51,29 +51,21 @@ protected:
 };
 
 // --------------------
-// 1. Basic write/read tests
+// 1. write/read tests
 // --------------------
 
-// Normal write/read
+// Basic write and read operation
 TEST_F(LocalFileManagementTest, WriteAndReadFile) {
     std::string fileName = "test.txt";
     std::string content = "Hello, world!";
-    ASSERT_TRUE(fm->write(fileName, content));
+    ASSERT_NO_THROW(fm->write(fileName, content));
     EXPECT_EQ(fm->read(fileName), content);
-}
-
-// Compressed write/read
-TEST_F(LocalFileManagementTest, WriteCompressedAndReadDecompressed) {
-    std::string fileName = "compressed.txt";
-    std::string content = "Data123";
-    ASSERT_TRUE(fm->writeCompressed(fileName, content));
-    EXPECT_EQ(fm->readDecompressed(fileName), content);
 }
 
 // Writing with empty name should fail, empty content allowed
 TEST_F(LocalFileManagementTest, WriteEmptyFileNameOrContent) {
-    EXPECT_FALSE(fm->write("", "Data")); // empty name fails
-    EXPECT_TRUE(fm->write("empty_content.txt", "")); // empty content allowed
+    EXPECT_THROW(fm->write("", "Data"), std::invalid_argument); // empty name throws
+    ASSERT_NO_THROW(fm->write("empty_content.txt", "")); // empty content allowed
     EXPECT_EQ(fm->read("empty_content.txt"), "");
 }
 
@@ -81,7 +73,7 @@ TEST_F(LocalFileManagementTest, WriteEmptyFileNameOrContent) {
 TEST_F(LocalFileManagementTest, FileNameWithSpecialCharacters) {
     std::string fileName = "my file-123.txt";
     std::string content = "Some data";
-    EXPECT_TRUE(fm->write(fileName, content));
+    ASSERT_NO_THROW(fm->write(fileName, content));
     EXPECT_EQ(fm->read(fileName), content);
 }
 
@@ -94,13 +86,13 @@ TEST_F(LocalFileManagementTest, RemoveFile) {
     std::string fileName = "remove.txt";
     fm->write(fileName, "some data");
     EXPECT_TRUE(fm->exists(fileName));
-    EXPECT_TRUE(fm->remove(fileName));
+    ASSERT_NO_THROW(fm->remove(fileName));
     EXPECT_FALSE(fm->exists(fileName));
 }
 
-// Remove non-existent file
+// Remove non-existent file (idempotent - doesn't throw)
 TEST_F(LocalFileManagementTest, RemoveNonExistentFile) {
-    EXPECT_FALSE(fm->remove("no_such_file.txt"));
+    EXPECT_NO_THROW(fm->remove("no_such_file.txt"));
 }
 
 // Exists on non-existent file
@@ -108,9 +100,9 @@ TEST_F(LocalFileManagementTest, ExistsOnNonExistentFile) {
     EXPECT_FALSE(fm->exists("missing.txt"));
 }
 
-// Read non-existent file returns empty string
+// Read non-existent file throws exception
 TEST_F(LocalFileManagementTest, ReadNonExistentFile) {
-    EXPECT_EQ(fm->read("missing.txt"), "");
+    EXPECT_THROW(fm->read("missing.txt"), std::runtime_error);
 }
 
 // --------------------
@@ -150,11 +142,11 @@ TEST_F(LocalFileManagementTest, FileListManyFiles) {
 // 4. Content search tests
 // --------------------
 
-// Search in compressed files
-TEST_F(LocalFileManagementTest, SearchContentInCompressedFiles) {
-    fm->writeCompressed("file1.txt", "Hello");
-    fm->writeCompressed("file2.txt", "World");
-    fm->writeCompressed("file3.txt", "Hello World");
+// Search for content in multiple files
+TEST_F(LocalFileManagementTest, SearchContentInFiles) {
+    fm->write("file1.txt", "Hello");
+    fm->write("file2.txt", "World");
+    fm->write("file3.txt", "Hello World");
     auto results = fm->searchContent("Hello");
     EXPECT_EQ(results.size(), 2);
     EXPECT_NE(std::find(results.begin(), results.end(), "file1.txt"), results.end());
@@ -163,7 +155,7 @@ TEST_F(LocalFileManagementTest, SearchContentInCompressedFiles) {
 
 // Search content not found
 TEST_F(LocalFileManagementTest, SearchContentNotFound) {
-    fm->writeCompressed("file1.txt", "Hello");
+    fm->write("file1.txt", "Hello");
     EXPECT_TRUE(fm->searchContent("XYZ").empty());
 }
 
@@ -171,8 +163,17 @@ TEST_F(LocalFileManagementTest, SearchContentNotFound) {
 // 5. Error handling tests
 // --------------------
 
-// Read decompressed throws on invalid data
-TEST_F(LocalFileManagementTest, ReadDecompressedThrowsOnInvalidData) {
-    fm->write("bad.txt", "INVALID");
-    EXPECT_THROW(fm->readDecompressed("bad.txt"), std::runtime_error);
+// Test that empty filename throws on read
+TEST_F(LocalFileManagementTest, ReadEmptyFileNameThrows) {
+    EXPECT_THROW(fm->read(""), std::invalid_argument);
+}
+
+// Test that empty filename throws on write
+TEST_F(LocalFileManagementTest, WriteEmptyFileNameThrows) {
+    EXPECT_THROW(fm->write("", "data"), std::invalid_argument);
+}
+
+// Test that empty filename throws on remove
+TEST_F(LocalFileManagementTest, RemoveEmptyFileNameThrows) {
+    EXPECT_THROW(fm->remove(""), std::invalid_argument);
 }

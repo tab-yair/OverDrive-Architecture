@@ -11,15 +11,11 @@ class IFileManagement {
         virtual ~IFileManagement() = default;
 
         // Basic file operations
-        virtual bool write(const std::string& fileName, const std::string &content) = 0;
+        virtual void write(const std::string& fileName, const std::string &content) = 0;
         virtual std::string read(const std::string& fileName) = 0;
-        virtual bool remove(const std::string& fileName) = 0;
+        virtual void remove(const std::string& fileName) = 0;
         virtual bool exists(const std::string& fileName) = 0;
         virtual std::vector<std::string> fileList() = 0;
-
-        // Compression helpers
-        virtual bool writeCompressed(const std::string& fileName, const std::string& content) = 0;
-        virtual std::string readDecompressed(const std::string& fileName) = 0;
         virtual std::vector<std::string> searchContent(const std::string& content) = 0;
     };
 

@@ -39,37 +39,61 @@ std::filesystem::path LocalFileManagement::fullPath(const std::string& fileName)
 // --------------------
 
 // Write content to file (overwrites if exists)
-bool LocalFileManagement::write(const std::string& fileName, const std::string &content) {
-    if (fileName.empty()) return false;
+void LocalFileManagement::write(const std::string& fileName, const std::string &content) {
+    // throw on errors if fileName empty or compressor missing
+    if (fileName.empty()) {
+        throw invalid_argument("File name cannot be empty");
+    }
+    if (!compressor) {
+        throw runtime_error("Compressor not set");
+    }
 
-    try {
-        ofstream out(fullPath(fileName), ios::binary);
-        out << content;
-        return true;
-    } catch (...) {
-        return false; // return false on any error
+    // Open file for writing
+    ofstream out(fullPath(fileName), ios::binary);
+    if (!out) {
+        throw runtime_error("Failed to open file for writing: " + fileName);
+    }
+    // Compress content and write
+    std::string compressed = compressor->compress(content);  // Can throw
+    out << compressed;
+    
+    if (!out) {
+        throw runtime_error("Failed to write to file: " + fileName);
     }
 }
 
 // Read entire file content, returns empty string if file missing
 std::string LocalFileManagement::read(const std::string& fileName) {
-    if (fileName.empty() || !exists(fileName)) return "";
-
+    // throw on errors if fileName empty, not exists or compressor missing
+    if (fileName.empty()) {
+        throw invalid_argument("File name cannot be empty");
+    }    
+    if (!exists(fileName)) {
+        throw runtime_error("File does not exist: " + fileName);
+    }    
+    if (!compressor) {
+        throw runtime_error("Compressor not set");
+    }
+    // Open file for reading
     ifstream in(fullPath(fileName), ios::binary);
+    if (!in) {
+        throw runtime_error("Failed to open file for reading: " + fileName);
+    }
+    // Read entire file into string
     stringstream buffer;
     buffer << in.rdbuf();
-    return buffer.str();
+    // Decompress and return
+    return compressor->decompress(buffer.str());  // Can throw
 }
 
 // Delete file, returns true if successful
-bool LocalFileManagement::remove(const std::string& fileName) {
-    if (fileName.empty()) return false;
-
-    try {
-        return fs::remove(fullPath(fileName));
-    } catch (...) {
-        return false;
+void LocalFileManagement::remove(const std::string& fileName) {
+    if (fileName.empty()) {
+        throw invalid_argument("File name cannot be empty");
     }
+    
+    fs::remove(fullPath(fileName));  
+    
 }
 
 // Check if file exists
@@ -88,29 +112,11 @@ std::vector<std::string> LocalFileManagement::fileList() {
     return files;
 }
 
-// --------------------
-// Compression helpers
-// Requires compressor to be set
-// --------------------
-
-// Compress content and write to file
-bool LocalFileManagement::writeCompressed(const std::string& fileName,
-                                          const std::string& content) {
-    if (!compressor) throw runtime_error("Compressor not set");
-    return write(fileName, compressor->compress(content));
-}
-
-// Read file and decompress content
-std::string LocalFileManagement::readDecompressed(const std::string& fileName) {
-    if (!compressor) throw runtime_error("Compressor not set");
-    return compressor->decompress(read(fileName));
-}
-
 // Search files containing a specific substring
 std::vector<std::string> LocalFileManagement::searchContent(const std::string& content) {
     vector<std::string> result;
     for (const auto& file : fileList()) {
-        if (readDecompressed(file).find(content) != string::npos)
+        if (read(file).find(content) != string::npos)
             result.push_back(file);
     }
     return result;
