@@ -26,9 +26,24 @@ LocalFileManagement::LocalFileManagement(std::unique_ptr<ICompressor> comp)
 
 // --------------------
 // Helper: full path
-// Joins basePath with fileName (cross-platform safe)
+// Joins basePath with fileName and validates against path traversal attacks
+// Allows subdirectories but blocks ".." patterns that could escape basePath
+// Throws invalid_argument if fileName attempts path traversal
 // --------------------
 std::filesystem::path LocalFileManagement::fullPath(const std::string& fileName) const {
+    // Validate using simple string operations
+    if (fileName.empty()) {
+        throw std::invalid_argument("File name cannot be empty");
+    }
+    
+    // Check for path traversal attempts at start or after separator
+    if (fileName.rfind("..", 0) == 0 ||                 // starts with ".."
+        fileName.find("/../") != std::string::npos ||   // contains "/../"
+        fileName.find("\\..\\") != std::string::npos) { // contains "\..\" (Windows)
+        throw std::invalid_argument("Invalid file name: path traversal detected");
+    }
+    
+    // Construct full path (allows subdirectories)
     return fs::path(basePath) / fileName;
 }
 
