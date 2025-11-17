@@ -62,7 +62,7 @@ void LocalFileManagement::write(const std::string& fileName, const std::string &
     }
 }
 
-// Read entire file content, returns empty string if file missing
+// Read entire file content, throws std::runtime_error if file missing
 std::string LocalFileManagement::read(const std::string& fileName) {
     // throw on errors if fileName empty, not exists or compressor missing
     if (fileName.empty()) {
