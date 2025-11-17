@@ -1,8 +1,6 @@
 #include "LocalFileManagement.h"
 #include <fstream>
 #include <sstream>
-#include <algorithm>
-#include <iterator>
 #include <filesystem>
 #include <stdexcept>
 
@@ -28,9 +26,41 @@ LocalFileManagement::LocalFileManagement(std::unique_ptr<ICompressor> comp)
 
 // --------------------
 // Helper: full path
-// Joins basePath with fileName (cross-platform safe)
+// Joins basePath with fileName and validates against path traversal attacks
+// Allows subdirectories but blocks ".." patterns that could escape basePath
+// Throws invalid_argument if fileName attempts path traversal
 // --------------------
 std::filesystem::path LocalFileManagement::fullPath(const std::string& fileName) const {
+    // Validate basic cases
+    if (fileName.empty()) {
+        throw std::invalid_argument("File name cannot be empty");
+    }
+    
+    // Reject absolute paths (starting with '/')
+    if (fileName[0] == '/') {
+        throw std::invalid_argument("Absolute paths are not allowed");
+    }
+    
+    // Reject "." and ".."
+    if (fileName == "." || fileName == "..") {
+        throw std::invalid_argument("Invalid file name");
+    }
+    
+    // Leading parent traversal: "../..."
+    if (fileName.rfind("../", 0) == 0) {
+        throw std::invalid_argument("Invalid file name: path traversal detected");
+    }
+    
+    // Any "/.." segment that is followed by '/' or end-of-string indicates upward traversal
+    for (size_t pos = 0; (pos = fileName.find("/..", pos)) != std::string::npos; pos += 3) {
+        // nextCharIndex is first character after "/.."
+        size_t nextCharIndex = pos + 3;
+        if (nextCharIndex == fileName.size() || fileName[nextCharIndex] == '/') {
+            throw std::invalid_argument("Invalid file name: path traversal detected");
+        }
+    }
+    
+    // Construct full path (allows subdirectories)
     return fs::path(basePath) / fileName;
 }
 
@@ -62,9 +92,9 @@ void LocalFileManagement::write(const std::string& fileName, const std::string &
     }
 }
 
-// Read entire file content, returns empty string if file missing
+// Read entire file content and decompress
+// Throws exception if fileName is empty, file doesn't exist, compressor not set, or I/O fails
 std::string LocalFileManagement::read(const std::string& fileName) {
-    // throw on errors if fileName empty, not exists or compressor missing
     if (fileName.empty()) {
         throw invalid_argument("File name cannot be empty");
     }    
@@ -86,7 +116,8 @@ std::string LocalFileManagement::read(const std::string& fileName) {
     return compressor->decompress(buffer.str());  // Can throw
 }
 
-// Delete file, returns true if successful
+// Delete file (idempotent - safe to call even if file doesn't exist)
+// Throws exception only on real errors (permission denied, etc.)
 void LocalFileManagement::remove(const std::string& fileName) {
     if (fileName.empty()) {
         throw invalid_argument("File name cannot be empty");
