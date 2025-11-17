@@ -1,8 +1,6 @@
 #include "RLECompressor.h"
 #include <sstream>
 #include <stdexcept>
-#include <cctype>
-#include <string>
 
 std::string RLECompressor::compress(const std::string& data) {
     if (data.empty()) return ""; // Return empty string if input is empty
