@@ -12,16 +12,23 @@ std::string RLECompressor::compress(const std::string& data) {
     int count = 1;
 
     for(size_t i = 1; i < data.size(); i++){
-        if(data[i] == currentChar){
-            count++; // Same character, increase count
+        if(data[i] == currentChar && count < MAX_RUN_LENGTH){
+            count++;
         } else {
-            compressed << currentChar << count; // Write character and its count
-            currentChar = data[i];              // Move to next character
-            count = 1;                          // Reset count
+            // Format: [char][DELIMITER][count as byte]
+            compressed << currentChar 
+                      << static_cast<char>(DELIMITER) 
+                      << static_cast<char>(count);
+            currentChar = data[i];
+            count = 1;
         }
     }
 
-    compressed << currentChar << count; // Write last character and count
+    // Write last run
+    compressed << currentChar 
+              << static_cast<char>(DELIMITER) 
+              << static_cast<char>(count);
+              
     return compressed.str();
 }
 
@@ -34,28 +41,28 @@ std::string RLECompressor::decompress(const std::string& data) {
     size_t i = 0;
 
     while (i < data.size()) {
-        char ch = data[i++]; // Read character
-
-        // Next characters must be digits representing count
-        if (i >= data.size() || !std::isdigit(data[i])) {
-            throw std::invalid_argument("Invalid format: expected count after character");
+        // Need at least 3 bytes: [char][delimiter][count]
+        if (i + 2 >= data.size()) {
+            throw std::invalid_argument("Invalid compressed format: incomplete data");
         }
-
-        std::string countStr;
-        while (i < data.size() && std::isdigit(data[i])) {
-            countStr += data[i++]; // Read full count
+        
+        char ch = data[i++];
+        
+        // Check for delimiter
+        if (static_cast<unsigned char>(data[i]) != DELIMITER) {
+            throw std::invalid_argument("Invalid compressed format: missing delimiter");
         }
-
-        if (countStr.size() > 1 && countStr[0] == '0') {
-            throw std::invalid_argument("Invalid format: leading zeros not allowed in count");
+        i++;
+        
+        // Get count (as unsigned byte)
+        unsigned char count = static_cast<unsigned char>(data[i++]);
+        
+        if (count == 0) {
+            throw std::invalid_argument("Invalid compressed format: count cannot be zero");
         }
-
-        int count = std::stoi(countStr);
-        if (count <= 0) {
-            throw std::invalid_argument("Invalid format: count must be positive");
-        }
-
-        decompressed << std::string(count, ch); 
+        
+        // Append 'count' copies of 'ch'
+        decompressed << std::string(count, ch);
     }
 
     return decompressed.str();
