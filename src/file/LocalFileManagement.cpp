@@ -86,7 +86,7 @@ std::string LocalFileManagement::read(const std::string& fileName) {
     return compressor->decompress(buffer.str());  // Can throw
 }
 
-// Delete file, returns true if successful
+// Delete file
 void LocalFileManagement::remove(const std::string& fileName) {
     if (fileName.empty()) {
         throw invalid_argument("File name cannot be empty");
