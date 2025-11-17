@@ -93,8 +93,10 @@ void LocalFileManagement::write(const std::string& fileName, const std::string &
     }
 }
 
+
 // Read entire file content and decompress
 // Throws exception if fileName is empty, file doesn't exist, compressor not set, or I/O fails
+
 std::string LocalFileManagement::read(const std::string& fileName) {
     if (fileName.empty()) {
         throw invalid_argument("File name cannot be empty");
@@ -116,6 +118,7 @@ std::string LocalFileManagement::read(const std::string& fileName) {
     // Decompress and return
     return compressor->decompress(buffer.str());  // Can throw
 }
+
 
 // Delete file (idempotent - safe to call even if file doesn't exist)
 // Throws exception only on real errors (permission denied, etc.)
