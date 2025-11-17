@@ -36,11 +36,29 @@ std::filesystem::path LocalFileManagement::fullPath(const std::string& fileName)
         throw std::invalid_argument("File name cannot be empty");
     }
     
-    // Check for path traversal attempts at start or after separator
-    if (fileName.rfind("..", 0) == 0 ||                 // starts with ".."
-        fileName.find("/../") != std::string::npos ||   // contains "/../"
-        fileName.find("\\..\\") != std::string::npos) { // contains "\..\" (Windows)
+
+    // Reject absolute paths (starting with '/')
+    if (fileName[0] == '/') {
+        throw std::invalid_argument("Absolute paths are not allowed");
+    }
+    
+    // Reject "." and ".."
+    if (fileName == "." || fileName == "..") {
+        throw std::invalid_argument("Invalid file name");
+    }
+    
+    // Leading parent traversal: "../..."
+    if (fileName.rfind("../", 0) == 0) {
         throw std::invalid_argument("Invalid file name: path traversal detected");
+    }
+    
+    // Any "/.." segment that is followed by '/' or end-of-string indicates upward traversal
+    for (size_t pos = 0; (pos = fileName.find("/..", pos)) != std::string::npos; pos += 3) {
+        // nextCharIndex is first character after "/.."
+        size_t nextCharIndex = pos + 3;
+        if (nextCharIndex == fileName.size() || fileName[nextCharIndex] == '/') {
+            throw std::invalid_argument("Invalid file name: path traversal detected");
+        }
     }
     
     // Construct full path (allows subdirectories)
