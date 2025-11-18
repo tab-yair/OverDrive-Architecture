@@ -271,6 +271,15 @@ TEST_F(LocalFileManagementTest, SearchContentEmptyDirectory) {
     EXPECT_TRUE(fm->searchContent("anything").empty());
 }
 
+// Search with empty string returns empty list
+TEST_F(LocalFileManagementTest, SearchContentEmptyString) {
+    fm->create("file1.txt", "Hello World");
+    fm->create("file2.txt", "Goodbye");
+    
+    // Empty search string should return empty list, not all files
+    EXPECT_TRUE(fm->searchContent("").empty());
+}
+
 // --------------------
 // 8. Workflow / Integration tests
 // --------------------

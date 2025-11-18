@@ -178,6 +178,12 @@ std::vector<std::string> LocalFileManagement::fileList() {
 // Search files containing a specific substring
 std::vector<std::string> LocalFileManagement::searchContent(const std::string& content) {
     vector<std::string> result;
+    
+    // Empty search string returns empty list
+    if (content.empty()) {
+        return result;
+    }
+    
     for (const auto& file : fileList()) {
         if (read(file).find(content) != string::npos)
             result.push_back(file);
