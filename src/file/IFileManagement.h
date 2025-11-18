@@ -11,6 +11,7 @@ class IFileManagement {
         virtual ~IFileManagement() = default;
 
         // Basic file operations
+        virtual void create(const std::string& fileName, const std::string &content = "") = 0;
         virtual void write(const std::string& fileName, const std::string &content) = 0;
         virtual std::string read(const std::string& fileName) = 0;
         virtual void remove(const std::string& fileName) = 0;

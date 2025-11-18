@@ -15,10 +15,14 @@ class LocalFileManagement : public IFileManagement {
         std::filesystem::path basePath; 
         std::filesystem::path fullPath(const std::string& fileName) const;
         
+        // Internal helper - performs actual file writing to physical path
+        void writeInternal(const std::filesystem::path& filePath, const std::string &content);
+        
     public:
         LocalFileManagement(std::unique_ptr<ICompressor> compressor);
 
          // Basic file operations
+        virtual void create(const std::string& fileName, const std::string &content = "") override;
         virtual void write(const std::string& fileName, const std::string &content) override;
         virtual std::string read(const std::string& fileName) override;
         virtual void remove(const std::string& fileName) override;

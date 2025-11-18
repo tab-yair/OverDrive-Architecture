@@ -66,31 +66,59 @@ std::filesystem::path LocalFileManagement::fullPath(const std::string& fileName)
 }
 
 // --------------------
-// Basic file operations
+// Helper functions
 // --------------------
 
-// Write content to file (overwrites if exists)
-void LocalFileManagement::write(const std::string& fileName, const std::string &content) {
-    // throw on errors if fileName empty or compressor missing
-    if (fileName.empty()) {
-        throw invalid_argument("File name cannot be empty");
-    }
+// Internal helper - performs actual file writing to physical path
+// Receives full validated path, compresses content and writes to disk
+void LocalFileManagement::writeInternal(const std::filesystem::path& filePath, const std::string &content) {
     if (!compressor) {
         throw runtime_error("Compressor not set");
     }
 
     // Open file for writing
-    ofstream out(fullPath(fileName), ios::binary);
+    ofstream out(filePath, ios::binary);
     if (!out) {
-        throw runtime_error("Failed to open file for writing: " + fileName);
+        throw runtime_error("Failed to open file for writing: " + filePath.string());
     }
+    
     // Compress content and write
     std::string compressed = compressor->compress(content);  // Can throw
     out << compressed;
     
     if (!out) {
-        throw runtime_error("Failed to write to file: " + fileName);
+        throw runtime_error("Failed to write to file: " + filePath.string());
     }
+}
+
+// --------------------
+// Basic file operations
+// --------------------
+
+// Create file with content (fails if file exists)
+void LocalFileManagement::create(const std::string& fileName, const std::string &content) {
+    if (fileName.empty()) {
+        throw invalid_argument("File name cannot be empty");
+    }
+    if (exists(fileName)) {
+        throw runtime_error("File already exists: " + fileName);
+    }
+    
+    // Get full path and use internal helper to write
+    writeInternal(fullPath(fileName), content);
+}
+
+// Write content to file (overwrites if exists, fails if doesn't exist)
+void LocalFileManagement::write(const std::string& fileName, const std::string &content) {
+    if (fileName.empty()) {
+        throw invalid_argument("File name cannot be empty");
+    }
+    if (!exists(fileName)) {
+        throw runtime_error("File does not exist: " + fileName);
+    }
+    
+    // Get full path and use internal helper to write
+    writeInternal(fullPath(fileName), content);
 }
 
 // Read entire file content and decompress
