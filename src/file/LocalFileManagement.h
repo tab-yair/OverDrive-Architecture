@@ -13,7 +13,10 @@ class LocalFileManagement : public IFileManagement {
     private:
         std::unique_ptr<ICompressor> compressor; 
         std::filesystem::path basePath; 
-        std::filesystem::path fullPath(const std::string& fileName) const;
+        
+        // Helpers
+        void validateFileName(const std::string& fileName) const;
+        std::filesystem::path buildFullPath(const std::string& fileName) const;
         
         // Internal helper - performs actual file writing to physical path
         void writeInternal(const std::filesystem::path& filePath, const std::string &content);
