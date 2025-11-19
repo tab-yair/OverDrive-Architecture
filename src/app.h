@@ -6,13 +6,13 @@
 #include "ICommand.h"
 #include "IExecutor.h"
 #include "ParsedCommand.h"
-#include "CommandParsing.h"
 #include "IParser.h"
 
 class App {
 private:
     IMenu* menu;
-    std::map<std::string, ICommand*> commands; 
+    IExecutor* executor;
+    IParser* parser;
 
 public:
     // Constructor: inject dependencies
