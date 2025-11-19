@@ -14,8 +14,7 @@
 class AddCommand : public ICommand {
 public:
     // Constructor receives dependencies for file handling and compression
-    AddCommand(std::shared_ptr<FileManager> fileManager,
-               /*std::shared_ptr<ICompressor> compressor*/);
+    AddCommand(std::shared_ptr<FileManager> fileManager);
 
     // Executes the 'add' command with the given arguments
     virtual std::optional<std::string> execute(const std::vector<std::string>& args) override;
