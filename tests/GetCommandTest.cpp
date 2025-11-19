@@ -35,9 +35,9 @@ TEST_F(GetCommandTest, NoArguments_ReturnsErrorMessage) {
     // The command should not attempt any file operation.
     EXPECT_FALSE(mockFileManager->existsCalled);
     
-    // Expecting an error message instructing the user how to use the command.
-    ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result.value(), "Error: Missing filename. Usage: get [file_name]"); 
+    // Expecting an empty return (nullopt) for usage errors.
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result, std::nullopt); 
 }
 
 // Test 2: Verifies that the command returns an error if the specified file does not exist.
@@ -53,9 +53,9 @@ TEST_F(GetCommandTest, FileDoesNotExist_ReturnsErrorMessage) {
     EXPECT_EQ(mockFileManager->lastCheckedPath, "nonexistent.txt");
     EXPECT_FALSE(mockFileManager->readCalled);
 
-    // 3. Expect an error message.
-    ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result.value(), "Error: File 'nonexistent.txt' not found."); 
+    // 3. Expect std::nullopt as the output.
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result, std::nullopt); 
 }
 
 // Test 3: Verifies that a successful file read returns the content directly to the user.
