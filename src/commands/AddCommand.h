@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <optional>
 #include "ICommand.h"
 #include "../FileManagement/FileManager.h"
 #include "../compression/ICompressor.h"
@@ -18,7 +19,7 @@ public:
                std::shared_ptr<ICompressor> compressor);
 
     // Executes the 'add' command with the given arguments
-    virtual void execute(const std::vector<std::string>& args) override;
+    virtual std::optional<std::string> execute(const std::vector<std::string>& args) override;
 
     // Virtual destructor
     virtual ~AddCommand() = default;

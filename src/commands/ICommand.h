@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <optional>
 
 // Abstract interface for all CLI commands
 class ICommand {
@@ -12,7 +13,7 @@ public:
 
     // Executes the command with the given arguments.
     // Example: add [file] [text], get [file], search [text].
-    virtual void execute(const std::vector<std::string>& args) = 0;
+    virtual std::optional<std::string> execute(const std::vector<std::string>& args) = 0;
 };
 
 #endif // ICOMMAND_H
