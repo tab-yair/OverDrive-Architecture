@@ -52,7 +52,7 @@ protected:
 };
 
 // ============================================================
-// TESTS — using string command names and full-argument strings
+// INTEGRATION TESTS (Parse + consoleMenu) - using string command names and full-argument strings
 // ============================================================
 
 // Test that a basic "add" command with a single argument is parsed correctly
@@ -79,6 +79,28 @@ TEST_F(ConsoleMenuTest, ParsesSearchCommand) {
 TEST_F(ConsoleMenuTest, ParsesSearchCommandMultipleWords) {
     testCommand("search pattern blah blah-blah", "search", "pattern blah blah-blah");
 }
+
+// Test that multiple consecutive commands are parsed correctly when streamed in one input buffer
+TEST_F(ConsoleMenuTest, MultipleCommandsInSequence) {
+    testInput.str("add file1.txt\nget file2.txt\nsearch hello world\n");
+    testInput.clear();
+
+    // First command
+    auto r1 = menu->nextCommand();
+    EXPECT_EQ(r1[0], "add");
+    EXPECT_EQ(r1[1], "file1.txt");
+
+    // Second command
+    auto r2 = menu->nextCommand();
+    EXPECT_EQ(r2[0], "get");
+    EXPECT_EQ(r2[1], "file2.txt");
+
+    // Third command
+    auto r3 = menu->nextCommand();
+    EXPECT_EQ(r3[0], "search");
+    EXPECT_EQ(r3[1], "hello world");
+}
+
 /*  
 
 These are tests that the app will handle, so I commented them out to avoid confusion.
@@ -122,26 +144,3 @@ TEST_F(ConsoleMenuTest, EmptyInputRecievesNewInput) {
 */
 
 
-
-
-
-// Test that multiple consecutive commands are parsed correctly when streamed in one input buffer
-TEST_F(ConsoleMenuTest, MultipleCommandsInSequence) {
-    testInput.str("add file1.txt\nget file2.txt\nsearch hello world\n");
-    testInput.clear();
-
-    // First command
-    auto r1 = menu->nextCommand();
-    EXPECT_EQ(r1[0], "add");
-    EXPECT_EQ(r1[1], "file1.txt");
-
-    // Second command
-    auto r2 = menu->nextCommand();
-    EXPECT_EQ(r2[0], "get");
-    EXPECT_EQ(r2[1], "file2.txt");
-
-    // Third command
-    auto r3 = menu->nextCommand();
-    EXPECT_EQ(r3[0], "search");
-    EXPECT_EQ(r3[1], "hello world");
-}
