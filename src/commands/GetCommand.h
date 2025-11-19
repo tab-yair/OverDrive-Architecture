@@ -1,5 +1,5 @@
-#ifndef ADDCOMMAND_H
-#define ADDCOMMAND_H
+#ifndef GETCOMMAND_H
+#define GETCOMMAND_H
 
 #include <vector>
 #include <string>
@@ -8,22 +8,22 @@
 #include "ICommand.h"
 #include "../FileManagement/IFileManager.h"
 
-// The AddCommand class implements the 'add' command.
+// The GetCommand class implements the 'get' command.
 // It creates a new file and writes the RLE-compressed version of the input text into it.
-// Expected usage: add [file_name] [text]
-class AddCommand : public ICommand {
+// Expected usage: get [file_name]
+class GetCommand : public ICommand {
 public:
     // Constructor receives dependencies for file handling
-    AddCommand(std::shared_ptr<IFileManager> fileManager);
+    GetCommand(std::shared_ptr<IFileManager> fileManager);
 
-    // Executes the 'add' command with the given arguments
+    // Executes the 'get' command with the given arguments
     virtual std::optional<std::string> execute(const std::vector<std::string>& args) override;
 
     // Virtual destructor
-    virtual ~AddCommand() = default;
+    virtual ~GetCommand() = default;
 
 private:
     std::shared_ptr<IFileManager> fileManager;
 };
 
-#endif // ADDCOMMAND_H
+#endif // GETCOMMAND_H
