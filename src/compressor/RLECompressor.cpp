@@ -2,8 +2,13 @@
 #include <sstream>
 #include <stdexcept>
 
+// Compresses data using Run-Length Encoding
+// Format: each run encoded as [char][DELIMITER=0xFF][count as byte]
+// Example: "AAABBC" -> "A[FF]03B[FF]02C[FF]01"
 std::string RLECompressor::compress(const std::string& data) {
-    if (data.empty()) return ""; // Return empty string if input is empty
+    if (data.empty()) {
+        return "";
+    }
 
     std::ostringstream compressed;
     char currentChar = data[0];
@@ -30,9 +35,11 @@ std::string RLECompressor::compress(const std::string& data) {
     return compressed.str();
 }
 
+// Decompresses RLE data by reading triplets of [char][DELIMITER][count]
+// Validates format and expands each run back to original characters
 std::string RLECompressor::decompress(const std::string& data) {
     if (data.empty()) {
-        return ""; // Return empty string if input is empty
+        return "";
     }
 
     std::ostringstream decompressed;

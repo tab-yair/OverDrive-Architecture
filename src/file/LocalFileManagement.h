@@ -8,17 +8,20 @@
 #include <vector>
 #include <filesystem>
 
-
+// Local file system implementation with compression support
+// Base path configured via OVERDRIVE_PATH environment variable
 class LocalFileManagement : public IFileManagement {
     private:
         std::unique_ptr<ICompressor> compressor; 
         std::filesystem::path basePath; 
         
-        // Helpers
+        // Validates fileName for security (path traversal prevention)
         void validateFileName(const std::string& fileName) const;
+        
+        // Constructs full filesystem path from basePath and fileName
         std::filesystem::path buildFullPath(const std::string& fileName) const;
         
-        // Internal helper - performs actual file writing to physical path
+        // Internal helper - compresses and writes content to disk
         void writeInternal(const std::filesystem::path& filePath, const std::string &content);
         
     public:
