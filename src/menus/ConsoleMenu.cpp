@@ -4,7 +4,11 @@
 std::vector<std::string> ConsoleMenu::nextCommand() {
     std::string input;
     std::getline(std::cin, input);
-    //Parse the input command into command[0] and arguments[1]
-    std::vector<std::string> commandParts = StringUtils::parseCommand(input);
-    return commandParts;
+    // Use the injected parser to parse the input
+    return parser->parse(input);
+}
+
+int ConsoleMenu::handleOutput(std::string output) {
+    std::cout << output << std::endl;
+    return 0;
 }

@@ -1,19 +1,23 @@
-#include "app.h"
+#include "App.h"
 
+App::App(IMenu* menu, IExecutor* executor, IParser* parser) : menu(menu), executor(executor), parser(parser) {}
 
-App::App(IMenu* menu, std::map<std::string, ICommand*> commands) : menu(menu), commands(commands) {}
-
+// The flow of the application: Menu → Parser → Executor (Command) → Menu (OutputHandler)
 
 void App::run() {
     while (true) {
-        // Get the next command (task[0]) and arguments (task[1]) from the menu
-        std::vector<std::string> task = menu->nextCommand();
+        // Get the next command + arguments from the menu
+        std::string unparsedCommand = menu->nextCommand();
+        // Parse the command string into command name and arguments
+        ParsedCommand cRes = CommandParser::parseCommand(unparsedCommand);
         try {
-            // Call the execute method of the command with arguments as one string
-            commands[task[0]]->execute(task[1]);
+            // Call the execute method of the executor with name and arguments
+            std::optional<std::string> output = executor->execute(cRes.name,cRes.args);
         }
         catch(...){
-            //  how to ignore invalid input
+            //!!  how to ignore invalid input
         }
+        int outputResult = menu->handleOutput(output);
+
     }
 }

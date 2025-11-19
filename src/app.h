@@ -4,6 +4,10 @@
 #include <map>
 #include "IMenu.h"
 #include "ICommand.h"
+#include "IExecutor.h"
+#include "ParsedCommand.h"
+#include "CommandParsing.h"
+#include "IParser.h"
 
 class App {
 private:
@@ -12,12 +16,11 @@ private:
 
 public:
     // Constructor: inject dependencies
-    App(IMenu* menu, std::map<std::string, ICommand*> commands);
+    App(IMenu* menu, IExecutor* executor, IParser* parser);
     
     // Main application loop
     void run();
     
-    // do we need Destructor ? what about pointer cleanup ?
 };
 
 #endif
