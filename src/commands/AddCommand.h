@@ -7,7 +7,6 @@
 #include <optional>
 #include "ICommand.h"
 #include "../FileManagement/FileManager.h"
-#include "../compression/ICompressor.h"
 
 // The AddCommand class implements the 'add' command.
 // It creates a new file and writes the RLE-compressed version of the input text into it.
@@ -16,7 +15,7 @@ class AddCommand : public ICommand {
 public:
     // Constructor receives dependencies for file handling and compression
     AddCommand(std::shared_ptr<FileManager> fileManager,
-               std::shared_ptr<ICompressor> compressor);
+               /*std::shared_ptr<ICompressor> compressor*/);
 
     // Executes the 'add' command with the given arguments
     virtual std::optional<std::string> execute(const std::vector<std::string>& args) override;
@@ -25,8 +24,7 @@ public:
     virtual ~AddCommand() = default;
 
 private:
-    std::shared_ptr<FileManager> fileManager;   // Handles file creation and writing
-    std::shared_ptr<ICompressor> compressor;     // Handles compression logic (RLE)
+    std::shared_ptr<FileManager> fileManager;
 };
 
 #endif // ADDCOMMAND_H
