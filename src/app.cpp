@@ -9,13 +9,13 @@ void App::run() {
         // Get the next command + arguments from the menu
         std::string unparsedCommand = menu->nextCommand();
         // Parse the command string into command name and arguments
-        ParsedCommand cRes = parser->parse(unparsedCommand);
+        ParsedCommand command = parser->parse(unparsedCommand);
         
         //Declare variable outside try block to be used afterwards
         std::optional<std::string> output;
         try {
             // Call the execute method of the executor with name and arguments
-            output = executor->execute(cRes.name,cRes.args);
+            output = executor->execute(command.name,command.args);
         }
         catch(...){
             //!!  how to ignore invalid input
