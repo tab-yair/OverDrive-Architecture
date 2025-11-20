@@ -13,7 +13,7 @@ class IMenu {
     public:
         IMenu(IParser* parser);
         // Pure virtual function to get the next command from the user
-        virtual std::vector<std::string> nextCommand() = 0;
+        virtual std::string nextCommand() = 0;
         // Pure virtual function to handle output
         virtual int handleOutput(std::string output) = 0;
 

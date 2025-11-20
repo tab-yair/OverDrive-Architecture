@@ -9,7 +9,7 @@
 class ConsoleMenu : public IMenu {
     public:
         // Override nextCommand to get user input from console
-        std::vector<std::string> nextCommand() override;
+        std::string nextCommand() override;
 
         int handleOutput(std::string output) override;
 };
