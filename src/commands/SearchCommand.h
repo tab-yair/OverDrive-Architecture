@@ -1,0 +1,28 @@
+#ifndef SEARCHCOMMAND_H
+#define SEARCHCOMMAND_H
+
+#include <vector>
+#include <string>
+#include <memory>
+#include <optional>
+#include "ICommand.h"
+#include "../FileManagement/IFileManager.h"
+
+// The SearchCommand class implements the 'search' command.
+// It searches for the specified text in all files and returns a list of filenames containing that text
+class SearchCommand : public ICommand {
+public:
+    // Constructor receives dependencies for file handling
+    SearchCommand(std::shared_ptr<IFileManager> fileManager);
+
+    // Executes the 'search' command with the given arguments
+    virtual std::optional<std::string> execute(const std::vector<std::string>& args) override;
+
+    // Virtual destructor
+    virtual ~SearchCommand() = default;
+    
+private:
+    std::shared_ptr<IFileManager> fileManager;
+};
+
+#endif // SEARCHCOMMAND_H
