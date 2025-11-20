@@ -1,63 +1,88 @@
 #ifndef MOCK_FILE_MANAGER_H
 #define MOCK_FILE_MANAGER_H
 
-#include "../../src/FileManagement/FileManager.h"
+#include "../../src/file/IFileManagement.h"
 #include <string>
 #include <vector>
 #include <stdexcept>
-#include <cstdint>
 
 /**
- * a mock class for FileManager to be used in unit tests.
- * It captures method calls and parameters for verification
+ * Mock class for IFileManagement to be used in unit tests.
+ * Captures calls and parameters to allow verification.
  */
-class MockFileManager : public FileManager {
+class MockFileManager : public IFileManagement {
 public:
-    // data captured from create calls
-    std::string lastCreatedFilename;
-    std::string lastCreatedContent; 
+    // For create method
     bool createCalled = false;
-    
-    // data captured from exists calls
+    std::string lastCreatedFilename;
+    std::string lastCreatedContent;
+    bool throwOnCreate = false;
+
+    // For exists method
     bool existsCalled = false;
-    bool readFileCalled = false; // a flag to indicate if readFile was called
     std::string lastCheckedPath;
-    std::string lastReadPath; // captures the path used in readFile
+    bool existsReturnValue = false;
 
-    // flags to control behavior
-    bool existsReturnValue = false; // what exists should return
-    bool throwOnCreate = false;     // if true, create will throw an exception
-    std::string readFileContent = ""; // the content that readFile should return*
+    // For read method
+    bool readCalled = false;
+    std::string lastReadFilename;
+    bool throwOnRead = false;
+    std::string readReturnValue = "";
 
-    // capture create calls to verify parameters
-    void create(const std::string& fileName, const std::string& content) override {
+    // For searchContent method
+    bool searchContentCalled = false;
+    std::string lastSearchContent;
+    std::vector<std::string> searchContentReturnValue;
+
+    // Implement create: record params, optionally throw
+    void create(const std::string& fileName, const std::string& content = "") override {
         createCalled = true;
         lastCreatedFilename = fileName;
         lastCreatedContent = content;
-        
+
         if (throwOnCreate) {
-            throw std::runtime_error("Mock: Simulation of file creation error (e.g., file already exists or permission denied).");
+            throw std::runtime_error("Mock: Simulated create error.");
         }
     }
 
-    // capture exists calls to verify parameters
-    bool exists(const std::string& path) override {
+    // Implement exists: record params, return preset value
+    bool exists(const std::string& fileName) override {
         existsCalled = true;
-        lastCheckedPath = path;
-        return existsReturnValue; 
-    }
-    
-    // let us simulate reading a file
-    std::string readFile(const std::string& path) override {
-        readFileCalled = true;
-        lastReadPath = path;
-        return readFileContent; 
+        lastCheckedPath = fileName;
+        return existsReturnValue;
     }
 
-    // Other FileManager methods can be similarly mocked if needed
-    bool createDirectory(const std::string& path) override { return true; }
-    bool deleteFile(const std::string& path) override { return true; }
-    bool writeFile(const std::string& path, const std::string& content) override { return true; }
+    // Implement read: record params, optionally throw, return preset value
+    std::string read(const std::string& fileName) override {
+        readCalled = true;
+        lastReadFilename = fileName;
+        if (throwOnRead) {
+            throw std::runtime_error("Mock: Simulated read error.");
+        }
+        return readReturnValue;
+    }
+
+    // Implement remove (optional - no need to track)
+    void remove(const std::string& /*fileName*/) override {
+        // No action needed for tests currently
+    }
+
+    // Implement write (optional - no need to track)
+    void write(const std::string& /*fileName*/, const std::string& /*content*/) override {
+        // No action needed for tests currently
+    }
+
+    // Implement fileList (optional - no need to track)
+    std::vector<std::string> fileList() override {
+        return {};
+    }
+
+    // Implement searchContent: record params, return preset vector
+    std::vector<std::string> searchContent(const std::string& content) override {
+        searchContentCalled = true;
+        lastSearchContent = content;
+        return searchContentReturnValue;
+    }
 };
 
 #endif // MOCK_FILE_MANAGER_H
