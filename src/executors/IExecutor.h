@@ -5,17 +5,11 @@
 #include <vector>
 #include <map>
 #include "ICommand.h"
-#include "CommandResult.h"
 
 class IExecutor {
-private:
-    std::map<std::string, ICommand*> commands; 
-
 public:
-    // Constructor: inject dependencies
-    IExecutor(std::map<std::string, ICommand*> commands);
-    virtual CommandResult execute(const std::vector<std::string>& args) = 0;
-    virtual ~IExecutor() = default;
+    // Executes the command with the given name and arguments.
+    virtual std::optional<std::string> execute(const std::string& name, const std::vector<std::string>& args) = 0;
 };
 
-#endif // IEXECUTER_H
+#endif // IEXECUTOR_H
