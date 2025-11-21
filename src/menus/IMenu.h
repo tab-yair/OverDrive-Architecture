@@ -8,10 +8,7 @@
 #include "IParser.h"
 
 class IMenu {
-    protected:
-        IParser* parser;
     public:
-        IMenu(IParser* parser);
         // Pure virtual function to get the next command from the user
         virtual std::string nextCommand() = 0;
         // Pure virtual function to handle output

@@ -7,7 +7,10 @@
 #include <iostream>  
 
 class ConsoleMenu : public IMenu {
+    private:
+        IParser* parser;
     public:
+        ConsoleMenu(IParser* parser);
         // Override nextCommand to get user input from console
         std::string nextCommand() override;
 

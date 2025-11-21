@@ -1,5 +1,6 @@
 #include "ConsoleMenu.h"
 
+ConsoleMenu::ConsoleMenu(IParser* parser) : parser(parser) {}
 
 std::string ConsoleMenu::nextCommand() {
     std::string input;
