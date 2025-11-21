@@ -6,7 +6,7 @@
 #include <memory>
 #include <optional>
 #include "ICommand.h"
-#include "../FileManagement/IFileManager.h"
+#include "../file/IFileManagement.h"
 
 // The SearchCommand class implements the 'search' command.
 // It searches for the specified text in all files and returns a list of filenames containing that text
@@ -20,7 +20,7 @@ public:
 
     // Virtual destructor
     virtual ~SearchCommand() = default;
-    
+
 private:
     std::shared_ptr<IFileManager> fileManager;
 };
