@@ -13,11 +13,13 @@ file(GLOB_RECURSE OVERDRIVE_SRC CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/src/*.cpp
 )
 
-add_library(overdrive STATIC ${OVERDRIVE_SRC}) {}
+add_library(overdrive STATIC ${OVERDRIVE_SRC}) 
 target_include_directories(overdrive PUBLIC 
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/compressor
     ${CMAKE_SOURCE_DIR}/src/commands
+    ${CMAKE_SOURCE_DIR}/src/menus
+    ${CMAKE_SOURCE_DIR}/src/file
 )
 
 # --- GoogleTest ---
