@@ -2,96 +2,46 @@
 #include <cstdlib>
 #include <sstream>
 #include <utility>
+#include <stdexcept>
 
-// Define the fixed subdirectory name for storing files.
-const std::string OVERDRIVE_SUBDIR = "overdrive_files/"; 
-
-AddCommand::AddCommand(std::shared_ptr<FileManager> fileManager,
-                       std::shared_ptr<ICompressor> compressor)
-    : fileManager(std::move(fileManager)),
-      compressor(std::move(compressor)) {}
+AddCommand::AddCommand(std::shared_ptr<FileManager> fileManager)
+    : fileManager(std::move(fileManager)) {}
 
 
-void AddCommand::execute(const std::vector<std::string>& args) {
+std::optional<std::string> AddCommand::execute(const std::vector<std::string>& args) {
 
-    // if missing dependencies, return without doing anything
-    if (!fileManager || !compressor) {
-        return;
+    // if missing dependencies, stop immediately
+    if (!fileManager) {
+        return std::nullopt;
     }
 
     // If no filename provided, there is nothing to do.
     if (args.empty()) {
-        return;
+        return std::nullopt;
     }
 
-    // --- Resolve Base Path ---
-
-    // Get the base directory from the environment variable.
-    const char* envPath = std::getenv("OVERDRIVE_PATH");
-    if (!envPath) {
-        return;
-    }
-
-    std::string basePath = envPath;
-
-    // Append a trailing slash if necessary.
-    if (!basePath.empty() && basePath.back() != '/' && basePath.back() != '\\') {
-        basePath += '/';
-    }
-
-    // --- Ensure Subdirectory Exists ---
-    
-    // Construct the path to the dedicated data subdirectory.
-    const std::string subDirPath = basePath + OVERDRIVE_SUBDIR;
-
-    // Check if the subdirectory exists. If not, try to create it.
-    try {
-        if (!fileManager->exists(subDirPath)) {
-            // If creation fails, stop execution.
-            if (!fileManager->createDirectory(subDirPath)) {
-                return; 
-            }
-        }
-    } catch (...) {
-        return; // Exception during directory check/creation.
-    }
-
-    // --- Existence Check ---
-
-    // Full path includes the subdirectory.
+    // args[0] is the filename
     const std::string& fileName = args[0];
-    const std::string fullPath = subDirPath + fileName;
-    
-    // Do not overwrite an existing file.
-    if (fileManager->exists(fullPath)) {
-        return;
-    }
-
-    // --- Prepare Content ---
     
     // Combine all arguments after the filename into a single text string.
     std::string inputText;
-    if (args.size() > 1) {
-        inputText = args[1];
-    } else {
-        inputText = ""; // No text provided results in empty content.
-    }
-
-    // --- Compress and Write ---
-
-    std::string compressed;
     
-    // Attempt compression, handle exceptions silently.
-    try {
-        compressed = compressor->compress(inputText);
-    } catch (...) {
-        return;
+    if (args.size() > 1) {
+        std::stringstream currStr;
+        for (size_t i = 1; i < args.size(); ++i) {
+            currStr << args[i];
+            // Add space between words, but not after the last word.
+            if (i < args.size() - 1) {
+                currStr << " ";
+            }
+        }
+        inputText = currStr.str(); 
+    } else {
+        inputText = ""; // Handle empty content case
     }
+    
+    // Attempt to write the compressed data
+    fileManager->create(fileName, inputText);
 
-    // Attempt to write the compressed data, handle exceptions silently.
-    try {
-        fileManager->writeFile(fullPath, compressed);
-    } catch (...) {
-        return;
-    }
+    return std::nullopt;
 }
