@@ -12,7 +12,7 @@ public:
 
     // Executes the command with the given arguments.
     // Example: add [file] [text], get [file], search [text].
-    virtual void execute(const std::string& args) = 0;
+    virtual std::optional<std::string> execute(const std::vector<std::string>& args) = 0;
 };
 
 #endif // ICOMMAND_H
