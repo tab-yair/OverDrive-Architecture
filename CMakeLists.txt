@@ -28,14 +28,15 @@ target_include_directories(overdrive PUBLIC
     ${CMAKE_SOURCE_DIR}/src/executors
     ${CMAKE_SOURCE_DIR}/src/parsers 
     ${CMAKE_SOURCE_DIR}/tests
-    ${CMAKE_SOURCE_DIR}/tests/integration
-    ${CMAKE_SOURCE_DIR}/tests/unit
     ${CMAKE_SOURCE_DIR}/tests/mocks
 )
 
 # main.cpp and App.cpp for the main application - optional
 if(EXISTS ${CMAKE_SOURCE_DIR}/src/main.cpp AND EXISTS ${CMAKE_SOURCE_DIR}/src/App.cpp)
-    add_executable(overdrive_main_app ${CMAKE_SOURCE_DIR}/src/main.cpp ${CMAKE_SOURCE_DIR}/src/App.cpp)
+    add_executable(overdrive_main_app 
+    ${CMAKE_SOURCE_DIR}/src/main.cpp 
+    ${CMAKE_SOURCE_DIR}/src/app/App.cpp
+    )
     target_link_libraries(overdrive_main_app PRIVATE overdrive)
      # define output directory for the main app
     set_target_properties(overdrive_main_app PROPERTIES
