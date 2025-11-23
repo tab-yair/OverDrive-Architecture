@@ -8,7 +8,6 @@
 #include "IParser.h"
 #include "ICompressor.h"
 #include "IFileManagement.h"
-// Concrete implementations
 #include "RLECompressor.h"
 #include "LocalFileManagement.h"
 #include "AddCommand.h"
