@@ -1,4 +1,4 @@
-#include "RLECompressor.h"
+#include "compressor/RLECompressor.h"
 #include <sstream>
 #include <stdexcept>
 

@@ -20,15 +20,7 @@ list(FILTER OVERDRIVE_SRC EXCLUDE REGEX ".*/App\\.cpp$")
 add_library(overdrive STATIC ${OVERDRIVE_SRC}) 
 target_include_directories(overdrive PUBLIC 
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/app
-    ${CMAKE_SOURCE_DIR}/src/compressor
-    ${CMAKE_SOURCE_DIR}/src/commands
-    ${CMAKE_SOURCE_DIR}/src/menus
-    ${CMAKE_SOURCE_DIR}/src/file
-    ${CMAKE_SOURCE_DIR}/src/executors
-    ${CMAKE_SOURCE_DIR}/src/parsers 
     ${CMAKE_SOURCE_DIR}/tests
-    ${CMAKE_SOURCE_DIR}/tests/mocks
 )
 
 # main.cpp and App.cpp for the main application - optional

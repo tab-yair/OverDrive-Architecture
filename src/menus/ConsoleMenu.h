@@ -1,9 +1,9 @@
 #ifndef CONSOLEMENU_H
 #define CONSOLEMENU_H
 
-#include "IMenu.h"
-#include "CommandParser.h"
-#include "ParsedCommand.h"
+#include "menus/IMenu.h"
+#include "parsers/CommandParser.h"
+#include "parsers/ParsedCommand.h"
 #include <iostream>  
 
 class ConsoleMenu : public IMenu {

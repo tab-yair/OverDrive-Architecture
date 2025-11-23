@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
-#include "GetCommand.h"
-#include "MockFileManager.h"
+#include "commands/GetCommand.h"
+#include "mocks/MockFileManager.h"
 #include <memory>
 #include <string>
 #include <vector>

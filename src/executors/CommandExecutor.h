@@ -7,8 +7,8 @@
 #include <optional>
 #include <stdexcept>
 #include <memory>
-#include "ICommand.h"
-#include "IExecutor.h"
+#include "commands/ICommand.h"
+#include "executors/IExecutor.h"
 
 class CommandExecutor : public IExecutor {
 private:

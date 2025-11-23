@@ -1,8 +1,8 @@
 #ifndef COMMANDPARSING_H
 #define COMMANDPARSING_H
 
-#include "IParser.h"
-#include "ParsedCommand.h"
+#include "parsers/IParser.h"
+#include "parsers/ParsedCommand.h"
 #include <string>
 #include <vector>
 #include <sstream>

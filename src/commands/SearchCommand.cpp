@@ -1,4 +1,4 @@
-#include "SearchCommand.h"
+#include "commands/SearchCommand.h"
 #include <sstream>
 #include <optional>
 #include <stdexcept>

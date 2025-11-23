@@ -5,8 +5,8 @@
 #include <string>
 #include <memory>
 #include <optional>
-#include "ICommand.h"
-#include "../file/IFileManagement.h"
+#include "commands/ICommand.h"
+#include "file/IFileManagement.h"
 
 // The GetCommand class implements the 'get' command.
 // It creates a new file and writes the RLE-compressed version of the input text into it.

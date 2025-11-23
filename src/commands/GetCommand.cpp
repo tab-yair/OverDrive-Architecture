@@ -1,4 +1,4 @@
-#include "GetCommand.h"
+#include "commands/GetCommand.h"
 #include <utility>      
 #include <stdexcept>    
 

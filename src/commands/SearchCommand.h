@@ -5,8 +5,8 @@
 #include <string>
 #include <memory>
 #include <optional>
-#include "ICommand.h"
-#include "../file/IFileManagement.h"
+#include "commands/ICommand.h"
+#include "file/IFileManagement.h"
 
 // The SearchCommand class implements the 'search' command.
 // It searches for the specified text in all files and returns a list of filenames containing that text

@@ -3,11 +3,11 @@
 
 #include <map>
 #include <memory>
-#include "IMenu.h"
-#include "ICommand.h"
-#include "IExecutor.h"
-#include "ParsedCommand.h"
-#include "IParser.h"
+#include "menus/IMenu.h"
+#include "commands/ICommand.h"
+#include "executors/IExecutor.h"
+#include "parsers/ParsedCommand.h"
+#include "parsers/IParser.h"
 
 class App {
 private:
