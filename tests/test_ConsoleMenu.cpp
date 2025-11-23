@@ -83,23 +83,28 @@ protected:
 // ============================================================
 // ========== Input Tests ==========
 
+// Verifies menu correctly reads and returns a simple command with argument
 TEST_F(ConsoleMenuTest, BasicCommand) {
     testCommandInput("upload file.txt", "upload file.txt");
 }
 
+// Verifies menu correctly handles empty input from user
 TEST_F(ConsoleMenuTest, EmptyInput) {
     testCommandInput("", "");
 }
 
+// Verifies menu correctly handles commands with multiple space-separated words
 TEST_F(ConsoleMenuTest, CommandWithSpaces) {
     testCommandInput("list all files", "list all files");
 }
 
+// Verifies menu correctly handles input containing file paths and special characters
 TEST_F(ConsoleMenuTest, CommandWithSpecialCharacters) {
     testCommandInput("download /path/to/file-v2.0.txt", 
                     "download /path/to/file-v2.0.txt");
 }
 
+// Verifies menu can handle extremely long input strings (1000 characters)
 TEST_F(ConsoleMenuTest, VeryLongInput) {
     std::string longInput(1000, 'a');
     testCommandInput(longInput, longInput);
@@ -107,24 +112,29 @@ TEST_F(ConsoleMenuTest, VeryLongInput) {
 
 // ========== Output Tests ==========
 
+// Verifies menu correctly displays a simple success message with newline
 TEST_F(ConsoleMenuTest, BasicOutput) {
     testCommandOutput("File uploaded successfully", 
                      "File uploaded successfully\n");
 }
 
+// Verifies menu correctly handles empty output messages
 TEST_F(ConsoleMenuTest, EmptyOutput) {
     testCommandOutput("", "\n");
 }
 
+// Verifies menu correctly displays multiline output with preserved formatting
 TEST_F(ConsoleMenuTest, MultilineOutput) {
     testCommandOutput("Line 1\nLine 2\nLine 3", 
                      "Line 1\nLine 2\nLine 3\n");
 }
 
+// Verifies menu correctly displays messages containing special characters
 TEST_F(ConsoleMenuTest, OutputWithSpecialCharacters) {
     testCommandOutput("Success! @#$%", "Success! @#$%\n");
 }
 
+// Verifies menu can handle extremely long output strings (5000 characters)
 TEST_F(ConsoleMenuTest, VeryLongOutput) {
     std::string longOutput(5000, 'x');
     testCommandOutput(longOutput, longOutput + "\n");

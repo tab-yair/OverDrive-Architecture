@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "CommandExecutor.h"
+#include <memory>
 #include <map>
 #include <string>
 #include <vector>
@@ -42,29 +43,14 @@ public:
     ~MockEchoCommand() override = default;
 };
 
-class CommandExecutorTest : public ::testing::Test {
-protected:
-    MockCommand* mockCmd;
-    MockEmptyCommand* mockEmptyCmd;
-    MockEchoCommand* mockEchoCmd;
-    
-    void SetUp() override {
-        mockCmd = new MockCommand();
-        mockEmptyCmd = new MockEmptyCommand();
-        mockEchoCmd = new MockEchoCommand();
-    }
-    
-    void TearDown() override {
-        delete mockCmd;
-        delete mockEmptyCmd;
-        delete mockEchoCmd;
-    }
-};
-
 // Test: Execute a valid command with arguments
-TEST_F(CommandExecutorTest, ExecuteValidCommandWithArgs) {
-    std::map<std::string, ICommand*> commands = {{"test", mockCmd}};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, ExecuteValidCommandWithArgs) {
+    // Create commands map with unique_ptr ownership
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["test"] = std::make_unique<MockCommand>();
+    
+    // Transfer ownership to executor
+    CommandExecutor executor(std::move(commands));
     
     auto result = executor.execute("test", {"arg1", "arg2"});
     
@@ -73,9 +59,11 @@ TEST_F(CommandExecutorTest, ExecuteValidCommandWithArgs) {
 }
 
 // Test: Execute a valid command with no arguments
-TEST_F(CommandExecutorTest, ExecuteValidCommandNoArgs) {
-    std::map<std::string, ICommand*> commands = {{"test", mockCmd}};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, ExecuteValidCommandNoArgs) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["test"] = std::make_unique<MockCommand>();
+    
+    CommandExecutor executor(std::move(commands));
     
     auto result = executor.execute("test", {});
     
@@ -84,9 +72,11 @@ TEST_F(CommandExecutorTest, ExecuteValidCommandNoArgs) {
 }
 
 // Test: Execute command that returns empty optional
-TEST_F(CommandExecutorTest, ExecuteCommandReturnsEmpty) {
-    std::map<std::string, ICommand*> commands = {{"empty", mockEmptyCmd}};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, ExecuteCommandReturnsEmpty) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["empty"] = std::make_unique<MockEmptyCommand>();
+    
+    CommandExecutor executor(std::move(commands));
     
     auto result = executor.execute("empty", {});
     
@@ -94,9 +84,11 @@ TEST_F(CommandExecutorTest, ExecuteCommandReturnsEmpty) {
 }
 
 // Test: Execute command with actual argument processing
-TEST_F(CommandExecutorTest, ExecuteEchoCommand) {
-    std::map<std::string, ICommand*> commands = {{"echo", mockEchoCmd}};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, ExecuteEchoCommand) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["echo"] = std::make_unique<MockEchoCommand>();
+    
+    CommandExecutor executor(std::move(commands));
     
     auto result = executor.execute("echo", {"hello", "world"});
     
@@ -105,9 +97,11 @@ TEST_F(CommandExecutorTest, ExecuteEchoCommand) {
 }
 
 // Test: Unknown command throws invalid_argument
-TEST_F(CommandExecutorTest, UnknownCommandThrows) {
-    std::map<std::string, ICommand*> commands = {{"test", mockCmd}};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, UnknownCommandThrows) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["test"] = std::make_unique<MockCommand>();
+    
+    CommandExecutor executor(std::move(commands));
     
     EXPECT_THROW(
         executor.execute("nonexistent", {}),
@@ -116,9 +110,11 @@ TEST_F(CommandExecutorTest, UnknownCommandThrows) {
 }
 
 // Test: Unknown command throws with correct message
-TEST_F(CommandExecutorTest, UnknownCommandThrowsWithMessage) {
-    std::map<std::string, ICommand*> commands = {{"test", mockCmd}};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, UnknownCommandThrowsWithMessage) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["test"] = std::make_unique<MockCommand>();
+    
+    CommandExecutor executor(std::move(commands));
     
     try {
         executor.execute("badcommand", {});
@@ -129,9 +125,11 @@ TEST_F(CommandExecutorTest, UnknownCommandThrowsWithMessage) {
 }
 
 // Test: Null command pointer throws runtime_error
-TEST_F(CommandExecutorTest, NullCommandPointerThrows) {
-    std::map<std::string, ICommand*> commands = {{"null", nullptr}};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, NullCommandPointerThrows) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["null"] = nullptr;
+    
+    CommandExecutor executor(std::move(commands));
     
     EXPECT_THROW(
         executor.execute("null", {}),
@@ -140,9 +138,11 @@ TEST_F(CommandExecutorTest, NullCommandPointerThrows) {
 }
 
 // Test: Null command pointer throws with correct message
-TEST_F(CommandExecutorTest, NullCommandPointerThrowsWithMessage) {
-    std::map<std::string, ICommand*> commands = {{"null", nullptr}};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, NullCommandPointerThrowsWithMessage) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["null"] = nullptr;
+    
+    CommandExecutor executor(std::move(commands));
     
     try {
         executor.execute("null", {});
@@ -153,13 +153,13 @@ TEST_F(CommandExecutorTest, NullCommandPointerThrowsWithMessage) {
 }
 
 // Test: Multiple commands in executor
-TEST_F(CommandExecutorTest, MultipleCommands) {
-    std::map<std::string, ICommand*> commands = {
-        {"cmd1", mockCmd},
-        {"echo", mockEchoCmd},
-        {"empty", mockEmptyCmd}
-    };
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, MultipleCommands) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["cmd1"] = std::make_unique<MockCommand>();
+    commands["echo"] = std::make_unique<MockEchoCommand>();
+    commands["empty"] = std::make_unique<MockEmptyCommand>();
+    
+    CommandExecutor executor(std::move(commands));
     
     auto result1 = executor.execute("cmd1", {"test"});
     ASSERT_TRUE(result1.has_value());
@@ -174,9 +174,11 @@ TEST_F(CommandExecutorTest, MultipleCommands) {
 }
 
 // Test: Empty command name
-TEST_F(CommandExecutorTest, EmptyCommandName) {
-    std::map<std::string, ICommand*> commands = {{"test", mockCmd}};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, EmptyCommandName) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    commands["test"] = std::make_unique<MockCommand>();
+    
+    CommandExecutor executor(std::move(commands));
     
     EXPECT_THROW(
         executor.execute("", {}),
@@ -185,9 +187,10 @@ TEST_F(CommandExecutorTest, EmptyCommandName) {
 }
 
 // Test: Empty executor (no commands)
-TEST_F(CommandExecutorTest, EmptyExecutor) {
-    std::map<std::string, ICommand*> commands = {};
-    CommandExecutor executor(commands);
+TEST(CommandExecutorTest, EmptyExecutor) {
+    std::map<std::string, std::unique_ptr<ICommand>> commands;
+    
+    CommandExecutor executor(std::move(commands));
     
     EXPECT_THROW(
         executor.execute("anything", {}),
