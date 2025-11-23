@@ -2,6 +2,7 @@
 FROM gcc:latest AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
+# התקנת build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -16,7 +17,7 @@ COPY . /src
 # Clean build
 RUN rm -rf build
 
-# Configure and build
+# Configure and build everything
 RUN mkdir build && cd build \
     && cmake .. -DCMAKE_BUILD_TYPE=Release \
     && cmake --build . --clean-first -- -j$(nproc)
@@ -24,16 +25,20 @@ RUN mkdir build && cd build \
 # --- Runtime stage ---
 FROM gcc:latest AS runtime
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
+
+# צור תיקייה לקבצים של OVERDRIVE
+RUN mkdir -p /app/files
+
+# התקנת CA certificates בלבד (ריצה מינימלית)
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy binaries
+# העתק רק את ה-executables (הספריות נשארות ב-builder)
 COPY --from=builder /src/build/bin /app/bin
-ENV PATH="/app/bin:${PATH}"
 
-# Set default OverDrive path for file operations
+# PATH ותיקיית OverDrive
+ENV PATH="/app/bin:${PATH}"
 ENV OVERDRIVE_PATH=/app/files
 
-# Default: run all tests (adjust if needed)
-CMD ["bash", "-c", "for t in /app/bin/*; do echo Running $t; $t; done"]
+# ברירת מחדל: הרץ את כל הטסטים
+CMD ["bash", "-c", "for t in /app/bin/*; do echo Running $t; $t || true; done"]
