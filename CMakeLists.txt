@@ -60,9 +60,6 @@ file(GLOB_RECURSE OVERDRIVE_TESTS CONFIGURE_DEPENDS
 foreach(test_file ${OVERDRIVE_TESTS})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file})
-     target_include_directories(${test_name} PRIVATE
-        ${CMAKE_SOURCE_DIR}/tests/mocks
-    )
     target_link_libraries(${test_name} PRIVATE overdrive gtest_main)
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
