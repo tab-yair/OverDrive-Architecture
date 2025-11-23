@@ -14,7 +14,7 @@
 class GetCommand : public ICommand {
 public:
     // Constructor receives dependencies for file handling
-    GetCommand(std::shared_ptr<IFileManager> fileManager);
+    GetCommand(std::shared_ptr<IFileManagement> fileManager);
 
     // Executes the 'get' command with the given arguments
     virtual std::optional<std::string> execute(const std::vector<std::string>& args) override;
@@ -23,7 +23,7 @@ public:
     virtual ~GetCommand() = default;
 
 private:
-    std::shared_ptr<IFileManager> fileManager;
+    std::shared_ptr<IFileManagement> fileManager;
 };
 
 #endif // GETCOMMAND_H

@@ -13,7 +13,7 @@
 class SearchCommand : public ICommand {
 public:
     // Constructor receives dependencies for file handling
-    SearchCommand(std::shared_ptr<IFileManager> fileManager);
+    SearchCommand(std::shared_ptr<IFileManagement> fileManager);
 
     // Executes the 'search' command with the given arguments
     virtual std::optional<std::string> execute(const std::vector<std::string>& args) override;
@@ -22,7 +22,7 @@ public:
     virtual ~SearchCommand() = default;
 
 private:
-    std::shared_ptr<IFileManager> fileManager;
+    std::shared_ptr<IFileManagement> fileManager;
 };
 
 #endif // SEARCHCOMMAND_H

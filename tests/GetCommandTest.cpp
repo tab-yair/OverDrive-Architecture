@@ -39,21 +39,21 @@ TEST_F(GetCommandTest, FileDoesNotExist_ReturnsNullOpt) {
 
     EXPECT_TRUE(mockFileManager->existsCalled);
     EXPECT_EQ(mockFileManager->lastCheckedPath, "nonexistent.txt");
-    EXPECT_FALSE(mockFileManager->readFileCalled);
+    EXPECT_FALSE(mockFileManager->readCalled);
     EXPECT_FALSE(result.has_value());
 }
 
 // File exists → read returns content, returned by execute
 TEST_F(GetCommandTest, SuccessfulRead_ReturnsContent) {
     mockFileManager->existsReturnValue = true;
-    mockFileManager->readFileContent = "File content here";
+    mockFileManager->readReturnValue = "File content here";
     std::vector<std::string> args = {"data.txt"};
 
     auto result = getCommand->execute(args);
 
     EXPECT_TRUE(mockFileManager->existsCalled);
-    EXPECT_TRUE(mockFileManager->readFileCalled);
-    EXPECT_EQ(mockFileManager->lastReadPath, "data.txt");
+    EXPECT_TRUE(mockFileManager->readCalled);
+    EXPECT_EQ(mockFileManager->lastReadFilename, "data.txt");
 
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result.value(), "File content here");
@@ -68,7 +68,7 @@ TEST_F(GetCommandTest, ReadThrowsException_BubblesUp) {
     EXPECT_THROW(getCommand->execute(args), std::runtime_error);
 
     EXPECT_TRUE(mockFileManager->existsCalled);
-    EXPECT_TRUE(mockFileManager->readFileCalled);
+    EXPECT_TRUE(mockFileManager->readCalled);
 }
 
 // Null fileManager dependency → no crash, returns nullopt

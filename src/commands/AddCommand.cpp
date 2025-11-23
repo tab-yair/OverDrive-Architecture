@@ -4,7 +4,7 @@
 #include <utility>
 #include <stdexcept>
 
-AddCommand::AddCommand(std::shared_ptr<FileManager> fileManager)
+AddCommand::AddCommand(std::shared_ptr<IFileManagement> fileManager)
     : fileManager(std::move(fileManager)) {}
 
 
