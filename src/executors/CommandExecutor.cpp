@@ -1,13 +1,16 @@
 #include "CommandExecutor.h"
 
-CommandExecutor::CommandExecutor(std::map<std::string, ICommand*> commands) : commands(commands) {}
+CommandExecutor::CommandExecutor(
+    std::map<std::string, std::unique_ptr<ICommand>> commands)
+    : commands(std::move(commands)) {}
+
 // Executes the command with the given name and arguments.
 std::optional<std::string> CommandExecutor::execute(
     const std::string& name,
     const std::vector<std::string>& args) 
 {
     try {
-        ICommand* cmd = commands.at(name);
+        auto& cmd = commands.at(name);
         
         // If command pointer in the map is null, throw an error
         if (cmd == nullptr) {
