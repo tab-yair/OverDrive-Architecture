@@ -1,9 +1,11 @@
 # OneDrive
 
 OverDrive is a command-line compression system implemented in C++.
+
 The project follows principles of clean architecture, SOLID, and extensibility - designed to support future expansion with minimal changes.
 
-Supported Commands:
+
+### Supported Commands:
 
 | Command                  | Description                                                                        |
 | ------------------------ | ---------------------------------------------------------------------------------- |
@@ -17,7 +19,7 @@ notes:
 * Invalid commands are handled silently.
 * All compressed files are stored under: /app/files
 
-### Running the Project:
+## Running the Project:
 No need to install C++, CMake, or test frameworks locally. Everything is built and run inside Docker.
 
 1. Build the Docker image
@@ -32,9 +34,18 @@ docker run --rm overdrive
 ```
 
 3. Running the Application
-When running the program, we want to make sure that the files are saved to the computer and not just inside the docker.
+
+On Linux / Mac / Git Bash:
 ```bash
-docker run -it --rm \
-    -v $(pwd)/files:/app/files \
-    overdrive /app/bin/OverDrive
+docker run -it --rm -v "$(pwd)/files:/app/files" overdrive /app/bin/OverDrive
+```
+
+On Windows PowerShell:
+```bash
+docker run -it --rm -v ${PWD}/files:/app/files overdrive /app/bin/OverDrive
+```
+
+On Windows Command Prompt (CMD):
+```bash
+docker run -it --rm -v %cd%\files:/app/files overdrive /app/bin/OverDrive
 ```
