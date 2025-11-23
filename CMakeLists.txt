@@ -20,12 +20,17 @@ list(FILTER OVERDRIVE_SRC EXCLUDE REGEX ".*/App\\.cpp$")
 add_library(overdrive STATIC ${OVERDRIVE_SRC}) 
 target_include_directories(overdrive PUBLIC 
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/app
     ${CMAKE_SOURCE_DIR}/src/compressor
     ${CMAKE_SOURCE_DIR}/src/commands
     ${CMAKE_SOURCE_DIR}/src/menus
     ${CMAKE_SOURCE_DIR}/src/file
     ${CMAKE_SOURCE_DIR}/src/executors
-    ${CMAKE_SOURCE_DIR}/src/parsers   
+    ${CMAKE_SOURCE_DIR}/src/parsers 
+    ${CMAKE_SOURCE_DIR}/tests
+    ${CMAKE_SOURCE_DIR}/tests/integration
+    ${CMAKE_SOURCE_DIR}/tests/unit
+    ${CMAKE_SOURCE_DIR}/tests/mocks
 )
 
 # main.cpp and App.cpp for the main application - optional
@@ -55,6 +60,9 @@ file(GLOB_RECURSE OVERDRIVE_TESTS CONFIGURE_DEPENDS
 foreach(test_file ${OVERDRIVE_TESTS})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file})
+     target_include_directories(${test_name} PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/mocks
+    )
     target_link_libraries(${test_name} PRIVATE overdrive gtest_main)
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()

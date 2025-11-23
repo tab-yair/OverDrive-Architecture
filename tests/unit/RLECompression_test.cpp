@@ -109,7 +109,7 @@ TEST(RLECompressionTest, VeryLongSequenceSplits) {
 }
 
 // ========================================
-// 3. SPECIAL CHARACTER SUPPORT (NEW!)
+// 3. SPECIAL CHARACTER SUPPORT 
 // ========================================
 
 // Digits (now supported with binary format!)
