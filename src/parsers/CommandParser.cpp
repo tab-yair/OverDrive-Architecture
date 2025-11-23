@@ -1,4 +1,4 @@
-#include "CommandParser.h"
+#include "parsers/CommandParser.h"
 
 ParsedCommand CommandParser::parse(const std::string& input) {
     ParsedCommand result;

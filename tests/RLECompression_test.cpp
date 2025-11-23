@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "RLECompressor.h"
+#include "compressor/RLECompressor.h"
 
 // ---------------- HELPER FUNCTION ----------------
 // Helper function to test round-trip compression and decompression
@@ -195,5 +195,4 @@ TEST(RLECompressionInvalidInput, DecompressRejectsMalformedCompressedStrings) {
     std::string wrongDelimiter = "A\xFE\x03";  // Using 0xFE instead of 0xFF
     EXPECT_THROW(rle.decompress(wrongDelimiter), std::invalid_argument);
 }
-
 

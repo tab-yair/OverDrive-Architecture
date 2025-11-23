@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "../src/commands/AddCommand.h"
+#include "commands/AddCommand.h"
 #include "mocks/MockFileManager.h"
 #include <memory>
 #include <vector>

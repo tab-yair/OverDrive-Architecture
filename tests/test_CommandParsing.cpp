@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "CommandParser.h"
-#include "ParsedCommand.h"
+#include "parsers/CommandParser.h"
+#include "parsers/ParsedCommand.h"
 
 class ParserTest : public ::testing::Test {
 protected:

@@ -1,8 +1,8 @@
 #ifndef LOCALFILEMANAGEMENT_H
 #define LOCALFILEMANAGEMENT_H
 
-#include "IFileManagement.h"
-#include "ICompressor.h"
+#include "file/IFileManagement.h"
+#include "compressor/ICompressor.h"
 #include <string>
 #include <memory>
 #include <vector>

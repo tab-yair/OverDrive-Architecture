@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
-#include "LocalFileManagement.h"
-#include "ICompressor.h"
-#include "RLECompressor.h"
+#include "file/LocalFileManagement.h"
+#include "compressor/ICompressor.h"
+#include "compressor/RLECompressor.h"
 #include <memory>
 #include <cstdlib>
 #include <filesystem>

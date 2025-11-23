@@ -1,4 +1,4 @@
-#include "App.h"
+#include "app/App.h"
 
 // Constructor for app class, using dependency injection
 App::App(std::unique_ptr<IMenu> menu, 

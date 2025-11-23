@@ -5,8 +5,8 @@
 #include <string>
 #include <memory>
 #include <optional>
-#include "ICommand.h"
-#include "../file/IFileManagement.h"
+#include "commands/ICommand.h"
+#include "file/IFileManagement.h"
 
 // The AddCommand class implements the 'add' command.
 // It creates a new file and writes the RLE-compressed version of the input text into it.

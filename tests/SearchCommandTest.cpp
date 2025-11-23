@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "../src/commands/SearchCommand.h"
+#include "commands/SearchCommand.h"
 #include "mocks/MockFileManager.h"
 #include <memory>
 #include <string>

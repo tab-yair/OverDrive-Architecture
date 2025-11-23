@@ -1,13 +1,21 @@
 #include <map>
 #include <memory>
-#include "App.h"
-#include "IMenu.h"
-#include "ICommand.h"
-#include "IExecutor.h"
-#include "ParsedCommand.h"
-#include "IParser.h"
-#include "ICompressor.h"
-#include "IFileManagement.h"
+#include "app/App.h"
+#include "menus/IMenu.h"
+#include "commands/ICommand.h"
+#include "executors/IExecutor.h"
+#include "parsers/ParsedCommand.h"
+#include "parsers/IParser.h"
+#include "compressor/ICompressor.h"
+#include "file/IFileManagement.h"
+#include "compressor/RLECompressor.h"
+#include "file/LocalFileManagement.h"
+#include "commands/AddCommand.h"
+#include "commands/GetCommand.h"
+#include "commands/SearchCommand.h"
+#include "executors/CommandExecutor.h"
+#include "parsers/CommandParser.h"
+#include "menus/ConsoleMenu.h"
 
 int main() {
     // Step 1: Create compressor (polymorphic with unique_ptr)
@@ -30,7 +38,8 @@ int main() {
     std::unique_ptr<IMenu> menu = std::make_unique<ConsoleMenu>();
 
     // Step 5: Create and run App (App takes ownership!)
-    App app(std::move(executor), std::move(parser), std::move(menu));
+    // App signature: App(std::unique_ptr<IMenu>, std::unique_ptr<IExecutor>, std::unique_ptr<IParser>)
+    App app(std::move(menu), std::move(executor), std::move(parser));
     app.run();
 
     // Step 6: Cleanup handled automatically

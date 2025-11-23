@@ -1,4 +1,4 @@
-#include "ConsoleMenu.h"
+#include "menus/ConsoleMenu.h"
 
 ConsoleMenu::ConsoleMenu() {}
 

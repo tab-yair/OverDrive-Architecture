@@ -1,7 +1,7 @@
 #ifndef IPARSER_H
 #define IPARSER_H
 
-#include "ParsedCommand.h"
+#include "parsers/ParsedCommand.h"
 #include <string>
 
 class IParser {
