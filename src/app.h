@@ -2,6 +2,7 @@
 #define APP_H
 
 #include <map>
+#include <memory>
 #include "IMenu.h"
 #include "ICommand.h"
 #include "IExecutor.h"
@@ -10,17 +11,18 @@
 
 class App {
 private:
-    IMenu* menu;
-    IExecutor* executor;
-    IParser* parser;
+    std::unique_ptr<IMenu> menu;
+    std::unique_ptr<IExecutor> executor;
+    std::unique_ptr<IParser> parser;
 
 public:
     // Constructor: inject dependencies
-    App(IMenu* menu, IExecutor* executor, IParser* parser);
-    
-    // Main application loop
+    App(std::unique_ptr<IMenu> menu, 
+        std::unique_ptr<IExecutor> executor,
+        std::unique_ptr<IParser> parser);
+
+    // Main application loop    
     void run();
-    
 };
 
 #endif

@@ -1,6 +1,12 @@
 #include "App.h"
 
-App::App(IMenu* menu, IExecutor* executor, IParser* parser) : menu(menu), executor(executor), parser(parser) {}
+// Constructor for app class, using dependency injection
+App::App(std::unique_ptr<IMenu> menu, 
+         std::unique_ptr<IExecutor> executor,
+         std::unique_ptr<IParser> parser)
+    : menu(std::move(menu)),          
+      executor(std::move(executor)), 
+      parser(std::move(parser)) {}
 
 // The flow of the application: Menu → Parser → Executor (Command) → Menu (OutputHandler)
 
