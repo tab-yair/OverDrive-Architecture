@@ -8,6 +8,15 @@
 #include "IParser.h"
 #include "ICompressor.h"
 #include "IFileManagement.h"
+// Concrete implementations
+#include "RLECompressor.h"
+#include "LocalFileManagement.h"
+#include "AddCommand.h"
+#include "GetCommand.h"
+#include "SearchCommand.h"
+#include "CommandExecutor.h"
+#include "CommandParser.h"
+#include "ConsoleMenu.h"
 
 int main() {
     // Step 1: Create compressor (polymorphic with unique_ptr)
@@ -30,7 +39,8 @@ int main() {
     std::unique_ptr<IMenu> menu = std::make_unique<ConsoleMenu>();
 
     // Step 5: Create and run App (App takes ownership!)
-    App app(std::move(executor), std::move(parser), std::move(menu));
+    // App signature: App(std::unique_ptr<IMenu>, std::unique_ptr<IExecutor>, std::unique_ptr<IParser>)
+    App app(std::move(menu), std::move(executor), std::move(parser));
     app.run();
 
     // Step 6: Cleanup handled automatically

@@ -21,6 +21,8 @@ target_include_directories(overdrive PUBLIC
     ${CMAKE_SOURCE_DIR}/src/commands
     ${CMAKE_SOURCE_DIR}/src/menus
     ${CMAKE_SOURCE_DIR}/src/file
+    ${CMAKE_SOURCE_DIR}/src/executors
+    ${CMAKE_SOURCE_DIR}/src/parsers   
 )
 
 # --- GoogleTest ---
