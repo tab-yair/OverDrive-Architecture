@@ -3,16 +3,6 @@
 #include "ConsoleMenu.h"
 
 
-// Mock Parser class for testing
-class MockParser : public IParser {
-public:
-    ParsedCommand parse(const std::string& input) override {
-        // Return a default/empty ParsedCommand
-        return ParsedCommand();
-    }
-    
-    ~MockParser() override = default;
-};
 
 // ============================================================
 // TEST FIXTURE WITH HELPER FUNCTIONS
@@ -28,8 +18,7 @@ protected:
     
     // redirecting cin/cout to stringstreams for testing
     void SetUp() override {
-        IParser* mockParser = new MockParser();
-        menu = new ConsoleMenu(mockParser);
+        menu = new ConsoleMenu();
         oldCin = std::cin.rdbuf(testInput.rdbuf());
         oldCout = std::cout.rdbuf(testOutput.rdbuf());
     }
