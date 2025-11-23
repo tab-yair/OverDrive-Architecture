@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <optional>
 
 // Abstract interface for all CLI commands
 class ICommand {

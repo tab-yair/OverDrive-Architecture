@@ -16,4 +16,4 @@ class ICompressor {
         virtual std::string decompress(const std::string& data) = 0;
 };
 
-#endif // COMPRESSOR_H
+#endif // ICOMPRESSOR_H
