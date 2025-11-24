@@ -24,7 +24,7 @@ target_include_directories(overdrive PUBLIC
 )
 
 # main.cpp and App.cpp for the main application - optional
-if(EXISTS ${CMAKE_SOURCE_DIR}/src/main.cpp AND EXISTS ${CMAKE_SOURCE_DIR}/src/App.cpp)
+if(EXISTS ${CMAKE_SOURCE_DIR}/src/main.cpp AND EXISTS ${CMAKE_SOURCE_DIR}/src/app/App.cpp)
     add_executable(overdrive_main_app 
     ${CMAKE_SOURCE_DIR}/src/main.cpp 
     ${CMAKE_SOURCE_DIR}/src/app/App.cpp

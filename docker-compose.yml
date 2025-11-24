@@ -1,0 +1,21 @@
+services:
+  # Main application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    tty: true
+    stdin_open: true
+    init: true
+    volumes:
+      - ./files:/app/files
+    ports:
+      - "8080:8080"
+
+  # Tests
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    volumes:
+      - ./files:/app/files
