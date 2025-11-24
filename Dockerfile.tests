@@ -27,11 +27,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy ONLY the main application
-COPY --from=builder /src/build/overdrive_main_app /app/overdrive_main_app
+# Copy ONLY the test binaries
+COPY --from=builder /src/build/bin /app/bin
 
+ENV PATH="/app/bin:${PATH}"
 ENV OVERDRIVE_PATH=/app/files
 RUN mkdir -p /app/files
 
-# Run the main application
-CMD ["/app/overdrive_main_app"]
+# Run all tests
+CMD ["bash", "-c", "for t in /app/bin/*; do echo '=== Running' $t '==='; $t && echo 'PASSED' || echo 'FAILED'; echo; done"]
