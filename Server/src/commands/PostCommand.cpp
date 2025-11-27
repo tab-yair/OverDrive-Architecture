@@ -4,8 +4,8 @@
 #include <utility>
 #include <stdexcept>
 
-PostCommand::PostCommand(std::shared_ptr<IFileManagement> fileManager)
-    : fileManager(std::move(fileManager)) {}
+PostCommand::PostCommand(std::shared_ptr<IFileManagement> fileManager, const ClientContext& context)
+    : fileManager(std::move(fileManager)), clientContext(context) {}
 
 
 CommandResult PostCommand::execute(const std::vector<std::string>& args) {
@@ -40,7 +40,7 @@ CommandResult PostCommand::execute(const std::vector<std::string>& args) {
     }
     
     // Attempt to write the compressed data
-    fileManager->create(fileName, inputText);
+    fileManager->create(clientContext.clientId, fileName, inputText);
 
     return CommandResult(CommandResult::Status::CREATED);
 }

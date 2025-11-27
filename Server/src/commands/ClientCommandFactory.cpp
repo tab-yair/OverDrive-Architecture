@@ -3,7 +3,7 @@
 #include "commands/GetCommand.h"
 #include "commands/SearchCommand.h"
 
-ClientCommandFactory::ClientCommandFactory(std::shared_ptr<FileManager> fm) 
+ClientCommandFactory::ClientCommandFactory(std::shared_ptr<IFileManagement> fm) 
     : fileManager(fm) 
 {
     registerCommands();
@@ -11,16 +11,16 @@ ClientCommandFactory::ClientCommandFactory(std::shared_ptr<FileManager> fm)
 
 void ClientCommandFactory::registerCommands() {
     commandRegistry["POST"] = [this](const ClientContext& ctx) {
-        return std::make_unique<PostCommand>(ctx, fileManager);
+        return std::make_unique<PostCommand>(fileManager, ctx);
     };
     commandRegistry["GET"] = [this](const ClientContext& ctx) {
-        return std::make_unique<GetCommand>(ctx, fileManager);
+        return std::make_unique<GetCommand>(fileManager, ctx);
     };
     commandRegistry["DELETE"] = [this](const ClientContext& ctx) {
-        return std::make_unique<DeleteCommand>(ctx, fileManager);
+        return std::make_unique<DeleteCommand>(fileManager, ctx);
     };
     commandRegistry["SEARCH"] = [this](const ClientContext& ctx) {
-        return std::make_unique<SearchCommand>(ctx, fileManager);
+        return std::make_unique<SearchCommand>(fileManager, ctx);
     };
 }
 

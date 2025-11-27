@@ -6,6 +6,7 @@
 #include <memory>
 #include "commands/ICommand.h"
 #include "file/IFileManagement.h"
+#include "handlers/ClientContext.h"
 
 // The PostCommand class implements the 'post' command.
 // It creates a new file and writes the RLE-compressed version of the input text into it.
@@ -13,10 +14,11 @@
 class PostCommand : public ICommand {
 private:
     std::shared_ptr<IFileManagement> fileManager;
+    ClientContext clientContext;
 
 public:
-    // Constructor receives dependencies for file handling
-    PostCommand(std::shared_ptr<IFileManagement> fileManager);
+    // Constructor receives dependencies for file handling and client context
+    PostCommand(std::shared_ptr<IFileManagement> fileManager, const ClientContext& context);
 
     // Executes the 'post' command with the given arguments
     virtual CommandResult execute(const std::vector<std::string>& args) override;

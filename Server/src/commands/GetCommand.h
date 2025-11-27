@@ -6,14 +6,15 @@
 #include <memory>
 #include "commands/ICommand.h"
 #include "file/IFileManagement.h"
+#include "handlers/ClientContext.h"
 
 // The GetCommand class implements the 'get' command.
-// It creates a new file and writes the RLE-compressed version of the input text into it.
+// It retrieves the content of a file for a specific client.
 // Expected usage: get [file_name]
 class GetCommand : public ICommand {
 public:
-    // Constructor receives dependencies for file handling
-    GetCommand(std::shared_ptr<IFileManagement> fileManager);
+    // Constructor receives dependencies for file handling and client context
+    GetCommand(std::shared_ptr<IFileManagement> fileManager, const ClientContext& context);
 
     // Executes the 'get' command with the given arguments
     virtual CommandResult execute(const std::vector<std::string>& args) override;
@@ -23,6 +24,7 @@ public:
 
 private:
     std::shared_ptr<IFileManagement> fileManager;
+    ClientContext clientContext;
 };
 
 #endif // GETCOMMAND_H

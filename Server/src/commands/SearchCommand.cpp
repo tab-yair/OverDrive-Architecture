@@ -2,8 +2,8 @@
 #include <sstream>
 #include <stdexcept>
 
-SearchCommand::SearchCommand(std::shared_ptr<IFileManagement> fileManager)
-    : fileManager(std::move(fileManager)) {}
+SearchCommand::SearchCommand(std::shared_ptr<IFileManagement> fileManager, const ClientContext& context)
+    : fileManager(std::move(fileManager)), clientContext(context) {}
 
 CommandResult SearchCommand::execute(const std::vector<std::string>& args) {
     // Check if the fileManager dependency is valid
@@ -32,7 +32,7 @@ CommandResult SearchCommand::execute(const std::vector<std::string>& args) {
     }
 
     // Search for files containing the given content
-    std::vector<std::string> matchedFiles = fileManager->searchContent(searchTerm);
+    std::vector<std::string> matchedFiles = fileManager->searchContent(clientContext.clientId, searchTerm);
 
     // If no files matched, return no content
     if (matchedFiles.empty()) {

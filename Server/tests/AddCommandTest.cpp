@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "commands/PostCommand.h"
 #include "mocks/MockFileManager.h"
+#include "handlers/ClientContext.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -12,11 +13,13 @@ class AddCommandTest : public ::testing::Test {
 protected:
     std::shared_ptr<MockFileManager> mockFileManager;
     std::unique_ptr<PostCommand> postCommand;
+    ClientContext testContext;
 
     void SetUp() override {
         // Dependency Injection – the command receives a mock instead of the real file manager
         mockFileManager = std::make_shared<MockFileManager>();
-        postCommand = std::make_unique<PostCommand>(mockFileManager);
+        testContext = {1, 10}; // Test client ID and socket
+        postCommand = std::make_unique<PostCommand>(mockFileManager, testContext);
     }
 
     void TearDown() override {

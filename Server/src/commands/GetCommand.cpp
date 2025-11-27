@@ -5,8 +5,8 @@
 /**
  * GetCommand constructor.
  */
-GetCommand::GetCommand(std::shared_ptr<IFileManagement> fileManager)
-    : fileManager(std::move(fileManager)) {}
+GetCommand::GetCommand(std::shared_ptr<IFileManagement> fileManager, const ClientContext& context)
+    : fileManager(std::move(fileManager)), clientContext(context) {}
 
 
 /**
@@ -27,14 +27,14 @@ CommandResult GetCommand::execute(const std::vector<std::string>& args) {
     const std::string& fileName = args[0];
 
     // Check if the file exists before attempting to read
-    if (!fileManager->exists(fileName)) {
+    if (!fileManager->exists(clientContext.clientId, fileName)) {
         return CommandResult(CommandResult::Status::NOT_FOUND);
     }
 
     // Attempt to read the file content
     try {
         // The read operation might throw exceptions (I/O, permissions) which will be caught here
-        std::string fileContent = fileManager->read(fileName);
+        std::string fileContent = fileManager->read(clientContext.clientId, fileName);
         
         return CommandResult(CommandResult::Status::OK, fileContent);
 
