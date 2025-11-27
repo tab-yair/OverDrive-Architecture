@@ -8,30 +8,42 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Put runtime binaries in bin/
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# --- Sources ---
-file(GLOB_RECURSE OVERDRIVE_SRC CONFIGURE_DEPENDS
-    ${CMAKE_SOURCE_DIR}/src/*.cpp
+# --- Server Sources ---
+file(GLOB_RECURSE SERVER_SRC CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/Server/src/*.cpp
 )
 
-# Exclude main.cpp and App.cpp from the library
-list(FILTER OVERDRIVE_SRC EXCLUDE REGEX ".*/main\\.cpp$")
-list(FILTER OVERDRIVE_SRC EXCLUDE REGEX ".*/App\\.cpp$")
+# Exclude main.cpp from the library
+list(FILTER SERVER_SRC EXCLUDE REGEX ".*/main\\.cpp$")
 
-add_library(overdrive STATIC ${OVERDRIVE_SRC}) 
-target_include_directories(overdrive PUBLIC 
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/tests
+# --- Client Sources ---
+file(GLOB_RECURSE CLIENT_SRC CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/Client/src/*.cpp
 )
 
-# main.cpp and App.cpp for the main application - optional
-if(EXISTS ${CMAKE_SOURCE_DIR}/src/main.cpp AND EXISTS ${CMAKE_SOURCE_DIR}/src/app/App.cpp)
-    add_executable(overdrive_main_app 
-    ${CMAKE_SOURCE_DIR}/src/main.cpp 
-    ${CMAKE_SOURCE_DIR}/src/app/App.cpp
+# Build server library
+add_library(overdrive_server STATIC ${SERVER_SRC}) 
+target_include_directories(overdrive_server PUBLIC 
+    ${CMAKE_SOURCE_DIR}/Server/src
+    ${CMAKE_SOURCE_DIR}/Common/include
+    ${CMAKE_SOURCE_DIR}
+)
+
+# Build client library
+add_library(overdrive_client STATIC ${CLIENT_SRC}) 
+target_include_directories(overdrive_client PUBLIC 
+    ${CMAKE_SOURCE_DIR}/Client/src
+    ${CMAKE_SOURCE_DIR}/Common/include
+    ${CMAKE_SOURCE_DIR}
+)
+
+# Server main executable - optional
+if(EXISTS ${CMAKE_SOURCE_DIR}/Server/src/main.cpp)
+    add_executable(overdrive_server_app 
+        ${CMAKE_SOURCE_DIR}/Server/src/main.cpp
     )
-    target_link_libraries(overdrive_main_app PRIVATE overdrive)
-     # define output directory for the main app
-    set_target_properties(overdrive_main_app PROPERTIES
+    target_link_libraries(overdrive_server_app PRIVATE overdrive_server)
+    set_target_properties(overdrive_server_app PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
 
@@ -45,14 +57,32 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-# --- Tests ---
-file(GLOB_RECURSE OVERDRIVE_TESTS CONFIGURE_DEPENDS
-    ${CMAKE_SOURCE_DIR}/tests/*.cpp
+# --- Server Tests ---
+file(GLOB_RECURSE SERVER_TESTS CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/Server/tests/*.cpp
 )
 
-foreach(test_file ${OVERDRIVE_TESTS})
+foreach(test_file ${SERVER_TESTS})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file})
-    target_link_libraries(${test_name} PRIVATE overdrive gtest_main)
+    target_link_libraries(${test_name} PRIVATE overdrive_server gtest_main)
+    target_include_directories(${test_name} PRIVATE 
+        ${CMAKE_SOURCE_DIR}/Server/tests
+    )
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endforeach()
+
+# --- Client Tests ---
+file(GLOB_RECURSE CLIENT_TESTS CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/Client/tests/*.cpp
+)
+
+foreach(test_file ${CLIENT_TESTS})
+    get_filename_component(test_name ${test_file} NAME_WE)
+    add_executable(${test_name} ${test_file})
+    target_link_libraries(${test_name} PRIVATE overdrive_client gtest_main)
+    target_include_directories(${test_name} PRIVATE 
+        ${CMAKE_SOURCE_DIR}/Client/tests
+    )
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
