@@ -39,7 +39,6 @@ CommandResult GetCommand::execute(const std::vector<std::string>& args) {
         return CommandResult(CommandResult::Status::OK, fileContent);
 
     } catch (const std::exception& e) {
-        // Re-throw the exception for the main loop to handle I/O errors.
-        throw; 
+        return CommandResult(CommandResult::Status::NOT_FOUND);
     }
 }

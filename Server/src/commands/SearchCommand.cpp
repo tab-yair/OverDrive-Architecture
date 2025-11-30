@@ -31,12 +31,20 @@ CommandResult SearchCommand::execute(const std::vector<std::string>& args) {
         return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 
-    // Search for files containing the given content
-    std::vector<std::string> matchedFiles = fileManager->searchContent(clientContext.clientId, searchTerm);
+    std::vector<std::string> matchedFiles;
+    try
+    {
+        // Search for files containing the given content
+        matchedFiles = fileManager->searchContent(clientContext.clientId, searchTerm);
+    }
+    catch(const std::exception& e)
+    {
+        return CommandResult(CommandResult::Status::NOT_FOUND);
+    }
 
     // If no files matched, return no content
     if (matchedFiles.empty()) {
-        return CommandResult(CommandResult::Status::NO_CONTENT);
+        return CommandResult(CommandResult::Status::OK);
     }
 
     // Join the matched filenames separated by spaces

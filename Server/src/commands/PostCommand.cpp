@@ -40,7 +40,14 @@ CommandResult PostCommand::execute(const std::vector<std::string>& args) {
     }
     
     // Attempt to write the compressed data
-    fileManager->create(clientContext.clientId, fileName, inputText);
+    try
+    {
+        fileManager->create(clientContext.clientId, fileName, inputText);
+    }
+    catch(const std::exception& e)
+    {
+        return CommandResult(CommandResult::Status::NOT_FOUND);
+    }
 
     return CommandResult(CommandResult::Status::CREATED);
 }
