@@ -8,14 +8,15 @@
 
 class HashPathMapper : public IPathMapper {
 private:
-    std::filesystem::path basePath;  // Base directory for all files 
+    // Base directory for all files
+    std::filesystem::path basePath;  
     // Compute hash using FNV-1a algorithm
     std::string computeHash(const std::string& input) const;
     
 public:
-    
+    // Constructor
     explicit HashPathMapper(const std::filesystem::path& base);
-    
+    // Resolve logical file name to physical path
     std::filesystem::path resolve(const std::string& logicalFileName) const override;
 
 };
