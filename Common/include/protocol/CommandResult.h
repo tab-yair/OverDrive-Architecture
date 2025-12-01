@@ -3,6 +3,7 @@
 
 #include <string>
 #include <functional>
+#include <unordered_map>
 
 
 // Represents the result of executing a command
@@ -28,22 +29,21 @@ using ResultAdapter = std::function<std::string(const CommandResult&)>;
 
 // Example: HTTP Adapter
 inline std::string HTTPAdapter(const CommandResult& result) {
-    switch (result.status) {
-        case CommandResult::Status::CREATED:
-            return result.content.empty() ? "201 Created" 
-                                         : "201 Created\n\n" + result.content;
-        case CommandResult::Status::OK:
-            return result.content.empty() ? "200 Ok" 
-                                         : "200 Ok\n\n" + result.content;
-        case CommandResult::Status::NO_CONTENT:
-            return result.content.empty() ? "204 No Content" 
-                                         : "204 No Content\n\n" + result.content;
-        case CommandResult::Status::NOT_FOUND:
-            return "404 Not Found";
-        case CommandResult::Status::BAD_REQUEST:
-            return "400 Bad Request";
+    static const std::unordered_map<CommandResult::Status, std::string> statusMap = {
+        {CommandResult::Status::CREATED, "201 Created"},
+        {CommandResult::Status::OK, "200 Ok"},
+        {CommandResult::Status::NO_CONTENT, "204 No Content"},
+        {CommandResult::Status::NOT_FOUND, "404 Not Found"},
+        {CommandResult::Status::BAD_REQUEST, "400 Bad Request"}
+    };
+
+    auto it = statusMap.find(result.status);
+    if (it == statusMap.end()) {
+        return ""; // fallback
     }
-    return ""; // fallback
+
+    const std::string& statusText = it->second;
+    return result.content.empty() ? statusText : statusText + "\n\n" + result.content;
 }
 
 #endif // COMMANDRESULT_H
