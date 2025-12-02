@@ -9,12 +9,40 @@ JsonMetadataStore::JsonMetadataStore(const std::filesystem::path& storageFile)
 {
     std::unique_lock<std::shared_mutex> lock(mtx);
     loadFromDiskUnsafe(); // load existing metadata if file exists
+
+    // Start background thread for periodic saving
+    backgroundThread = std::thread([this]() { backgroundSaveLoop(); });
 }
 
-// Destructor - save any pending changes
+// Destructor - save any pending changes and stop background thread
 JsonMetadataStore::~JsonMetadataStore() {
+    {
+        std::unique_lock<std::shared_mutex> lock(mtx);
+        shouldStop.store(true, std::memory_order_relaxed);
+        cv.notify_all(); // Wake up background thread
+    }
+
+    if (backgroundThread.joinable())
+        backgroundThread.join();
+
+    // save pending changes
     std::unique_lock<std::shared_mutex> lock(mtx);
-    saveIfDirty();  // Persist any unsaved changes
+    saveIfDirty();
+}
+
+// Background thread loop
+void JsonMetadataStore::backgroundSaveLoop() {
+    std::unique_lock<std::shared_mutex> lock(mtx);
+
+    while (!shouldStop.load(std::memory_order_relaxed)) {
+        // Wait for 3 minutes or until notified to stop
+        cv.wait_for(lock, std::chrono::minutes(3));
+
+        if (shouldStop.load(std::memory_order_relaxed))
+            break;
+
+        saveIfDirty();
+    }
 }
 
 // Load the JSON from disk into cache (caller must hold lock)

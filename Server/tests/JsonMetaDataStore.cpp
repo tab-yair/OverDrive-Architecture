@@ -2,6 +2,8 @@
 #include "file/metadata/JsonMetadataStore.h"
 #include <filesystem>
 #include <optional>
+#include <thread>
+#include <vector>
 
 class JsonMetadataStoreTest : public ::testing::Test {
 protected:
@@ -84,4 +86,32 @@ TEST_F(JsonMetadataStoreTest, List) {
 
     EXPECT_NE(std::find(keys.begin(), keys.end(), "file1"), keys.end());
     EXPECT_NE(std::find(keys.begin(), keys.end(), "file2"), keys.end());
+}
+
+// Test 5: Sybchronization and Thread Safety
+TEST_F(JsonMetadataStoreTest, ThreadSafety) {
+    JsonMetadataStore store(tmpFile);
+
+    constexpr int numThreads = 10;
+    constexpr int numOpsPerThread = 50;
+
+    auto worker = [&](int threadId) {
+        for (int i = 0; i < numOpsPerThread; ++i) {
+            std::string key = "file" + std::to_string(threadId) + "_" + std::to_string(i);
+            auto meta = makeTestMetadata(key);
+            store.save(key, meta);
+            auto loaded = store.load(key);
+            ASSERT_TRUE(loaded.has_value());
+            EXPECT_EQ(loaded->logicalName, key);
+            store.remove(key);
+        }
+    };
+
+    std::vector<std::thread> threads;
+    for (int t = 0; t < numThreads; ++t) {
+        threads.emplace_back(worker, t);
+    }
+    for (auto& th : threads) th.join();
+
+    EXPECT_TRUE(store.list().empty());
 }

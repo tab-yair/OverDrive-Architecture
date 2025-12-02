@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <shared_mutex>
 #include <atomic>
+#include <thread>
+#include <condition_variable>
 
 class JsonMetadataStore : public IMetadataStore {
 private:
@@ -17,6 +19,9 @@ private:
     mutable std::unordered_map<std::string, FileMetaData> cache; // In-memory cache for fast access
     mutable std::shared_mutex mtx;   // Reader-writer lock for better concurrency
     mutable std::atomic<bool> isDirty{false};  // Track if cache needs saving
+    std::thread backgroundThread; // Background thread for periodic saving
+    std::condition_variable_any cv; // Condition variable for background thread synchronization
+    std::atomic<bool> shouldStop = false; // Flag to stop background thread
 
     // Load the JSON from disk into cache (caller must hold lock)
     void loadFromDiskUnsafe() const;
@@ -26,6 +31,9 @@ private:
     
     // Save to disk only if dirty flag is set
     void saveIfDirty() const;
+
+    // Background thread function for periodic saving
+    void backgroundSaveLoop();
 
     // Convert FileMetaData to/from JSON
     nlohmann::json toJson(const FileMetaData& metadata) const;
