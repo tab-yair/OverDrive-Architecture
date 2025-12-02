@@ -8,19 +8,24 @@
 #include <optional>
 #include <nlohmann/json.hpp>  
 #include <filesystem>
-#include <mutex>
+#include <shared_mutex>
+#include <atomic>
 
 class JsonMetadataStore : public IMetadataStore {
 private:
     std::filesystem::path storageFile;  // Path to JSON file
     mutable std::unordered_map<std::string, FileMetaData> cache; // In-memory cache for fast access
-    mutable std::mutex mtx;   // Thread safety
+    mutable std::shared_mutex mtx;   // Reader-writer lock for better concurrency
+    mutable std::atomic<bool> isDirty{false};  // Track if cache needs saving
 
     // Load the JSON from disk into cache (caller must hold lock)
     void loadFromDiskUnsafe() const;
 
     // Write the cache to disk as JSON (caller must hold lock)
     void saveToDiskUnsafe() const;
+    
+    // Save to disk only if dirty flag is set
+    void saveIfDirty() const;
 
     // Convert FileMetaData to/from JSON
     nlohmann::json toJson(const FileMetaData& metadata) const;
@@ -28,6 +33,7 @@ private:
 
 public:
     explicit JsonMetadataStore(const std::filesystem::path& storageFile);
+    ~JsonMetadataStore();  // Ensure dirty data is saved on destruction
 
     // Save or overwrite metadata for a given key
     void save(const std::string& key, const FileMetaData& metadata) override;

@@ -11,8 +11,9 @@ struct FileMetaData {
     std::string logicalName;                  // Name of the logical name (e.g., "document.txt")
     std::filesystem::path physicalPath;       // Physical path on disk
     size_t fileSize;                          // Size of the file in bytes
-    std::string createdAt;                   // Creation timestamp (ISO 8601 format) 
-    std::string modifiedAt;                  // Last modified timestamp (ISO 8601 format)
+    std::string createdAt;                   // Creation timestamp (ISO 8601 format)
+    std::string modifiedAt;                  // Last modified timestamp (ISO 8601 format) 
+    std::string accessedAt;                  // Last accessed timestamp (ISO 8601 format)
 };
 
 #endif // FILEMETADATA_H

@@ -9,7 +9,7 @@ protected:
 
     void SetUp() override {
         tmpFile = std::filesystem::temp_directory_path() / "metadata_test.json";
-        // מנקה קובץ אם קיים
+        // clean up file if exists
         if (std::filesystem::exists(tmpFile)) {
             std::filesystem::remove(tmpFile);
         }

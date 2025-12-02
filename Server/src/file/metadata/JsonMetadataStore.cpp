@@ -1,13 +1,20 @@
 #include "JsonMetadataStore.h"
 #include <fstream>
 #include <iostream>
+#include <mutex>
 
 // Constructor
 JsonMetadataStore::JsonMetadataStore(const std::filesystem::path& storageFile)
     : storageFile(storageFile)
 {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::unique_lock<std::shared_mutex> lock(mtx);
     loadFromDiskUnsafe(); // load existing metadata if file exists
+}
+
+// Destructor - save any pending changes
+JsonMetadataStore::~JsonMetadataStore() {
+    std::unique_lock<std::shared_mutex> lock(mtx);
+    saveIfDirty();  // Persist any unsaved changes
 }
 
 // Load the JSON from disk into cache (caller must hold lock)
@@ -56,6 +63,7 @@ nlohmann::json JsonMetadataStore::toJson(const FileMetaData& metadata) const {
     j["fileSize"] = metadata.fileSize;
     j["createdAt"] = metadata.createdAt;
     j["modifiedAt"] = metadata.modifiedAt;
+    j["accessedAt"] = metadata.accessedAt;
     return j;
 }
 
@@ -68,19 +76,30 @@ FileMetaData JsonMetadataStore::fromJson(const nlohmann::json& j) const {
     metadata.fileSize = j.at("fileSize").get<size_t>();         
     metadata.createdAt = j.at("createdAt").get<std::string>();
     metadata.modifiedAt = j.at("modifiedAt").get<std::string>();
+    metadata.accessedAt = j.at("accessedAt").get<std::string>();
     return metadata;
+}
+
+// Save to disk only if dirty
+void JsonMetadataStore::saveIfDirty() const {
+    if (isDirty.load(std::memory_order_relaxed)) {
+        saveToDiskUnsafe();
+        isDirty.store(false, std::memory_order_relaxed);
+    }
 }
 
 // Save or overwrite metadata for a given key
 void JsonMetadataStore::save(const std::string& key, const FileMetaData& metadata) {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::unique_lock<std::shared_mutex> lock(mtx);  // Exclusive lock for writes
     cache[key] = metadata;
-    saveToDiskUnsafe();
+    isDirty.store(true, std::memory_order_relaxed);
+    // Optionally: saveToDiskUnsafe() for immediate persistence
+    // For better performance: let background thread handle it
 }
 
 // Load metadata for a given key
 std::optional<FileMetaData> JsonMetadataStore::load(const std::string& key) const {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::shared_lock<std::shared_mutex> lock(mtx);  // Shared lock - multiple readers!
     auto it = cache.find(key);
     if (it != cache.end()) {
         return it->second;
@@ -90,20 +109,23 @@ std::optional<FileMetaData> JsonMetadataStore::load(const std::string& key) cons
 
 // Remove metadata entry
 void JsonMetadataStore::remove(const std::string& key) {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::unique_lock<std::shared_mutex> lock(mtx);  // Exclusive lock for writes
     cache.erase(key);
-    saveToDiskUnsafe(); // Save changes to disk
+    isDirty.store(true, std::memory_order_relaxed);
+    // Save immediately for delete operations (safety)
+    saveToDiskUnsafe();
+    isDirty.store(false, std::memory_order_relaxed);
 }
 
 // Check if metadata exists for this key
 bool JsonMetadataStore::exists(const std::string& key) const {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::shared_lock<std::shared_mutex> lock(mtx);  // Shared lock - fast reads!
     return cache.find(key) != cache.end();
 }   
 
 // List all metadata entries
 std::vector<std::pair<std::string, FileMetaData>> JsonMetadataStore::list() const {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::shared_lock<std::shared_mutex> lock(mtx);  // Shared lock - multiple readers!
     std::vector<std::pair<std::string, FileMetaData>> entries;
     for (const auto& [key, metadata] : cache) {
         entries.emplace_back(key, metadata);
