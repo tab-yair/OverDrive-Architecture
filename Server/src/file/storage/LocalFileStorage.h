@@ -1,7 +1,7 @@
 #ifndef LOCALFILESTORAGE_H
 #define LOCALFILESTORAGE_H
 
-#include "IFileStorage.h"
+#include "file/storage/IFileStorage.h"
 #include <string>
 #include <memory>
 #include <vector>

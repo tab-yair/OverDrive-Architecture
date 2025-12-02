@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <string>
-#include "LocalFileStorage.h"
+#include "file/storage/LocalFileStorage.h"
 
 using namespace std;
 namespace fs = std::filesystem;

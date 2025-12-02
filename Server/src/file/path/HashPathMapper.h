@@ -1,7 +1,7 @@
 #ifndef HASHPATHMAPPER_H
 #define HASHPATHMAPPER_H
 
-#include "IPathMapper.h"
+#include "file/path/IPathMapper.h"
 #include <string>
 #include <filesystem>
 

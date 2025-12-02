@@ -1,8 +1,8 @@
 #ifndef COMPRESSEDFILESTORAGE_H
 #define COMPRESSEDFILESTORAGE_H
 
-#include "IFileStorage.h"
-#include "../compressor/ICompressor.h"
+#include "file/storage/IFileStorage.h"
+#include "file/compressor/ICompressor.h"
 #include <string>
 #include <memory>
 #include <vector>

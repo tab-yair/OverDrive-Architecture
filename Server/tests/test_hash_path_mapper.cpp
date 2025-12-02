@@ -1,4 +1,4 @@
-#include "HashPathMapper.h"
+#include "file/path/HashPathMapper.h"
 #include <gtest/gtest.h>
 #include <fstream>
 #include <set>

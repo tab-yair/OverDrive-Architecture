@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
-#include "CompressedFileStorage.h"
+#include "file/storage/CompressedFileStorage.h"
+#include "file/compressor/ICompressor.h"
+#include "file/storage/IFileStorage.h"
 #include <unordered_map>
 
 // --- Mock Classes ---
