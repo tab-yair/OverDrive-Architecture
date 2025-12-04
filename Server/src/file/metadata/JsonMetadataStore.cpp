@@ -73,7 +73,8 @@ void JsonMetadataStore::saveToDiskUnsafe() const {
     for (const auto& [key, metadata] : cache) {
         j[key] = toJson(metadata);
     }
-
+    //check and create directory if not exists
+    std::filesystem::create_directories(storageFile.parent_path());
     // Open the file for writing
     std::ofstream outFile(storageFile);
     if (!outFile.is_open()) {
