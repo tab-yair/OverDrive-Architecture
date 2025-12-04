@@ -35,7 +35,7 @@ CommandResult SearchCommand::execute(const std::vector<std::string>& args) {
     try
     {
         // Search for files containing the given content
-        matchedFiles = fileManager->searchContent(clientContext.clientId, searchTerm);
+        matchedFiles = fileManager->search(clientContext.clientId, searchTerm);
     }
     catch(const std::exception& e)
     {

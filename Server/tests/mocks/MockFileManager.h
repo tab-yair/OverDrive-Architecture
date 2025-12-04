@@ -14,7 +14,7 @@ public:
     bool postCalled = false;
     bool readCalled = false;
     bool existsCalled = false;
-    bool searchContentCalled = false;
+    bool searchCalled = false;
     bool deleteCalled = false;
 
     // ------------------------------
@@ -23,13 +23,13 @@ public:
     bool existsReturnValue = false;
 
     std::string readReturnValue = "";
-    std::vector<std::string> searchContentReturnValue = {};
+    std::vector<std::string> searchReturnValue = {};
 
     // ------------------------------
     // Exception triggers
     // ------------------------------
     bool throwOnRead = false;
-    bool throwOnSearchContent = false;
+    bool throwOnSearch = false;
     bool throwOnDelete = false;
     bool throwOnPost = false;
 
@@ -41,7 +41,7 @@ public:
     std::string lastFileName = "";
     std::string lastContent = "";
 
-    std::string lastSearchContent = "";
+    std::string lastSearch = "";
 
 
     // ===========================================================
@@ -77,15 +77,15 @@ public:
         return readReturnValue;
     }
 
-    std::vector<std::string> searchContent(int clientId, const std::string& term) override {
-        searchContentCalled = true;
+    std::vector<std::string> search(int clientId, const std::string& term) override {
+        searchCalled = true;
         lastClientId = clientId;
-        lastSearchContent = term;
+        lastSearch = term;
 
-        if (throwOnSearchContent) {
-            throw std::runtime_error("Mock: searchContent error");
+        if (throwOnSearch) {
+            throw std::runtime_error("Mock: search error");
         }
-        return searchContentReturnValue;
+        return searchReturnValue;
     }
 
     void deleteFile(int clientId, const std::string& fileName) override {

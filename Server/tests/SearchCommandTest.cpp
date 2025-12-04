@@ -28,7 +28,7 @@ TEST_F(SearchCommandTest, NoArguments_ReturnsBadRequest) {
     auto result = searchCommand->execute(args);
 
     EXPECT_EQ(result.status, CommandResult::Status::BAD_REQUEST);
-    EXPECT_FALSE(mockFileManager->searchContentCalled);
+    EXPECT_FALSE(mockFileManager->searchCalled);
 }
 
 // null file manager test case
@@ -43,14 +43,14 @@ TEST_F(SearchCommandTest, NullFileManager_ReturnsBadRequest) {
 
 // empty search term test case
 TEST_F(SearchCommandTest, NoMatchingFiles_ReturnsOK_EmptyOutput) {
-    mockFileManager->searchContentReturnValue = {};
+    mockFileManager->searchReturnValue = {};
 
     std::vector<std::string> args = {"hello"};
     auto result = searchCommand->execute(args);
 
-    EXPECT_TRUE(mockFileManager->searchContentCalled);
+    EXPECT_TRUE(mockFileManager->searchCalled);
     EXPECT_EQ(mockFileManager->lastClientId, 1);
-    EXPECT_EQ(mockFileManager->lastSearchContent, "hello");
+    EXPECT_EQ(mockFileManager->lastSearch, "hello");
 
     EXPECT_EQ(result.status, CommandResult::Status::OK);
     EXPECT_EQ(result.output, "");
@@ -58,29 +58,29 @@ TEST_F(SearchCommandTest, NoMatchingFiles_ReturnsOK_EmptyOutput) {
 
 // multiple arguments test case
 TEST_F(SearchCommandTest, MultipleArguments_ConcatenatedCorrectly) {
-    mockFileManager->searchContentReturnValue = {};
+    mockFileManager->searchReturnValue = {};
 
     std::vector<std::string> args = {"hello", "world"};
     auto result = searchCommand->execute(args);
 
-    EXPECT_EQ(mockFileManager->lastSearchContent, "hello world");
+    EXPECT_EQ(mockFileManager->lastSearch, "hello world");
 }
 
 // matching files test case
 TEST_F(SearchCommandTest, MatchingFiles_ReturnsJoinedFilenames) {
-    mockFileManager->searchContentReturnValue = {"a.txt", "b.txt", "c.txt"};
+    mockFileManager->searchReturnValue = {"a.txt", "b.txt", "c.txt"};
 
     std::vector<std::string> args = {"abc"};
     auto result = searchCommand->execute(args);
 
-    EXPECT_TRUE(mockFileManager->searchContentCalled);
+    EXPECT_TRUE(mockFileManager->searchCalled);
     EXPECT_EQ(result.status, CommandResult::Status::OK);
     EXPECT_EQ(result.output, "a.txt b.txt c.txt");
 }
 
 // search throws exception test case
 TEST_F(SearchCommandTest, SearchThrows_ReturnsNotFound) {
-    mockFileManager->throwOnSearchContent = true; // You should add this boolean
+    mockFileManager->throwOnSearch = true; // You should add this boolean
     
     std::vector<std::string> args = {"error"};
     auto result = searchCommand->execute(args);
@@ -90,7 +90,7 @@ TEST_F(SearchCommandTest, SearchThrows_ReturnsNotFound) {
 
 // verify client ID passed correctly
 TEST_F(SearchCommandTest, PassesCorrectClientId) {
-    mockFileManager->searchContentReturnValue = {};
+    mockFileManager->searchReturnValue = {};
 
     std::vector<std::string> args = {"test"};
     searchCommand->execute(args);
