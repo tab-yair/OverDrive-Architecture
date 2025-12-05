@@ -13,5 +13,6 @@ class IThreadManager {
         // Virtual destructor to ensure proper cleanup of derived classes
         virtual ~IThreadManager() = default;
 
-}
+};
 
+#endif // ITHREAD_MANAGER_H
