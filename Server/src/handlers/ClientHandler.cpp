@@ -13,7 +13,7 @@ ClientHandler::ClientHandler(std::unique_ptr<ICommunication> comm,
 void ClientHandler::run() {
     while (true) {
         // Get the next command + arguments from the communication interface
-        std::string unparsedCommand = comm->recive();
+        std::string unparsedCommand = comm->recieve();
         // Parse the command string into command name and arguments
         ParsedCommand command = parser->parse(unparsedCommand);
         
@@ -24,18 +24,15 @@ void ClientHandler::run() {
             result = executor->execute(command.name, command.args);
         }
         catch(...){
-            //!!  how to ignore invalid input
-            continue;
+            //!!  how to ignore invalid input/invalid ptr to command
+            continue; // silently ignore invalid commands
         }
 
-        // Send output if there is content
-        if (!result.content.empty()) {
-            int sendResult = comm->send(result.content);
-            if (sendResult == -1) {
-                //!! Error in send handling, for now ignored
-            }
+        // Send the converted result back through the communication interface
+        int sent_bytes = comm->send(HTTPAdapter(result));
+        if (sent_bytes < 0) {
+            // Handle send error (optional)
         }
-
 
     }
 }
