@@ -6,7 +6,7 @@
 class ICommunication {
     public:
         // Pure virtual function to get the next command from the user
-        virtual std::string recive() = 0;
+        virtual std::string recieve() = 0;
         // Pure virtual function to handle output
         virtual int send(std::string output) = 0;
 

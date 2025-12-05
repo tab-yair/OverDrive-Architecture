@@ -2,15 +2,17 @@
 #define CLIENTSERVERCOMM_H
 
 #include <string>
+#include <sys/socket.h>
+#include <string.h>
 #include "communication/ICommunication.h"
 
 class ClientServerComm : public ICommunication {
 public:
-    ClientServerComm(int clientSocket);
-    std::string recive() override;
+    ClientServerComm(int socket);
+    std::string recieve() override;
     int send(std::string output) override;
 private:
-    int clientSocket;
+    int socket;
 };
 
 #endif // CLIENTSERVERCOMM_H
