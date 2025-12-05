@@ -7,8 +7,10 @@
 #include <optional>
 #include <stdexcept>
 #include <memory>
+#include <algorithm>
 #include "commands/ICommand.h"
 #include "executors/IExecutor.h"
+#include "protocol/CommandResult.h"
 
 class CommandExecutor : public IExecutor {
 private:

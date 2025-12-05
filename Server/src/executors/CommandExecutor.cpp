@@ -10,15 +10,10 @@ CommandResult CommandExecutor::execute(
     const std::vector<std::string>& args)     
 {
 
-     // Convert name to uppercase
-    std::string upper_name = name;
-    std::transform(upper_name.begin(), upper_name.end(), upper_name.begin(),
-                   [](unsigned char c){ return std::toupper(c); });
-
     try {
-        auto& cmd = commands.at(upper_name);
-        
-        // If command pointer in the map is null, throw an error
+        auto& cmd = commands.at(name);
+        CommandResult result(CommandResult::Status::BAD_REQUEST);
+        // If command pointer in the map is null (command is in the map but ptr is null), throw an error
         if (cmd == nullptr) {
             throw std::runtime_error("Command '" + name + "' is not initialized");
         }
@@ -28,6 +23,6 @@ CommandResult CommandExecutor::execute(
         
     } catch (const std::out_of_range&) {
         // Convert generic map exception to more descriptive one
-        throw std::invalid_argument("Unknown command: " + name);
+        return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 }
