@@ -1,7 +1,7 @@
 #ifndef RLE_COMPRESSOR_H
 #define RLECOMPRESSOR_H
 
-#include "compressor/ICompressor.h"
+#include "file/compressor/ICompressor.h"
 
 // Run-Length Encoding (RLE) compression algorithm
 class RLECompressor : public ICompressor {

@@ -1,4 +1,6 @@
 #include "executors/CommandExecutor.h"
+#include <algorithm>
+
 
 CommandExecutor::CommandExecutor(
     std::map<std::string, std::unique_ptr<ICommand>> commands)
