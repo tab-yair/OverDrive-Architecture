@@ -3,8 +3,17 @@
 
 // Server main header file
 #include <memory>
+#include <iostream>
+#include <sys/socket.h>
+#include <stdio.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <string.h>
 #include "threading/IThreadManager.h"
 #include "handlers/IClientHandlerFactory.h"
+#include "handlers/ClientContext.h"
+
 
 class Server {
 private:
