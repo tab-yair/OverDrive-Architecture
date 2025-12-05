@@ -8,6 +8,7 @@ ParsedCommand CommandParser::parse(const std::string& input) {
     // Get the command (first token)
     if (iss >> token) {
         result.name = token;
+        for (char &c : result.name) c = toupper(c);
     }
 
     // Get the arguments (remaining tokens)

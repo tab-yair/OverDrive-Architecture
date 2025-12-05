@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <cctype>
 
 class CommandParser : public IParser {
     public:
