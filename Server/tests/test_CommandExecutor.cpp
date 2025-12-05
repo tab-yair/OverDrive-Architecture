@@ -98,32 +98,29 @@ TEST(CommandExecutorTest, ExecuteEchoCommand) {
     EXPECT_EQ(result.content, "Echo: hello world");
 }
 
-// Test: Unknown command throws invalid_argument
-TEST(CommandExecutorTest, UnknownCommandThrows) {
+// Test: Unknown command returns BAD_REQUEST
+TEST(CommandExecutorTest, UnknownCommandReturnsBadRequest) {
     std::map<std::string, std::unique_ptr<ICommand>> commands;
     commands["TEST"] = std::make_unique<MockCommand>();
-    
+
     CommandExecutor executor(std::move(commands));
-    
-    EXPECT_THROW(
-        executor.execute("nonexistent", {}),
-        std::invalid_argument
-    );
+
+    auto result = executor.execute("nonexistent", {});
+
+    EXPECT_EQ(result.status, CommandResult::Status::BAD_REQUEST);
 }
 
-// Test: Unknown command throws with correct message
-TEST(CommandExecutorTest, UnknownCommandThrowsWithMessage) {
+// Test: Unknown command returns BAD_REQUEST with error message
+TEST(CommandExecutorTest, UnknownCommandReturnsBadRequestWithMessage) {
     std::map<std::string, std::unique_ptr<ICommand>> commands;
     commands["TEST"] = std::make_unique<MockCommand>();
-    
+
     CommandExecutor executor(std::move(commands));
-    
-    try {
-        executor.execute("badcommand", {});
-        FAIL() << "Expected std::invalid_argument";
-    } catch (const std::invalid_argument& e) {
-        EXPECT_STREQ(e.what(), "Unknown command: badcommand");
-    }
+
+    auto result = executor.execute("badcommand", {});
+
+    EXPECT_EQ(result.status, CommandResult::Status::BAD_REQUEST);
+    EXPECT_EQ(result.content, "Unknown command: badcommand");
 }
 
 // Test: Null command pointer throws runtime_error
@@ -175,27 +172,25 @@ TEST(CommandExecutorTest, MultipleCommands) {
     EXPECT_EQ(result3.status, CommandResult::Status::NO_CONTENT);
 }
 
-// Test: Empty command name
-TEST(CommandExecutorTest, EmptyCommandName) {
+// Test: Empty command name returns BAD_REQUEST
+TEST(CommandExecutorTest, EmptyCommandNameReturnsBadRequest) {
     std::map<std::string, std::unique_ptr<ICommand>> commands;
     commands["TEST"] = std::make_unique<MockCommand>();
-    
+
     CommandExecutor executor(std::move(commands));
-    
-    EXPECT_THROW(
-        executor.execute("", {}),
-        std::invalid_argument
-    );
+
+    auto result = executor.execute("", {});
+
+    EXPECT_EQ(result.status, CommandResult::Status::BAD_REQUEST);
 }
 
-// Test: Empty executor (no commands)
-TEST(CommandExecutorTest, EmptyExecutor) {
+// Test: Empty executor (no commands) returns BAD_REQUEST
+TEST(CommandExecutorTest, EmptyExecutorReturnsBadRequest) {
     std::map<std::string, std::unique_ptr<ICommand>> commands;
-    
+
     CommandExecutor executor(std::move(commands));
-    
-    EXPECT_THROW(
-        executor.execute("anything", {}),
-        std::invalid_argument
-    );
+
+    auto result = executor.execute("anything", {});
+
+    EXPECT_EQ(result.status, CommandResult::Status::BAD_REQUEST);
 }
