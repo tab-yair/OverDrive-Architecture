@@ -7,7 +7,7 @@ ClientHandlerFactory::ClientHandlerFactory(std::shared_ptr<ICommandFactory> cmdF
     : commandFactory(cmdFactory), parser(p) {}
 
 std::unique_ptr<ClientHandler> ClientHandlerFactory::create(std::shared_ptr<ClientContext> context) {
-    std::map<std::string, std::unique_ptr<ICommand>> commandMap = commandFactory->createCommands(context);
+    std::map<std::string, std::unique_ptr<ICommand>> commandMap = commandFactory->createCommands(std::move(context));
     std::unique_ptr<IExecutor> executor = std::make_unique<CommandExecutor>(std::move(commandMap));
     std::unique_ptr<ICommunication> comm = std::make_unique<ClientServerComm>(context->clientSocket);
     return std::make_unique<ClientHandler>(std::move(comm), std::move(executor), parser);
