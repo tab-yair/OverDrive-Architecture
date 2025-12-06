@@ -24,7 +24,7 @@ void ClientCommandFactory::registerCommands() {
     };
 }
 
-std::map<std::string, std::unique_ptr<ICommand>> ClientCommandFactory::createCommands(const ClientContext& context) {
+std::map<std::string, std::unique_ptr<ICommand>> ClientCommandFactory::createCommands(std::shared_ptr<ClientContext> context) {
     std::map<std::string, std::unique_ptr<ICommand>> commands;
     for (const auto& [name, creator] : commandRegistry) {
         commands[name] = creator(context);

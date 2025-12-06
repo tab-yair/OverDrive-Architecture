@@ -44,7 +44,6 @@ void Server::start() {
         int client_sock = accept(sock, (struct sockaddr *) &client_sin, &addr_len);
 
         if (client_sock < 0) {
-            perror("error accepting client");
             continue;
         }
 
@@ -54,7 +53,7 @@ void Server::start() {
         context.clientSocket = client_sock;
 
         // Create client handler via factory
-        std::unique_ptr<IRunnable> handler = clientHandlerFactory->create(context);
+        std::unique_ptr<IRunnable> handler = clientHandlerFactory->create(std::make_shared<ClientContext>(context));
 
         // Send handler to thread manager
         threadManager->startThread(std::move(handler));
