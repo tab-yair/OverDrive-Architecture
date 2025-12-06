@@ -8,7 +8,7 @@ class UserClientComm : public ICommunication {
     public:
         UserClientComm();
         // Override nextCommand to get user input from console
-        std::string recive() override;
+        std::string recieve() override;
         int send(std::string output) override;
 };
 
