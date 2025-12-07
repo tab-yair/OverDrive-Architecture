@@ -13,7 +13,7 @@
 class SearchCommand : public ICommand {
 public:
     // Constructor receives dependencies for file handling and client context
-    SearchCommand(std::shared_ptr<IFileManagement> fileManager, const ClientContext& context);
+    SearchCommand(std::shared_ptr<IFileManagement> fileManager, std::shared_ptr<ClientContext> context);
 
     // Executes the 'search' command with the given arguments
     virtual CommandResult execute(const std::vector<std::string>& args) override;
@@ -23,7 +23,7 @@ public:
 
 private:
     std::shared_ptr<IFileManagement> fileManager;
-    ClientContext clientContext;
+    std::shared_ptr<ClientContext> clientContext;
 };
 
 #endif // SEARCHCOMMAND_H

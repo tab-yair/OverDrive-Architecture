@@ -4,13 +4,13 @@
 #include <utility>
 #include <stdexcept>
 
-PostCommand::PostCommand(std::shared_ptr<IFileManagement> fileManager, const ClientContext& context)
-    : fileManager(std::move(fileManager)), clientContext(context) {}
+PostCommand::PostCommand(std::shared_ptr<IFileManagement> fileManager, std::shared_ptr<ClientContext> context)
+    : fileManager(std::move(fileManager)), clientContext(std::move(context)) {}
 
 
 CommandResult PostCommand::execute(const std::vector<std::string>& args) {
     // if missing dependencies, stop immediately
-    if (!fileManager) {
+    if (!fileManager || !clientContext) {
         return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 
@@ -42,7 +42,7 @@ CommandResult PostCommand::execute(const std::vector<std::string>& args) {
     // Attempt to write the compressed data
     try
     {
-        fileManager->create(clientContext.clientId, fileName, inputText);
+        fileManager->create(clientContext->clientId, fileName, inputText);
     }
     catch(const std::exception& e)
     {

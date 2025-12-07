@@ -13,11 +13,11 @@ class PostCommandTest : public ::testing::Test {
 protected:
     std::shared_ptr<MockFileManager> mockFileManager;
     std::unique_ptr<PostCommand> postCommand;
-    ClientContext testContext;
+    std::shared_ptr<ClientContext> testContext;
 
     void SetUp() override {
         mockFileManager = std::make_shared<MockFileManager>();
-        testContext = {1, 10}; // clientId=1, socket=10
+        testContext = std::make_shared<ClientContext>(ClientContext{1,10});
         postCommand = std::make_unique<PostCommand>(mockFileManager, testContext);
     }
 };
