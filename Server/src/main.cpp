@@ -15,32 +15,78 @@
 #include "commands/SearchCommand.h"
 #include "executors/CommandExecutor.h"
 #include "parsers/CommandParser.h"
+#include "threading/IThreadManager.h"
+#include "threading/DedicatedThreadManager.h"
+#include "handlers/IClientHandlerFactory.h"
+#include "handlers/ClientHandlerFactory.h"
+#include "server/Server.h"
+#include "commands/ClientCommandFactory.h"
 
-int main() {
-    // Step 1: Create compressor (polymorphic with unique_ptr)
-    std::unique_ptr<ICompressor> compressor = std::make_unique<RLECompressor>();
+ClientCommandFactory::ClientCommandFactory(std::shared_ptr<IFileManagement> fm) 
+    : fileManager(fm) 
 
-    // Step 2: Create file management (shared_ptr for shared ownership with commands)
-    std::shared_ptr<IFileManagement> fileManager =
-        std::make_shared<LocalFileManagement>(std::move(compressor));
+int main(int argc, char* argv[]) {
+    // Get base path from environment variable
+    const char* basePathEnv = std::getenv("OVERDRIVE_PATH");
+    if (!basePathEnv) {
+        throw std::runtime_error("Environment variable OVERDRIVE_PATH not set");
+    }
 
-    // Step 3: Create commands map (unique_ptr for ownership)
-    std::map<std::string, std::unique_ptr<ICommand>> commands;
-    commands["POST"] = std::make_unique<PostCommand>(fileManager);
-    commands["GET"] = std::make_unique<GetCommand>(fileManager);
-    commands["SEARCH"] = std::make_unique<SearchCommand>(fileManager);
+    basePath = fs::path(basePathEnv);
 
-    // Step 4: Create executor, parser, communication
-    std::unique_ptr<IExecutor> executor =
-        std::make_unique<CommandExecutor>(std::move(commands));
-    std::unique_ptr<IParser> parser = std::make_unique<CommandParser>();
-    // TODO: Create appropriate communication implementation
-    // std::unique_ptr<ICommunication> comm = std::make_unique<...>();
+    if (argc < 2) {
+        std::cerr << "Usage: server <port>\n";
+        return 1;
+    }
+    int port = std::stoi(argv[1]);
+    // Step 1: Create file management system
+    // 1.1 Create path mapper
+    auto pathMapper = std::make_unique<HashPathMapper>(basePath);
 
-    // Step 5: Create and run ClientHandler
-    // ClientHandler handler(std::move(comm), std::move(executor), std::move(parser));
-    // handler.run();
+    // 1.2 Create metadata store
+    auto metadataStore = std::make_unique<JsonMetadataStore>(basePath / "metadata.json");
 
-    // Step 6: Cleanup handled automatically
+    // 1.3 Create base storage
+    auto baseStorage = std::make_unique<LocalFileStorage>();
+
+    // 1.4 Create compressor
+    auto compressor = std::make_unique<RLECompressor>();
+
+    // 1.5 Create storage strategy (compressed storage wrapping base storage)
+    auto storageStrategy = std::make_unique<CompressedFileStorage>(
+        std::move(compressor),
+        std::move(baseStorage)
+    );
+
+    // 1.6 Create core file manager
+    auto coreManager = std::make_unique<LocalFileManagement>(
+        std::move(pathMapper),
+        std::move(storageStrategy),
+        std::move(metadataStore)
+    );
+
+    // 1.7 Wrap in thread-safe wrapper (shared_ptr for multiple client handlers)
+    auto fs = std::make_shared<ThreadSafeFileManagement>(std::move(coreManager));
+
+
+    // Step 2: Create thread manager
+    std::shared_ptr<IThreadManager> threadManager = std::make_shared<DedicatedThreadManager>();
+
+    // Step 3: Create command factory
+    std::shared_ptr<ICommandFactory> commandFactory = std::make_shared<ClientCommandFactory>(fs);
+
+    // Step 4: Create parser
+    std::shared_ptr<IParser> parser = std::make_shared<CommandParser>();
+
+    // Step 5: Create client handler factory
+    std::shared_ptr<IClientHandlerFactory> clientHandlerFactory =
+        std::make_shared<ClientHandlerFactory>(commandFactory, parser);
+
+    // Step 6: Create and start server
+    Server server(std::move(threadManager), std::move(clientHandlerFactory), port);
+    server.start();
+
+
+    // Cleanup handled automatically
     return 0;
 }

@@ -34,25 +34,25 @@ protected:
 
 // Verifies parsing a command with no arguments
 TEST_F(ParserTest, SingleWordCommand) {
-    testParse("list", "list", {});
+    testParse("list", "LIST", {});
 }
 
 // Verifies parsing a command with a single argument
 TEST_F(ParserTest, CommandWithOneArgument) {
-    testParse("upload file.txt", "upload", {"file.txt"});
+    testParse("upload file.txt", "UPLOAD", {"file.txt"});
 }
 
 // Verifies parsing a command with three arguments
 TEST_F(ParserTest, CommandWithMultipleArguments) {
-    testParse("download file1.txt file2.txt file3.txt", 
-              "download", 
+    testParse("download file1.txt file2.txt file3.txt",
+              "DOWNLOAD",
               {"file1.txt", "file2.txt", "file3.txt"});
 }
 
 // Verifies parsing a command with five arguments
 TEST_F(ParserTest, CommandWithManyArguments) {
-    testParse("command arg1 arg2 arg3 arg4 arg5", 
-              "command", 
+    testParse("command arg1 arg2 arg3 arg4 arg5",
+              "COMMAND",
               {"arg1", "arg2", "arg3", "arg4", "arg5"});
 }
 
@@ -60,47 +60,47 @@ TEST_F(ParserTest, CommandWithManyArguments) {
 
 // Verifies parser correctly handles leading spaces before command
 TEST_F(ParserTest, LeadingWhitespace) {
-    testParse("   upload file.txt", "upload", {"file.txt"});
+    testParse("   upload file.txt", "UPLOAD", {"file.txt"});
 }
 
 // Verifies parser correctly handles trailing spaces after arguments
 TEST_F(ParserTest, TrailingWhitespace) {
-    testParse("upload file.txt   ", "upload", {"file.txt"});
+    testParse("upload file.txt   ", "UPLOAD", {"file.txt"});
 }
 
 // Verifies parser correctly handles both leading and trailing whitespace
 TEST_F(ParserTest, LeadingAndTrailingWhitespace) {
-    testParse("   upload file.txt   ", "upload", {"file.txt"});
+    testParse("   upload file.txt   ", "UPLOAD", {"file.txt"});
 }
 
 // Verifies parser handles multiple consecutive spaces between command and argument
 TEST_F(ParserTest, MultipleSpacesBetweenWords) {
-    testParse("upload    file.txt", "upload", {"file.txt"});
+    testParse("upload    file.txt", "UPLOAD", {"file.txt"});
 }
 
 // Verifies parser handles multiple consecutive spaces between all tokens
 TEST_F(ParserTest, MultipleSpacesBetweenAllWords) {
-    testParse("download   file1.txt    file2.txt     file3.txt", 
-              "download", 
+    testParse("download   file1.txt    file2.txt     file3.txt",
+              "DOWNLOAD",
               {"file1.txt", "file2.txt", "file3.txt"});
 }
 
 // Verifies parser handles excessive whitespace in all positions
 TEST_F(ParserTest, ExcessiveWhitespaceEverywhere) {
-    testParse("    command     arg1      arg2     ", 
-              "command", 
+    testParse("    command     arg1      arg2     ",
+              "COMMAND",
               {"arg1", "arg2"});
 }
 
 // Verifies parser correctly handles tab characters as delimiters
 TEST_F(ParserTest, TabCharacters) {
-    testParse("upload\tfile.txt", "upload", {"file.txt"});
+    testParse("upload\tfile.txt", "UPLOAD", {"file.txt"});
 }
 
 // Verifies parser handles mixed spaces and tabs
 TEST_F(ParserTest, MixedWhitespace) {
-    testParse("  upload \t  file.txt  \t arg2  ", 
-              "upload", 
+    testParse("  upload \t  file.txt  \t arg2  ",
+              "UPLOAD",
               {"file.txt", "arg2"});
 }
 
@@ -130,36 +130,36 @@ TEST_F(ParserTest, OnlyWhitespace) {
 
 // Verifies parser handles file path arguments with forward slashes
 TEST_F(ParserTest, PathArgument) {
-    testParse("upload /home/user/documents/file.txt", 
-              "upload", 
+    testParse("upload /home/user/documents/file.txt",
+              "UPLOAD",
               {"/home/user/documents/file.txt"});
 }
 
 // Verifies parser handles arguments containing hyphens, underscores, and dots
 TEST_F(ParserTest, ArgumentsWithSpecialCharacters) {
-    testParse("download file-name_v2.0.txt", 
-              "download", 
+    testParse("download file-name_v2.0.txt",
+              "DOWNLOAD",
               {"file-name_v2.0.txt"});
 }
 
 // Verifies parser handles arguments with multiple dots in filename
 TEST_F(ParserTest, ArgumentsWithDots) {
-    testParse("upload my.file.name.txt", 
-              "upload", 
+    testParse("upload my.file.name.txt",
+              "UPLOAD",
               {"my.file.name.txt"});
 }
 
 // Verifies parser handles command-line style flags with double hyphens
 TEST_F(ParserTest, ArgumentsWithHyphens) {
-    testParse("command --flag --option value", 
-              "command", 
+    testParse("command --flag --option value",
+              "COMMAND",
               {"--flag", "--option", "value"});
 }
 
 // Verifies parser handles URL strings as arguments
 TEST_F(ParserTest, URLAsArgument) {
-    testParse("fetch https://example.com/file.txt", 
-              "fetch", 
+    testParse("fetch https://example.com/file.txt",
+              "FETCH",
               {"https://example.com/file.txt"});
 }
 
@@ -168,13 +168,14 @@ TEST_F(ParserTest, URLAsArgument) {
 // Verifies parser handles extremely long command names (1000 characters)
 TEST_F(ParserTest, VeryLongCommand) {
     std::string longCommand(1000, 'a');
-    testParse(longCommand, longCommand, {});
+    std::string expectedUpper(1000, 'A');
+    testParse(longCommand, expectedUpper, {});
 }
 
 // Verifies parser handles extremely long argument strings (1000 characters)
 TEST_F(ParserTest, VeryLongArgument) {
     std::string longArg(1000, 'x');
-    testParse("upload " + longArg, "upload", {longArg});
+    testParse("upload " + longArg, "UPLOAD", {longArg});
 }
 
 // Verifies parser handles large number of arguments (100 arguments)
@@ -186,43 +187,70 @@ TEST_F(ParserTest, ManyArguments) {
         input += " " + arg;
         manyArgs.push_back(arg);
     }
-    testParse(input, "command", manyArgs);
+    testParse(input, "COMMAND", manyArgs);
 }
 
 // ========== Real-World Command Examples ==========
 
 // Verifies parser correctly handles typical upload command with file path
 TEST_F(ParserTest, UploadCommand) {
-    testParse("upload documents/report.pdf", 
-              "upload", 
+    testParse("upload documents/report.pdf",
+              "UPLOAD",
               {"documents/report.pdf"});
 }
 
 // Verifies parser correctly handles typical download command with filename
 TEST_F(ParserTest, DownloadCommand) {
-    testParse("download file123.txt", 
-              "download", 
+    testParse("download file123.txt",
+              "DOWNLOAD",
               {"file123.txt"});
 }
 
 // Verifies parser correctly handles list command with no arguments
 TEST_F(ParserTest, ListCommand) {
-    testParse("list", "list", {});
+    testParse("list", "LIST", {});
 }
 
 // Verifies parser correctly handles delete command with multiple file arguments
 TEST_F(ParserTest, DeleteCommand) {
-    testParse("delete file1.txt file2.txt", 
-              "delete", 
+    testParse("delete file1.txt file2.txt",
+              "DELETE",
               {"file1.txt", "file2.txt"});
 }
 
 // Verifies parser correctly handles exit command with no arguments
 TEST_F(ParserTest, ExitCommand) {
-    testParse("exit", "exit", {});
+    testParse("exit", "EXIT", {});
 }
 
 // Verifies parser correctly handles help command with topic argument
 TEST_F(ParserTest, HelpCommand) {
-    testParse("help upload", "help", {"upload"});
+    testParse("help upload", "HELP", {"upload"});
+}
+
+// ========== Case Conversion Tests ==========
+
+// Verifies parser converts lowercase command to uppercase
+TEST_F(ParserTest, LowercaseToUppercase) {
+    testParse("post file.txt", "POST", {"file.txt"});
+}
+
+// Verifies parser keeps uppercase command as uppercase
+TEST_F(ParserTest, UppercaseStaysUppercase) {
+    testParse("POST file.txt", "POST", {"file.txt"});
+}
+
+// Verifies parser converts mixed case command to uppercase
+TEST_F(ParserTest, MixedCaseToUppercase) {
+    testParse("PoSt file.txt", "POST", {"file.txt"});
+}
+
+// Verifies parser converts mixed case command to uppercase (GET)
+TEST_F(ParserTest, MixedCaseGetToUppercase) {
+    testParse("gEt movie1", "GET", {"movie1"});
+}
+
+// Verifies parser converts mixed case command to uppercase (SEARCH)
+TEST_F(ParserTest, MixedCaseSearchToUppercase) {
+    testParse("SeArCh keyword", "SEARCH", {"keyword"});
 }
