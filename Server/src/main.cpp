@@ -26,6 +26,14 @@ ClientCommandFactory::ClientCommandFactory(std::shared_ptr<IFileManagement> fm)
     : fileManager(fm) 
 
 int main(int argc, char* argv[]) {
+    // Get base path from environment variable
+    const char* basePathEnv = std::getenv("OVERDRIVE_PATH");
+    if (!basePathEnv) {
+        throw std::runtime_error("Environment variable OVERDRIVE_PATH not set");
+    }
+
+    basePath = fs::path(basePathEnv);
+
     if (argc < 2) {
         std::cerr << "Usage: server <port>\n";
         return 1;
@@ -33,10 +41,10 @@ int main(int argc, char* argv[]) {
     int port = std::stoi(argv[1]);
     // Step 1: Create file management system
     // 1.1 Create path mapper
-    auto pathMapper = std::make_unique<HashPathMapper>("./storage_root");
+    auto pathMapper = std::make_unique<HashPathMapper>(basePath);
 
     // 1.2 Create metadata store
-    auto metadataStore = std::make_unique<JsonMetadataStore>("./metadata.json");
+    auto metadataStore = std::make_unique<JsonMetadataStore>(basePath / "metadata.json");
 
     // 1.3 Create base storage
     auto baseStorage = std::make_unique<LocalFileStorage>();
