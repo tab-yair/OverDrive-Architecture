@@ -1,0 +1,10 @@
+# Python Client Docker Image
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy the Python client
+COPY Client/src/Client/Client.py .
+
+# Python client expects: python Client.py <server_ip> <port>
+ENTRYPOINT ["python3", "Client.py"]

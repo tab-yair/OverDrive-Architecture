@@ -1,0 +1,33 @@
+# Build Stage
+FROM gcc:11 as builder
+
+WORKDIR /app
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    cmake \
+    libssl-dev \
+    nlohmann-json3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy all source files
+COPY . .
+
+# Build the project
+RUN cmake . && make client_main
+
+# Run Stage
+FROM gcc:11
+
+# Install runtime dependencies (already has libstdc++, just need openssl)
+RUN apt-get update && apt-get install -y \
+    libssl1.1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the executable from builder
+COPY --from=builder /app/client_main .
+
+# Client expects: ./client_main <server_ip> <port>
+ENTRYPOINT ["./client_main"]

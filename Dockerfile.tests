@@ -1,0 +1,25 @@
+# Build and test in one stage
+FROM gcc:11
+
+WORKDIR /src
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    cmake \
+    make \
+    libssl-dev \
+    nlohmann-json3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy all source files
+COPY . /src
+
+# Build and run tests
+RUN mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build . --clean-first -- -j$(nproc)
+
+WORKDIR /src/build
+
+# Run all tests by default
+CMD ["ctest", "--output-on-failure", "--verbose"]
