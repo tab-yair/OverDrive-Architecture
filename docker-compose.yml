@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Server service
   server:
     build:
       context: .
@@ -23,7 +22,6 @@ services:
       retries: 3
       start_period: 5s
 
-  # Unit tests service
   tests:
     build:
       context: .
@@ -32,8 +30,8 @@ services:
     profiles: ["test"]
     networks:
       - overdrive_net
+    # No volumes or depends_on here to prevent creating ./server_data
 
-  # C++ Client
   client-cpp:
     build:
       context: .
@@ -49,7 +47,6 @@ services:
     command: ["server", "5555"]
     profiles: ["client"]
 
-  # Python Client
   client-python:
     build:
       context: .
