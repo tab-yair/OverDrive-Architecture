@@ -1,88 +1,100 @@
-#ifndef MOCK_FILE_MANAGER_H
-#define MOCK_FILE_MANAGER_H
-
+#pragma once // only include this header once per compilation unit
 #include "../../src/file/IFileManagement.h"
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <memory>
 
-/**
- * Mock class for IFileManagement to be used in unit tests.
- * Captures calls and parameters to allow verification.
- */
 class MockFileManager : public IFileManagement {
 public:
-    // For create method
-    bool createCalled = false;
-    std::string lastCreatedFilename;
-    std::string lastCreatedContent;
-    bool throwOnCreate = false;
 
-    // For exists method
+    // ------------------------------
+    // Flags for verifying calls
+    // ------------------------------
+    bool postCalled = false;
+    bool readCalled = false;
     bool existsCalled = false;
-    std::string lastCheckedPath;
+    bool searchCalled = false;
+    bool deleteCalled = false;
+
+    // ------------------------------
+    // Behavior control (what to return)
+    // ------------------------------
     bool existsReturnValue = false;
 
-    // For read method
-    bool readCalled = false;
-    std::string lastReadFilename;
-    bool throwOnRead = false;
     std::string readReturnValue = "";
+    std::vector<std::string> searchReturnValue = {};
 
-    // For searchContent method
-    bool searchContentCalled = false;
-    std::string lastSearchContent;
-    std::vector<std::string> searchContentReturnValue;
+    // ------------------------------
+    // Exception triggers
+    // ------------------------------
+    bool throwOnRead = false;
+    bool throwOnSearch = false;
+    bool throwOnDelete = false;
+    bool throwOnPost = false;
 
-    // Implement create: record params, optionally throw
-    void create(const std::string& fileName, const std::string& content = "") override {
-        createCalled = true;
-        lastCreatedFilename = fileName;
-        lastCreatedContent = content;
+    // ------------------------------
+    // Track last parameters
+    // ------------------------------
+    int lastClientId = -1;
 
-        if (throwOnCreate) {
-            throw std::runtime_error("Mock: Simulated create error.");
-        }
-    }
+    std::string lastFileName = "";
+    std::string lastContent = "";
 
-    // Implement exists: record params, return preset value
-    bool exists(const std::string& fileName) override {
+    std::string lastSearch = "";
+
+
+    // ===========================================================
+    // IFileManagement interface methods
+    // ===========================================================
+
+    bool exists(int clientId, const std::string& fileName) override {
         existsCalled = true;
-        lastCheckedPath = fileName;
+        lastClientId = clientId;
+        lastFileName = fileName;
         return existsReturnValue;
     }
 
-    // Implement read: record params, optionally throw, return preset value
-    std::string read(const std::string& fileName) override {
+    void post(int clientId, const std::string& fileName, const std::string& content) override {
+        postCalled = true;
+        lastClientId = clientId;
+        lastFileName = fileName;
+        lastContent = content;
+
+        if (throwOnPost) {
+            throw std::runtime_error("Mock: post error");
+        }
+    }
+
+    std::string read(int clientId, const std::string& fileName) override {
         readCalled = true;
-        lastReadFilename = fileName;
+        lastClientId = clientId;
+        lastFileName = fileName;
+
         if (throwOnRead) {
-            throw std::runtime_error("Mock: Simulated read error.");
+            throw std::runtime_error("Mock: read error");
         }
         return readReturnValue;
     }
 
-    // Implement remove (optional - no need to track)
-    void remove(const std::string& /*fileName*/) override {
-        // No action needed for tests currently
+    std::vector<std::string> search(int clientId, const std::string& term) override {
+        searchCalled = true;
+        lastClientId = clientId;
+        lastSearch = term;
+
+        if (throwOnSearch) {
+            throw std::runtime_error("Mock: search error");
+        }
+        return searchReturnValue;
     }
 
-    // Implement write (optional - no need to track)
-    void write(const std::string& /*fileName*/, const std::string& /*content*/) override {
-        // No action needed for tests currently
-    }
+    void deleteFile(int clientId, const std::string& fileName) override {
+        deleteCalled = true;
+        lastClientId = clientId;
+        lastFileName = fileName;
 
-    // Implement fileList (optional - no need to track)
-    std::vector<std::string> fileList() override {
-        return {};
-    }
-
-    // Implement searchContent: record params, return preset vector
-    std::vector<std::string> searchContent(const std::string& content) override {
-        searchContentCalled = true;
-        lastSearchContent = content;
-        return searchContentReturnValue;
+        if (throwOnDelete) {
+            throw std::runtime_error("Mock: delete error");
+        }
     }
 };
-
-#endif // MOCK_FILE_MANAGER_H

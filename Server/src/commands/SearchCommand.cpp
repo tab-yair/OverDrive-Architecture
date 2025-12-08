@@ -2,21 +2,22 @@
 #include <sstream>
 #include <stdexcept>
 
-SearchCommand::SearchCommand(std::shared_ptr<IFileManagement> fileManager, const ClientContext& context)
-    : fileManager(std::move(fileManager)), clientContext(context) {}
+SearchCommand::SearchCommand(std::shared_ptr<IFileManagement> fileManager,
+                             std::shared_ptr<ClientContext> context)
+    : fileManager(std::move(fileManager)), clientContext(std::move(context)) {}
 
 CommandResult SearchCommand::execute(const std::vector<std::string>& args) {
-    // Check if the fileManager dependency is valid
-    if (!fileManager) {
+    // Validate dependencies
+    if (!fileManager || !clientContext) {
         return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 
-    // Check if there are any arguments
+    // Check if arguments exist
     if (args.empty()) {
         return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 
-    // Join all args into a single search string separated by spaces
+    // Build the search term from args
     std::stringstream ss;
     for (size_t i = 0; i < args.size(); ++i) {
         ss << args[i];
@@ -26,20 +27,25 @@ CommandResult SearchCommand::execute(const std::vector<std::string>& args) {
     }
     std::string searchTerm = ss.str();
 
-    // If the resulting search term is empty, treat as invalid
-    if (searchTerm.empty()) {
+    if (searchTerm.empty()) {  // if no search term provided
         return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 
-    // Search for files containing the given content
-    std::vector<std::string> matchedFiles = fileManager->searchContent(clientContext.clientId, searchTerm);
-
-    // If no files matched, return no content
-    if (matchedFiles.empty()) {
-        return CommandResult(CommandResult::Status::NO_CONTENT);
+    std::vector<std::string> matchedFiles;
+    try {
+        // Perform the search
+        matchedFiles = fileManager->search(clientContext->clientId, searchTerm);
+    }
+    catch (const std::exception&) {
+        return CommandResult(CommandResult::Status::NOT_FOUND);
     }
 
-    // Join the matched filenames separated by spaces
+    // If no files matched, OK with empty content
+    if (matchedFiles.empty()) {
+        return CommandResult(CommandResult::Status::OK);
+    }
+
+    // Build output string
     std::stringstream resultStream;
     for (size_t i = 0; i < matchedFiles.size(); ++i) {
         resultStream << matchedFiles[i];
