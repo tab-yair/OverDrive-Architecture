@@ -1,7 +1,6 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-// Server main header file
 #include <memory>
 #include <iostream>
 #include <sys/socket.h>
@@ -14,7 +13,7 @@
 #include "handlers/IClientHandlerFactory.h"
 #include "handlers/ClientContext.h"
 
-
+// Multi-threaded TCP server handling client connections
 class Server {
 private:
     std::shared_ptr<IThreadManager> threadManager;

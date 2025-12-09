@@ -1,15 +1,14 @@
 import socket
 import sys
 
-# Define a reasonable timeout duration in seconds
-# This is necessary because the content length is unknown and the connection is persistent.
-SOCKET_TIMEOUT = 0.5  # 500ms - server on localhost responds in microseconds 
+# Socket timeout for reading complete responses from persistent connection
+# Set to 500ms to accommodate variable response lengths without content-length header
+SOCKET_TIMEOUT = 0.5 
 
 class SocketClientComm:
     """
-    Handles persistent TCP communication with the server using a line-based protocol.
-    Reads multi-line responses by relying on a short socket timeout to mark the end
-    of a complete message block.
+    Manages TCP socket communication with server using persistent connections.
+    Response boundaries are detected via socket timeout after complete message blocks.
     """
     
     def __init__(self, server_ip, port):
@@ -29,7 +28,7 @@ class SocketClientComm:
             self.socket.connect((server_ip, port))
             self.connected = True
             
-            # Set a short timeout in order to reliably read an unknown length, multi-line response on a persistent connection.
+            # Configure timeout for response boundary detection
             self.socket.settimeout(SOCKET_TIMEOUT) 
             
         except Exception as e:

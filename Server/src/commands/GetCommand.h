@@ -18,8 +18,6 @@ public:
 
     // Executes the 'get' command with the given arguments
     virtual CommandResult execute(const std::vector<std::string>& args) override;
-
-    // Virtual destructor
     virtual ~GetCommand() = default;
 
 private:
