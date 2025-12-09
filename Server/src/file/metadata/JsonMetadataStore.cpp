@@ -52,6 +52,11 @@ void JsonMetadataStore::loadFromDiskUnsafe() const {
         return; // No existing file, nothing to load
     }
 
+    // Check if file is empty
+    if (std::filesystem::file_size(storageFile) == 0) {
+        return; // Empty file, nothing to load
+    }
+
     // Open the file for reading
     std::ifstream inFile(storageFile);
     if (!inFile.is_open()) {
@@ -122,8 +127,9 @@ void JsonMetadataStore::save(const std::string& key, const FileMetaData& metadat
     std::unique_lock<std::shared_mutex> lock(mtx);  // Exclusive lock for writes
     cache[key] = metadata;
     isDirty.store(true, std::memory_order_relaxed);
-    // Optionally: saveToDiskUnsafe() for immediate persistence
-    // For better performance: let background thread handle it
+    // Save immediately to ensure persistence
+    saveToDiskUnsafe();
+    isDirty.store(false, std::memory_order_relaxed);
 }
 
 // Load metadata for a given key

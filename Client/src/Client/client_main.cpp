@@ -1,6 +1,6 @@
 #include "Client.h"
-#include "ClientServerComm.h"
-#include "UserClientComm.h"
+#include "communication/ClientServerComm.h"
+#include "communication/UserClientComm.h"
 #include <memory>
 #include <string>
 

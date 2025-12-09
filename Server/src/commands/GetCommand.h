@@ -5,7 +5,7 @@
 #include <string>
 #include <memory>
 #include "commands/ICommand.h"
-#include "file/IFileManagement.h"
+#include "file/management/IFileManagement.h"
 #include "handlers/ClientContext.h"
 
 // The GetCommand class implements the 'get' command.
@@ -18,8 +18,6 @@ public:
 
     // Executes the 'get' command with the given arguments
     virtual CommandResult execute(const std::vector<std::string>& args) override;
-
-    // Virtual destructor
     virtual ~GetCommand() = default;
 
 private:

@@ -1,50 +1,48 @@
-#include <map>
+#include <iostream>
 #include <memory>
-#include "handlers/ClientHandler.h"
-#include "communication/ICommunication.h"
-#include "commands/ICommand.h"
-#include "executors/IExecutor.h"
-#include "protocol/ParsedCommand.h"
-#include "parsers/IParser.h"
-#include "compressor/ICompressor.h"
-#include "file/IFileManagement.h"
-#include "compressor/RLECompressor.h"
-#include "file/LocalFileManagement.h"
-#include "commands/PostCommand.h"
-#include "commands/GetCommand.h"
-#include "commands/SearchCommand.h"
-#include "executors/CommandExecutor.h"
-#include "parsers/CommandParser.h"
-#include "threading/IThreadManager.h"
-#include "threading/DedicatedThreadManager.h"
-#include "handlers/IClientHandlerFactory.h"
-#include "handlers/ClientHandlerFactory.h"
-#include "server/Server.h"
-#include "commands/ClientCommandFactory.h"
+#include <filesystem>
+#include <cstdlib>
+#include <string>
 
-ClientCommandFactory::ClientCommandFactory(std::shared_ptr<IFileManagement> fm) 
-    : fileManager(fm) 
+// Server components
+#include "server/server.h"
+#include "handlers/ClientHandlerFactory.h"
+#include "threading/DedicatedThreadManager.h"
+#include "commands/ClientCommandFactory.h"
+#include "parsers/CommandParser.h"
+
+// File management system
+#include "file/management/ThreadSafeFileManagement.h"
+#include "file/management/LocalFileManagement.h"
+#include "file/path/HashPathMapper.h"
+#include "file/metadata/JsonMetadataStore.h"
+#include "file/storage/LocalFileStorage.h"
+#include "file/storage/CompressedFileStorage.h"
+#include "file/compressor/RLECompressor.h"
 
 int main(int argc, char* argv[]) {
     // Get base path from environment variable
-    const char* basePathEnv = std::getenv("OVERDRIVE_PATH");
-    if (!basePathEnv) {
-        throw std::runtime_error("Environment variable OVERDRIVE_PATH not set");
-    }
-
-    basePath = fs::path(basePathEnv);
-
-    if (argc < 2) {
-        std::cerr << "Usage: server <port>\n";
+    const char* envPath = std::getenv("OVERDRIVE_PATH");
+    if (!envPath) {
+        // throw std::runtime_error("Environment variable OVERDRIVE_PATH not set");
         return 1;
     }
+    
+    std::filesystem::path basePath = envPath;
+
+    if (argc != 2) {
+        // std::cerr << "Usage: server <port>\n";
+        return 1;
+    }
+    
     int port = std::stoi(argv[1]);
+    
     // Step 1: Create file management system
     // 1.1 Create path mapper
     auto pathMapper = std::make_unique<HashPathMapper>(basePath);
 
     // 1.2 Create metadata store
-    auto metadataStore = std::make_unique<JsonMetadataStore>(basePath / "metadata.json");
+    auto metadataStore = std::make_unique<JsonMetadataStore>(basePath / "metadata");
 
     // 1.3 Create base storage
     auto baseStorage = std::make_unique<LocalFileStorage>();
@@ -83,10 +81,8 @@ int main(int argc, char* argv[]) {
         std::make_shared<ClientHandlerFactory>(commandFactory, parser);
 
     // Step 6: Create and start server
-    Server server(std::move(threadManager), std::move(clientHandlerFactory), port);
+    Server server(threadManager, clientHandlerFactory, port);
     server.start();
 
-
-    // Cleanup handled automatically
     return 0;
 }

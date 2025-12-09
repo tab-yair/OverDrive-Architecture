@@ -17,7 +17,7 @@ protected:
 
     void SetUp() override {
         mockFileManager = std::make_shared<MockFileManager>();
-        testContext = std::make_shared<ClientContext>(ClientContext{1,10});  // clientId=1, socket=10
+        testContext = std::make_shared<ClientContext>(ClientContext{"1",10});  // clientId=1, socket=10
         getCommand = std::make_unique<GetCommand>(mockFileManager, testContext);
     }
 };
@@ -50,7 +50,7 @@ TEST_F(GetCommandTest, FileDoesNotExist_ReturnsNotFound) {
     auto result = getCommand->execute(args);
 
     EXPECT_TRUE(mockFileManager->existsCalled);
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
     EXPECT_EQ(mockFileManager->lastCheckedPath, "missing.txt");
     EXPECT_EQ(result.status, CommandResult::Status::NOT_FOUND);
 }
@@ -67,11 +67,11 @@ TEST_F(GetCommandTest, FileExists_ReadSuccess_ReturnsContent) {
     EXPECT_TRUE(mockFileManager->readCalled);
 
     EXPECT_EQ(mockFileManager->lastCheckedPath, "test.txt");
-    EXPECT_EQ(mockFileManager->lastReadFilename, "test.txt");
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastFileName, "test.txt");
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
 
     EXPECT_EQ(result.status, CommandResult::Status::OK);
-    EXPECT_EQ(result.output, "Hello World");
+    EXPECT_EQ(result.content, "Hello World");
 }
 
 // Read operation throws an exception should return NOT_FOUND
@@ -97,6 +97,6 @@ TEST_F(GetCommandTest, PassesCorrectClientIdToFileManager) {
     auto result = getCommand->execute(args);
 
     EXPECT_TRUE(mockFileManager->readCalled);
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
     EXPECT_EQ(result.status, CommandResult::Status::OK);
 }

@@ -17,7 +17,7 @@ protected:
 
     void SetUp() override {
         mockFileManager = std::make_shared<MockFileManager>();
-        testContext = std::make_shared<ClientContext>(ClientContext{1,10}); // clientId=1, socket=10
+        testContext = std::make_shared<ClientContext>(ClientContext{"1",10}); // clientId=1, socket=10
         deleteCommand = std::make_unique<DeleteCommand>(mockFileManager, testContext);
     }
 };
@@ -52,7 +52,7 @@ TEST_F(DeleteCommandTest, FileDoesNotExist_ReturnsNotFound) {
     auto result = deleteCommand->execute(args);
 
     EXPECT_TRUE(mockFileManager->existsCalled);
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
     EXPECT_EQ(mockFileManager->lastCheckedPath, "missing.txt");
     EXPECT_EQ(result.status, CommandResult::Status::NOT_FOUND);
 }
@@ -67,7 +67,7 @@ TEST_F(DeleteCommandTest, FileExists_RemoveSuccess_ReturnsOK) {
     EXPECT_TRUE(mockFileManager->existsCalled);
     EXPECT_TRUE(mockFileManager->removeCalled);
 
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
     EXPECT_EQ(mockFileManager->lastRemovedFilename, "del.txt");
 
     EXPECT_EQ(result.status, CommandResult::Status::OK);
@@ -94,5 +94,5 @@ TEST_F(DeleteCommandTest, PassesCorrectClientIdToFileManager) {
     std::vector<std::string> args = {"abc.txt"};
     auto result = deleteCommand->execute(args);
 
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
 }

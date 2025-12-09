@@ -3,10 +3,10 @@
 // Constructor for app class, using dependency injection
 ClientHandler::ClientHandler(std::unique_ptr<ICommunication> comm, 
          std::unique_ptr<IExecutor> executor,
-         std::unique_ptr<IParser> parser)
+         std::shared_ptr<IParser> parser)
     : comm(std::move(comm)),          
       executor(std::move(executor)), 
-      parser(std::move(parser)) {}
+      parser(parser) {}
 
 // The flow of the application: Comm → Parser → Executor (Command) → Comm
 

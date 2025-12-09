@@ -1,38 +1,25 @@
-# --- Builder stage ---
-FROM gcc:latest AS builder
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    git \
-    wget \
-    ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+# Build and test in one stage
+FROM gcc:11
 
 WORKDIR /src
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    cmake \
+    make \
+    libssl-dev \
+    nlohmann-json3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy all source files
 COPY . /src
 
-# Clean and build
-RUN rm -rf build
-RUN mkdir build && cd build \
-    && cmake .. -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build . --clean-first -- -j$(nproc)
+# Build and run tests
+RUN mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build . --clean-first -- -j$(nproc)
 
-# --- Runtime stage ---
-FROM gcc:latest AS runtime
-WORKDIR /app
+WORKDIR /src/build
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
- && rm -rf /var/lib/apt/lists/*
-
-# Copy ONLY the test binaries
-COPY --from=builder /src/build/bin /app/bin
-
-ENV PATH="/app/bin:${PATH}"
-ENV OVERDRIVE_PATH=/app/files
-RUN mkdir -p /app/files
-
-# Run all tests
-CMD ["bash", "-c", "for t in /app/bin/*; do echo '=== Running' $t '==='; $t && echo 'PASSED' || echo 'FAILED'; echo; done"]
+# Run all tests by default
+CMD ["ctest", "--output-on-failure", "--verbose"]

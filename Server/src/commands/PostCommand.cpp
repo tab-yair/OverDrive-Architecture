@@ -21,6 +21,11 @@ CommandResult PostCommand::execute(const std::vector<std::string>& args) {
 
     // args[0] is the filename
     const std::string& fileName = args[0];
+
+    // if file exists, return BAD_REQUEST
+    if (fileManager->exists(clientContext->clientId, fileName)) {
+        return CommandResult(CommandResult::Status::BAD_REQUEST);
+    }
     
     // Combine all arguments after the filename into a single text string.
     std::string inputText;

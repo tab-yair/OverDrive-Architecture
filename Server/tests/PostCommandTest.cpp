@@ -17,7 +17,7 @@ protected:
 
     void SetUp() override {
         mockFileManager = std::make_shared<MockFileManager>();
-        testContext = std::make_shared<ClientContext>(ClientContext{1,10});
+        testContext = std::make_shared<ClientContext>(ClientContext{"1",10});
         postCommand = std::make_unique<PostCommand>(mockFileManager, testContext);
     }
 };
@@ -37,7 +37,7 @@ TEST_F(PostCommandTest, OneArgument_CreatesEmptyFile) {
     auto result = postCommand->execute(args);
 
     EXPECT_TRUE(mockFileManager->createCalled);
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
     EXPECT_EQ(mockFileManager->lastCreatedFilename, "hello.txt");
     EXPECT_TRUE(mockFileManager->lastCreatedContent.empty());
     EXPECT_EQ(result.status, CommandResult::Status::CREATED);
@@ -49,7 +49,7 @@ TEST_F(PostCommandTest, FilenameAndText_WritesExactData) {
     auto result = postCommand->execute(args);
 
     EXPECT_TRUE(mockFileManager->createCalled);
-    EXPECT_EQ(mockFileManager->lastClientId, 1); 
+    EXPECT_EQ(mockFileManager->lastClientId, "1"); 
     EXPECT_EQ(mockFileManager->lastCreatedFilename, "note");
     EXPECT_EQ(mockFileManager->lastCreatedContent, "HELLO_WORLD");
     EXPECT_EQ(result.status, CommandResult::Status::CREATED);
@@ -61,7 +61,7 @@ TEST_F(PostCommandTest, MultiWordText_JoinedCorrectly) {
     auto result = postCommand->execute(args);
 
     EXPECT_TRUE(mockFileManager->createCalled);
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
     EXPECT_EQ(mockFileManager->lastCreatedFilename, "msg");
     EXPECT_EQ(mockFileManager->lastCreatedContent,
               "this is a test message");
@@ -70,7 +70,7 @@ TEST_F(PostCommandTest, MultiWordText_JoinedCorrectly) {
 
 // exception during create test case
 TEST_F(PostCommandTest, CreateThrowsException_ReturnsNotFound) {
-    mockFileManager->throwOnCreate = true;
+    mockFileManager->throwOnPost = true;
     std::vector<std::string> args = {"badfile.txt", "data"};
 
     auto result = postCommand->execute(args);

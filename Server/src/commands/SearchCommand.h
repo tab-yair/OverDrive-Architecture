@@ -5,7 +5,7 @@
 #include <string>
 #include <memory>
 #include "commands/ICommand.h"
-#include "file/IFileManagement.h"
+#include "file/management/IFileManagement.h"
 #include "handlers/ClientContext.h"
 
 // The SearchCommand class implements the 'search' command.

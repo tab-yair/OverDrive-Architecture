@@ -1,22 +1,67 @@
+version: '3.8'
+
 services:
-  # Main application
-  app:
+  server:
     build:
       context: .
-      dockerfile: Dockerfile
-    tty: true
-    stdin_open: true
-    init: true       
-    volumes:
-      - ./files:/app/files
+      dockerfile: Dockerfile.server
+    container_name: overdrive-server
+    environment:
+      - OVERDRIVE_PATH=/app/files
     ports:
-      - "8080:8080"
+      - "5555:5555"
+    volumes:
+      - ./server_data:/app/files
+    command: ["5555"]
+    networks:
+      - overdrive_net
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep server_main > /dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
-  # Tests
   tests:
     build:
       context: .
       dockerfile: Dockerfile.tests
-    volumes:
-      - /app/files
+    container_name: overdrive-tests
+    profiles: ["test"]
+    networks:
+      - overdrive_net
+    # No volumes or depends_on here to prevent creating ./server_data
 
+  client-cpp:
+    build:
+      context: .
+      dockerfile: Dockerfile.client-cpp
+    container_name: overdrive-client-cpp
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - overdrive_net
+    stdin_open: true
+    tty: true
+    command: ["server", "5555"]
+    profiles: ["client"]
+
+  client-python:
+    build:
+      context: .
+      dockerfile: Dockerfile.client-python
+    container_name: overdrive-client-python
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - overdrive_net
+    stdin_open: true
+    tty: true
+    command: ["server", "5555"]
+    profiles: ["client"]
+
+networks:
+  overdrive_net:
+    driver: bridge

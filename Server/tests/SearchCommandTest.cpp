@@ -17,7 +17,7 @@ protected:
 
     void SetUp() override {
         mockFileManager = std::make_shared<MockFileManager>();
-        testContext = std::make_shared<ClientContext>(ClientContext{1,10});
+        testContext = std::make_shared<ClientContext>(ClientContext{"1",10});
         searchCommand = std::make_unique<SearchCommand>(mockFileManager, testContext);
     }
 };
@@ -49,11 +49,11 @@ TEST_F(SearchCommandTest, NoMatchingFiles_ReturnsOK_EmptyOutput) {
     auto result = searchCommand->execute(args);
 
     EXPECT_TRUE(mockFileManager->searchCalled);
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
     EXPECT_EQ(mockFileManager->lastSearch, "hello");
 
     EXPECT_EQ(result.status, CommandResult::Status::OK);
-    EXPECT_EQ(result.output, "");
+    EXPECT_EQ(result.content, "");
 }
 
 // multiple arguments test case
@@ -75,7 +75,7 @@ TEST_F(SearchCommandTest, MatchingFiles_ReturnsJoinedFilenames) {
 
     EXPECT_TRUE(mockFileManager->searchCalled);
     EXPECT_EQ(result.status, CommandResult::Status::OK);
-    EXPECT_EQ(result.output, "a.txt b.txt c.txt");
+    EXPECT_EQ(result.content, "a.txt b.txt c.txt");
 }
 
 // search throws exception test case
@@ -95,5 +95,5 @@ TEST_F(SearchCommandTest, PassesCorrectClientId) {
     std::vector<std::string> args = {"test"};
     searchCommand->execute(args);
 
-    EXPECT_EQ(mockFileManager->lastClientId, 1);
+    EXPECT_EQ(mockFileManager->lastClientId, "1");
 }

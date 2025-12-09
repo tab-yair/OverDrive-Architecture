@@ -5,10 +5,9 @@
 #include <string>
 #include "protocol/CommandResult.h"
 
-// Abstract interface for all CLI commands
+// Interface for command execution
 class ICommand {
 public:
-    // Virtual destructor to ensure proper cleanup
     virtual ~ICommand() = default;
 
     // Executes the command with the given arguments.

@@ -14,8 +14,8 @@ private:
 public:
     ClientHandlerFactory(std::shared_ptr<ICommandFactory> cmdFactory, std::shared_ptr<IParser> p);
 
-    // מממש את הממשק
-    std::unique_ptr<ClientHandler> create(const ClientContext& context) override;
+    // Creates a ClientHandler based on the given ClientContext
+    std::unique_ptr<ClientHandler> create(std::shared_ptr<ClientContext> context) override;
 };
 
 #endif // CLIENT_HANDLER_FACTORY_H

@@ -1,13 +1,13 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include "ICommunication.h"
+#include "communication/ICommunication.h"
 #include <memory>
 
 class Client {
 public:
     Client(std::unique_ptr<ICommunication> serverComm,
-           std::unique_ptr<ICommunication> userComm;
+           std::unique_ptr<ICommunication> userComm);
 
     void run();
 

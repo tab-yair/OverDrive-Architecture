@@ -3,6 +3,14 @@
 #include "file/storage/IFileStorage.h"
 #include "file/metadata/IMetadataStore.h"
 #include <stdexcept>
+#include <sstream>
+#include <iomanip>
+#include <ctime>
+
+// Helper function to convert time_t to string
+static std::string timeToString(std::time_t t) {
+    return std::to_string(t);
+}
 
 // Constructor
 LocalFileManagement::LocalFileManagement(
@@ -26,14 +34,15 @@ void LocalFileManagement::create(const std::string& userID, const std::string& f
 
     // Build metadata object
     std::time_t now = std::time(nullptr);
+    std::string nowStr = timeToString(now);
     FileMetaData metadata;
     metadata.ownerId = userID;
     metadata.logicalName = fileName;
     metadata.physicalPath = physicalPath;
     metadata.fileSize = content.size();
-    metadata.createdAt = now;
-    metadata.modifiedAt = now;
-    metadata.accessedAt = now;
+    metadata.createdAt = nowStr;
+    metadata.modifiedAt = nowStr;
+    metadata.accessedAt = nowStr;
 
     metadataStore->save(fileName, metadata);
 }
@@ -54,8 +63,9 @@ void LocalFileManagement::write(const std::string& userID, const std::string& fi
     }
     FileMetaData metadata = *metadataOpt;
     metadata.fileSize = content.size();
-    metadata.modifiedAt = std::time(nullptr);
-    metadata.accessedAt = std::time(nullptr);
+    std::string nowStr = timeToString(std::time(nullptr));
+    metadata.modifiedAt = nowStr;
+    metadata.accessedAt = nowStr;
     metadataStore->save(fileName, metadata);
 }
 
@@ -73,7 +83,7 @@ std::string LocalFileManagement::read(const std::string& userID, const std::stri
     auto metadataOpt = metadataStore->load(fileName);
     if (metadataOpt) {
         FileMetaData metadata = *metadataOpt;
-        metadata.accessedAt = std::time(nullptr);
+        metadata.accessedAt = timeToString(std::time(nullptr));
         metadataStore->save(fileName, metadata);
     }
     return content;

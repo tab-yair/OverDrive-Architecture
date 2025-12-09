@@ -5,12 +5,11 @@
 #include <string>
 #include <memory>
 #include "commands/ICommand.h"
-#include "file/IFileManagement.h"
+#include "file/management/IFileManagement.h"
 #include "handlers/ClientContext.h"
 
-// The PostCommand class implements the 'post' command.
-// It creates a new file and writes the RLE-compressed version of the input text into it.
-// Expected usage: post [file_name] [text]
+// Implements POST command: creates new file with compressed content
+// Usage: POST <filename> <content>
 class PostCommand : public ICommand {
 private:
     std::shared_ptr<IFileManagement> fileManager;

@@ -17,6 +17,11 @@ CommandResult DeleteCommand::execute(const std::vector<std::string>& args) {
 
     const std::string& fileName = args[0];
 
+    // Check if file exists first
+    if (!fileManager->exists(clientContext->clientId, fileName)) {
+        return CommandResult(CommandResult::Status::NOT_FOUND);
+    }
+
     // try deleting the file
     try {
         fileManager->remove(clientContext->clientId, fileName);
@@ -25,6 +30,6 @@ CommandResult DeleteCommand::execute(const std::vector<std::string>& args) {
         return CommandResult(CommandResult::Status::NOT_FOUND);
     }
 
-    // if deletion succeeded - return NO CONTENT
-    return CommandResult(CommandResult::Status::NO_CONTENT);
+    // if deletion succeeded - return OK
+    return CommandResult(CommandResult::Status::OK);
 }

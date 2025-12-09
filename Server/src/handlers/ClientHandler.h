@@ -9,19 +9,20 @@
 #include "protocol/ParsedCommand.h"
 #include "parsers/IParser.h"
 #include "threading/IRunnable.h"
+#include "handlers/ClientContext.h"
 
 // Handles client logic and runs as a task for a thread
 class ClientHandler : public IRunnable {
 private:
     std::unique_ptr<ICommunication> comm;
     std::unique_ptr<IExecutor> executor;
-    std::unique_ptr<IParser> parser;
+    std::shared_ptr<IParser> parser;
 
 public:
     // Constructor: inject dependencies
     ClientHandler(std::unique_ptr<ICommunication> comm, 
         std::unique_ptr<IExecutor> executor,
-        std::unique_ptr<IParser> parser);
+        std::shared_ptr<IParser> parser);
 
     // Main application loop    
     void run();

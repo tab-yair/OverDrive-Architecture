@@ -1,15 +1,14 @@
 import socket
 import sys
 
-# Define a reasonable timeout duration in seconds
-# This is necessary because the content length is unknown and the connection is persistent.
+# Socket timeout for reading complete responses from persistent connection
+# Set to 500ms to accommodate variable response lengths without content-length header
 SOCKET_TIMEOUT = 0.5 
 
 class SocketClientComm:
     """
-    Handles persistent TCP communication with the server using a line-based protocol.
-    Reads multi-line responses by relying on a short socket timeout to mark the end
-    of a complete message block.
+    Manages TCP socket communication with server using persistent connections.
+    Response boundaries are detected via socket timeout after complete message blocks.
     """
     
     def __init__(self, server_ip, port):
@@ -22,63 +21,68 @@ class SocketClientComm:
         """
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connected = False
-        self.file_stream = None
+        self.buffer = b''  # Buffer for partial data
         
         try:
             # Connect to the server
             self.socket.connect((server_ip, port))
             self.connected = True
             
-            # Set a short timeout in order to reliably read an unknown length, multi-line response on a persistent connection.
+            # Configure timeout for response boundary detection
             self.socket.settimeout(SOCKET_TIMEOUT) 
-            
-            # Create a file-like object for easier line-by-line reading
-            self.file_stream = self.socket.makefile('rb')
             
         except Exception as e:
             raise ConnectionError(f"Failed to connect to server: {e}")
     
     def receive(self):
         """
-        Receives the full response data from the server.
+        Receives a single response from the server.
         
-        It reads line-by-line in a loop until a timeout occurs, signifying that
-        the server has finished sending the complete response block (Status + Content).
+        Protocol format:
+        - No content: STATUS\\n
+        - With content: STATUS\\n\\nCONTENT\\n
+        
+        Reads until timeout (0.5s), then parses the received data.
         
         Returns:
-            str: The fully received response, or an empty string on error/disconnect.
+            str: The received response formatted as "STATUS" or "STATUS\\nCONTENT",
+                 or an empty string on error/disconnect.
         """
-        if not self.connected or not self.file_stream:
+        if not self.connected:
             return ""
         
-        full_response_bytes = []
+        response_data = b''
         
         try:
-            # Read all incoming data line-by-line until the socket blocks.
+            # Read chunks until timeout
             while True:
-                # self.file_stream.readline() will block until \n or timeout
-                response_line_bytes = self.file_stream.readline()
-                
-                if not response_line_bytes:
-                    # EOF: Server closed the connection
-                    self.connected = False
+                try:
+                    chunk = self.socket.recv(4096)
+                    if not chunk:
+                        # EOF
+                        if not response_data:
+                            self.connected = False
+                        break
+                    response_data += chunk
+                except socket.timeout:
+                    # Timeout - response complete
                     break
-
-                full_response_bytes.append(response_line_bytes)
-                
-        except socket.timeout:
-            # Expected behavior: The server has finished sending the full message block.
-            pass
+                    
         except Exception:
-            # Handle other communication errors
             self.connected = False
-        
-        if not full_response_bytes:
-            # If nothing was received, return an empty string
             return ""
-            
-        # Join all the received bytes and decode to a single string
-        return b"".join(full_response_bytes).decode('utf-8')
+        
+        if not response_data:
+            return ""
+        
+        # Decode and parse response
+        decoded = response_data.decode('utf-8')
+        
+        # Remove final newline if present
+        if decoded.endswith('\n'):
+            decoded = decoded[:-1]
+        
+        return decoded
     
     def send(self, message):
         """
@@ -134,7 +138,7 @@ class UserClientComm:
         Args:
             message (str): Message to display
         """
-        print(message, end='')
+        print(message)
 
 
 def main():
@@ -142,7 +146,7 @@ def main():
     
     # Check command line arguments
     if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <server_ip> <port>", file=sys.stderr)
+        # print(f"Usage: {sys.argv[0]} <server_ip> <port>", file=sys.stderr)
         sys.exit(1)
     
     server_ip = sys.argv[1]
@@ -150,7 +154,7 @@ def main():
     try:
         port = int(sys.argv[2])
     except ValueError:
-        print("Error: Port must be a number", file=sys.stderr)
+        # print("Error: Port must be a number", file=sys.stderr)
         sys.exit(1)
     
     try:
@@ -182,10 +186,10 @@ def main():
         server_comm.close()
         
     except ConnectionError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        # print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
+        # print(f"Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
 

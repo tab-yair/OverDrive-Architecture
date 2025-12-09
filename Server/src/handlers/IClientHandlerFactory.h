@@ -3,6 +3,7 @@
 
 #include <memory>
 #include "handlers/ClientHandler.h"
+#include "handlers/ClientContext.h"
 
 // Interface for creating ClientHandler instances
 class IClientHandlerFactory {
@@ -11,6 +12,6 @@ public:
     virtual ~IClientHandlerFactory() = default;
     
     // Creates a ClientHandler based on the given ClientContext
-    virtual std::unique_ptr<ClientHandler> create(const ClientContext& context) = 0;
+    virtual std::unique_ptr<ClientHandler> create(std::shared_ptr<ClientContext> context) = 0;
 };
 #endif // ICLIENT_HANDLER_FACTORY_H

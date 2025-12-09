@@ -1,9 +1,14 @@
 #include "communication/UserClientComm.h"
+#include <stdexcept>
+
 UserClientComm::UserClientComm() {}
 
-std::string UserClientComm::recive() {
+std::string UserClientComm::recieve() {
     std::string input;
-    std::getline(std::cin, input);
+    if (!std::getline(std::cin, input)) {
+        // EOF reached - throw exception to signal client should exit
+        throw std::runtime_error("EOF: stdin closed");
+    }
     return input;
 }
 
