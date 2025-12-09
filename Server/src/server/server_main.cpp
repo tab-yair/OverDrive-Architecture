@@ -24,13 +24,14 @@ int main(int argc, char* argv[]) {
     // Get base path from environment variable
     const char* envPath = std::getenv("OVERDRIVE_PATH");
     if (!envPath) {
-        throw std::runtime_error("Environment variable OVERDRIVE_PATH not set");
+        // throw std::runtime_error("Environment variable OVERDRIVE_PATH not set");
+        return 1;
     }
     
     std::filesystem::path basePath = envPath;
 
-    if (argc < 2) {
-        std::cerr << "Usage: server <port>\n";
+    if (argc != 2) {
+        // std::cerr << "Usage: server <port>\n";
         return 1;
     }
     

@@ -9,7 +9,7 @@ void Server::start() {
     // Create TCP socket
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
-        perror("error creating socket");
+        // perror("error creating socket");
         return;
     }
 
@@ -22,14 +22,14 @@ void Server::start() {
 
     // Bind the socket to the port
     if (bind(sock, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
-        perror("error binding socket");
+        // perror("error binding socket");
         close(sock);
         return;
     }
 
     // Listen for incoming connections
     if (listen(sock, 5) < 0) {
-        perror("error listening to a socket");
+        // perror("error listening to a socket");
         close(sock);
         return;
     }

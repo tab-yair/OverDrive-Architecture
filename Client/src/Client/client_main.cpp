@@ -7,7 +7,7 @@
 int main(int argc, char* argv[]) {
     if (argc != 3) {
         // Usage error: missing IP or port
-        std::cerr << "Usage: " << argv[0] << " <server_ip> <port>" << std::endl;
+        // std::cerr << "Usage: " << argv[0] << " <server_ip> <port>" << std::endl;
         return 1;
     }
 
@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
         port = std::stoi(argv[2]);
     } catch (...) {
         // Invalid port number
-        std::cerr << "Invalid port number: " << argv[2] << std::endl;
+        // std::cerr << "Invalid port number: " << argv[2] << std::endl;
         return 1;
     }
 
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
         client.run();
     } catch (const std::exception& e) {
         // Error during client setup or connection
-        std::cerr << "Error: " << e.what() << std::endl;
+        // std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
 

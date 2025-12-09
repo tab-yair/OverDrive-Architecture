@@ -146,7 +146,7 @@ def main():
     
     # Check command line arguments
     if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <server_ip> <port>", file=sys.stderr)
+        # print(f"Usage: {sys.argv[0]} <server_ip> <port>", file=sys.stderr)
         sys.exit(1)
     
     server_ip = sys.argv[1]
@@ -154,7 +154,7 @@ def main():
     try:
         port = int(sys.argv[2])
     except ValueError:
-        print("Error: Port must be a number", file=sys.stderr)
+        # print("Error: Port must be a number", file=sys.stderr)
         sys.exit(1)
     
     try:
@@ -186,10 +186,10 @@ def main():
         server_comm.close()
         
     except ConnectionError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        # print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
+        # print(f"Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
 
