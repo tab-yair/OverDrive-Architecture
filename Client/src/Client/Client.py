@@ -3,7 +3,7 @@ import sys
 
 # Define a reasonable timeout duration in seconds
 # This is necessary because the content length is unknown and the connection is persistent.
-SOCKET_TIMEOUT = 0.5 
+SOCKET_TIMEOUT = 0.5  # 500ms - server on localhost responds in microseconds 
 
 class SocketClientComm:
     """
@@ -22,7 +22,7 @@ class SocketClientComm:
         """
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connected = False
-        self.file_stream = None
+        self.buffer = b''  # Buffer for partial data
         
         try:
             # Connect to the server
@@ -32,53 +32,58 @@ class SocketClientComm:
             # Set a short timeout in order to reliably read an unknown length, multi-line response on a persistent connection.
             self.socket.settimeout(SOCKET_TIMEOUT) 
             
-            # Create a file-like object for easier line-by-line reading
-            self.file_stream = self.socket.makefile('rb')
-            
         except Exception as e:
             raise ConnectionError(f"Failed to connect to server: {e}")
     
     def receive(self):
         """
-        Receives the full response data from the server.
+        Receives a single response from the server.
         
-        It reads line-by-line in a loop until a timeout occurs, signifying that
-        the server has finished sending the complete response block (Status + Content).
+        Protocol format:
+        - No content: STATUS\\n
+        - With content: STATUS\\n\\nCONTENT\\n
+        
+        Reads until timeout (0.5s), then parses the received data.
         
         Returns:
-            str: The fully received response, or an empty string on error/disconnect.
+            str: The received response formatted as "STATUS" or "STATUS\\nCONTENT",
+                 or an empty string on error/disconnect.
         """
-        if not self.connected or not self.file_stream:
+        if not self.connected:
             return ""
         
-        full_response_bytes = []
+        response_data = b''
         
         try:
-            # Read all incoming data line-by-line until the socket blocks.
+            # Read chunks until timeout
             while True:
-                # self.file_stream.readline() will block until \n or timeout
-                response_line_bytes = self.file_stream.readline()
-                
-                if not response_line_bytes:
-                    # EOF: Server closed the connection
-                    self.connected = False
+                try:
+                    chunk = self.socket.recv(4096)
+                    if not chunk:
+                        # EOF
+                        if not response_data:
+                            self.connected = False
+                        break
+                    response_data += chunk
+                except socket.timeout:
+                    # Timeout - response complete
                     break
-
-                full_response_bytes.append(response_line_bytes)
-                
-        except socket.timeout:
-            # Expected behavior: The server has finished sending the full message block.
-            pass
+                    
         except Exception:
-            # Handle other communication errors
             self.connected = False
-        
-        if not full_response_bytes:
-            # If nothing was received, return an empty string
             return ""
-            
-        # Join all the received bytes and decode to a single string
-        return b"".join(full_response_bytes).decode('utf-8')
+        
+        if not response_data:
+            return ""
+        
+        # Decode and parse response
+        decoded = response_data.decode('utf-8')
+        
+        # Remove final newline if present
+        if decoded.endswith('\n'):
+            decoded = decoded[:-1]
+        
+        return decoded
     
     def send(self, message):
         """
@@ -134,7 +139,7 @@ class UserClientComm:
         Args:
             message (str): Message to display
         """
-        print(message, end='')
+        print(message)
 
 
 def main():
