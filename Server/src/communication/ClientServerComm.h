@@ -1,7 +1,7 @@
 #ifndef CLIENTSERVERCOMM_H
 #define CLIENTSERVERCOMM_H
 
-#include "ICommunication.h"
+#include "communication/ICommunication.h"
 #include <string>
 
 class ClientServerComm : public ICommunication {
@@ -14,7 +14,7 @@ public:
 
     ~ClientServerComm();
 
-    std::string recive() override;
+    std::string recieve() override;
     int send(std::string output) override;
 
     void close();

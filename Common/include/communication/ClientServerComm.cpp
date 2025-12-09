@@ -1,4 +1,4 @@
-#include "ClientServerComm.h"
+#include "communication/ClientServerComm.h"
 #include <cstring>
 #include <stdexcept>
 #include <string>
@@ -33,21 +33,6 @@ ClientServerComm::ClientServerComm(const std::string& ip, int port)
         is_connected = true;
         return;
     }
-    
-    // Not an IP address, try to resolve as hostname
-    struct addrinfo hints{}, *result = nullptr;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    
-    if (getaddrinfo(ip.c_str(), nullptr, &hints, &result) != 0 || result == nullptr) {
-        ::close(socket);
-        throw std::runtime_error("Failed to resolve hostname");
-    }
-
-    // Use the first resolved address
-    memcpy(&sin.sin_addr, &((struct sockaddr_in*)result->ai_addr)->sin_addr, sizeof(sin.sin_addr));
-    freeaddrinfo(result);
     
     // Connect to server
     if (connect(socket, (struct sockaddr*)&sin, sizeof(sin)) < 0) {
