@@ -2,130 +2,139 @@
 
 A high-performance client-server file storage system with RLE compression, built with C++17 and Python.
 
-## Overview:
-
+## Overview
 
 OverDrive is a networked file storage system featuring:
 - **Client-Server Architecture**: Multi-threaded server handling multiple concurrent clients
-- **RLE Compression**: Automatic Run-Length Encoding compression for efficient storage
+- **RLE Compression**: Automatic Run-Length Encoding for efficient storage
 - **Dual Client Support**: Both C++ and Python client implementations
-- **HTTP-like Protocol**: Simple text-based protocol with status codes (200, 201, 404, 400)
-- **Persistent Storage**: Metadata and files persist across server restarts
+- **HTTP-like Protocol**: Simple text-based protocol with status codes
+- **Persistent Storage**: Files and metadata persist across server restarts
 - **Docker-Ready**: Full containerization with Docker Compose
 
-## Features
+---
 
-- ✅ **Multi-threaded Server**: Handles multiple concurrent client connections
-- ✅ **RLE Compression**: Automatic compression/decompression of file content
-- ✅ **Persistent Storage**: Files and metadata survive server restarts
-- ✅ **Dual Clients**: C++ and Python client implementations
-- ✅ **HTTP-like Protocol**: Status codes (200 OK, 201 Created, 404 Not Found, 400 Bad Request)
-- ✅ **Docker Support**: Complete containerization with docker-compose
-- ✅ **Comprehensive Testing**: 14 unit tests with GoogleTest (100% pass rate)
-- ✅ **Thread-Safe**: Concurrent file operations with proper locking
-
-## Protocol Commands
-
-The system supports four main commands using an HTTP-like protocol:
-
-### `POST <filename> <content>`
-Creates a new file with the given name and content.
-- **Example**: `POST myfile.txt Hello World`
-- **Response**: `201 Created`
-- **Behavior**: 
-  - Compresses content using RLE before storage
-  - Files stored with hash-based physical paths
-  - Returns `400 Bad Request` if filename missing
-
-### `GET <filename>`
-Retrieves and decompresses file content.
-- **Example**: `GET myfile.txt`
-- **Response**: 
-  ```
-  200 Ok
-  Hello World
-  ```
-- **Behavior**: 
-  - Decompresses content automatically
-  - Returns `404 Not Found` if file doesn't exist
-  - Updates last access timestamp
-
-### `DELETE <filename>`
-Removes a file from storage.
-- **Example**: `DELETE myfile.txt`
-- **Response**: `200 Ok`
-- **Behavior**: 
-  - Removes both compressed file and metadata
-  - Returns `404 Not Found` if file doesn't exist
-
-### `SEARCH <keyword>`
-Searches for files containing the keyword.
-- **Example**: `SEARCH Hello`
-- **Response**: 
-  ```
-  200 Ok
-  myfile.txt otherfile.txt
-  ```
-- **Behavior**: 
-  - Searches decompressed content
-  - Returns space-separated list of matching filenames
-  - Case-sensitive search
-
-## Architecture
-
-The system follows SOLID principles with clean separation of concerns:
-
-### Server Components
-- **Commands**: `PostCommand`, `GetCommand`, `DeleteCommand`, `SearchCommand` (implementing `ICommand`)
-- **File Management**: `LocalFileManagement` with thread-safe operations
-- **Storage Layers**:
-  - `LocalFileStorage`: Raw file I/O
-  - `CompressedFileStorage`: RLE compression wrapper
-  - `ThreadSafeFileManagement`: Concurrent access protection
-- **Metadata**: `JsonMetadataStore` with immediate persistence
-- **Path Mapping**: `HashPathMapper` using SHA256 for physical paths
-- **Compression**: `RLECompressor` (implementing `ICompressor`)
-- **Parsing**: `CommandParser` with case-insensitive command names
-- **Execution**: `CommandExecutor` coordinating command lifecycle
-- **Networking**: `ClientServerComm` with line-based protocol
-- **Threading**: `DedicatedThreadManager` for client handlers
-
-### Client Components
-- **C++ Client**: Fast native client with `ClientServerComm` networking
-- **Python Client**: Portable client with socket-based communication
-- **User I/O**: `UserClientComm` for stdin/stdout interaction
-
-## Technology Stack
-
-- **Languages**: C++17, Python 3.11
-- **Build System**: CMake 3.14+
-- **Testing Framework**: GoogleTest 1.14.0
-- **Containerization**: Docker & Docker Compose
-- **Compiler**: GCC 11
-- **Libraries**: 
-  - OpenSSL (SHA256 hashing)
-  - nlohmann/json (metadata serialization)
-  - C++ STL (threading, filesystem, networking)
-
-## Quick Start
+## Getting Started
 
 ### Prerequisites
 - Docker
 - Docker Compose
 
-### 1. Build All Services
+### Step 1: Build (one-time only)
 
 ```bash
 docker-compose build
 ```
 
-This builds three images:
-- `overdrive-server`: The file storage server
-- `overdrive-client`: C++ client (1.77GB)
-- `overdrive-client-python`: Python client (186MB)
-- `overdrive-tests`: Test suite (1.94GB)
+### Step 2: Start the Server
 
-### 2. Run Tests
+```bash
+docker-compose up -d server
+```
+
+### Step 3: Run a Client
+
+**Python client:**
+```bash
+docker-compose --profile client run --rm -it client-python
+```
+
+**C++ client:**
+```bash
+docker-compose --profile client run --rm -it client-cpp
+```
+
+### Step 4: Stop Everything
+
+```bash
+docker-compose down
+```
+
+---
+
+## Demo: Multiple Clients
+
+The screenshot below demonstrates multiple terminal windows running simultaneously — one server and multiple clients connected at the same time:
+
+![Multiple Terminals Demo](images/running_example_proof.jpg)
+
+---
+
+## Protocol Commands
+
+| Command | Description | Example | Response |
+|---------|-------------|---------|----------|
+| `POST <filename> <content>` | Create a new file | `POST myfile.txt Hello World` | `201 Created` |
+| `GET <filename>` | Retrieve file content | `GET myfile.txt` | `200 Ok` + content |
+| `DELETE <filename>` | Remove a file | `DELETE myfile.txt` | `200 Ok` |
+| `SEARCH <keyword>` | Search files by content | `SEARCH Hello` | `200 Ok` + matching filenames |
+
+### Status Codes
+- `200 Ok` — Success
+- `201 Created` — File created successfully
+- `400 Bad Request` — Invalid command syntax
+- `404 Not Found` — File does not exist
+
+---
+
+## Architecture
+
+The system follows SOLID principles with clean separation of concerns:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Clients                             │
+│              (C++ Client / Python Client)                   │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ TCP Socket (port 5555)
+┌─────────────────────────▼───────────────────────────────────┐
+│                         Server                              │
+│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────┐   │
+│  │   Parser    │─▶│   Executor   │─▶│     Commands      │   │
+│  └─────────────┘  └──────────────┘  │ POST/GET/DELETE/  │   │
+│                                     │     SEARCH        │   │
+│                                     └─────────┬─────────┘   │
+│  ┌─────────────────────────────────────────────▼─────────┐  │
+│  │              File Management Layer                    │  │
+│  │  ┌─────────────┐  ┌────────────┐  ┌───────────────┐   │  │
+│  │  │ Thread-Safe │─▶│ Compressed │─▶│ Local Storage │   │  │
+│  │  │  Wrapper    │  │  Storage   │  │               │   │  │
+│  │  └─────────────┘  └────────────┘  └───────────────┘   │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+- **Commands**: `PostCommand`, `GetCommand`, `DeleteCommand`, `SearchCommand` (all implement `ICommand`)
+- **Storage**: Layered architecture with thread-safety, compression, and raw I/O
+- **Metadata**: `JsonMetadataStore` with immediate persistence
+- **Path Mapping**: `HashPathMapper` using SHA256 for physical paths
+- **Compression**: `RLECompressor` implementing `ICompressor`
+- **Communication**: `ICommunication` interface for socket/console abstraction
+
+---
+
+## Assignment Questions
+
+### 1. Did renaming commands require modifying code that should be "closed to modification"?
+
+**No.** The only changes required were in the command registration dictionary and the corresponding imports. The dictionary acts as a configuration layer that maps command names to their implementations — it is designed to be the single point of modification for such changes. The core logic (command execution, parsing, etc.) remained untouched. This is the expected behavior: the mapping/registration code is inherently "open" to accommodate new or renamed commands, while the actual business logic stays closed.
+
+### 2. Did adding new commands require modifying code that should be "closed to modification"?
+
+**No.** In Exercise 1, we implemented the Command Pattern with each command as a separate class implementing a common interface (`ICommand`). Adding a new command only required creating a new class and registering it in the command dictionary — no existing command or core logic code was modified.
+
+### 3. Did changing command output format require modifying code that should be "closed to modification"?
+
+**Yes**, initially. We had to modify existing code to accommodate output changes. To prevent this in the future, we implemented a `CommandResult` struct that encapsulates the output in a flexible way, allowing different data types and formats to be returned without changing the command interface or the code that processes results.
+
+### 4. Did switching from console to socket I/O require modifying code that should be "closed to modification"?
+
+**No.** In Exercise 1, we implemented the Dependency Inversion Principle by creating an `ICommunication` interface. The core logic depends only on this abstraction. To support sockets, we simply created a new `SocketCommunication` class implementing the interface — no existing code was modified.
+
+---
+
+## Running Tests
 
 ```bash
 docker-compose run --rm tests
@@ -133,193 +142,81 @@ docker-compose run --rm tests
 
 Expected output: `100% tests passed, 0 tests failed out of 14`
 
-### 3. Start Server
+### Test Coverage
+- Hash Path Mapper (3 tests)
+- Local File Storage (3 tests)
+- Compressed File Storage (3 tests)
+- JSON Metadata Store (5 tests)
+- RLE Compressor (19 tests)
+- Local File Management (9 tests)
+- Thread-Safe File Management (1 test)
+- Command Parsing (35 tests)
+- Command Executor (11 tests)
+- POST/GET/DELETE/SEARCH Commands (25 tests)
+- Client-Server Communication (10 tests)
 
-```bash
-docker-compose up -d server
-```
-
-Server starts on `localhost:5555` with health checks enabled.
-
-### 4. Use Clients
-
-
-
-#### Direct TCP Connection (Testing)
-```bash
-nc localhost 5555
-POST test.txt Hello
-201 Created
-GET test.txt
-200 Ok
-Hello
-```
-
-### Example Session
-
-```bash
-# 1. Run the test suite
-docker-compose --profile test run --rm tests
-
-# 2. Start the server in detached mode
-docker-compose up -d server
-
-# 3. Launch Python client interactively 
-docker-compose --profile client run --rm -it client-python
-
-# 4. Launch C++ client interactively
-docker-compose --profile client run --rm -it client-cpp
-
-# 5. Stop all running services
-docker-compose down
-```
-
-## Configuration
-
-### Environment Variables
-- `OVERDRIVE_PATH`: Server storage directory (default: `/app/files`)
-
-### Docker Volumes
-- `./server_data:/app/files`: Persistent file and metadata storage
-
-### Ports
-- `5555`: Server listening port (TCP)
+---
 
 ## Project Structure
 
 ```
 OverDrive/
 ├── Server/
-│   ├── src/
-│   │   ├── server/
-│   │   │   └── server_main.cpp          # Server entry point
-│   │   ├── commands/                    # POST, GET, DELETE, SEARCH
-│   │   ├── communication/               # Socket communication
-│   │   ├── compressor/                  # RLE compression
-│   │   ├── executors/                   # Command execution
-│   │   ├── file/
-│   │   │   ├── management/              # File operations
-│   │   │   ├── metadata/                # JSON metadata store
-│   │   │   ├── path/                    # SHA256 path mapper
-│   │   │   └── storage/                 # Storage layers
-│   │   ├── handlers/                    # Client connection handlers
-│   │   ├── parsers/                     # Command parsing
-│   │   └── threading/                   # Thread management
-│   └── tests/                           # Unit tests (14 total)
-│       └── mocks/                       # Mock objects
+│   └── src/
+│       ├── server/          # Server entry point
+│       ├── commands/        # POST, GET, DELETE, SEARCH
+│       ├── communication/   # Socket communication
+│       ├── compressor/      # RLE compression
+│       ├── executors/       # Command execution
+│       ├── file/            # Storage, metadata, path mapping
+│       ├── handlers/        # Client connection handlers
+│       ├── parsers/         # Command parsing
+│       └── threading/       # Thread management
 ├── Client/
 │   └── src/
-│       ├── Client/
-│       │   ├── Client.cpp               # C++ client
-│       │   └── Client.py                # Python client
-│       └── communication/               # User and server comm
+│       └── Client/          # C++ and Python clients
 ├── Common/
-│   └── include/
-│       ├── communication/               # Shared communication
-│       └── protocol/                    # Command result format
-├── CMakeLists.txt                       # Build configuration
-├── Dockerfile.server                    # Server container
-├── Dockerfile.client                    # C++ client container
-├── Dockerfile.client-python             # Python client container
-├── Dockerfile.tests                     # Test container
-└── docker-compose.yml                   # Multi-service orchestration
+│   └── include/             # Shared interfaces and protocols
+├── docker-compose.yml
+├── Dockerfile.server
+├── Dockerfile.client
+├── Dockerfile.client-python
+└── Dockerfile.tests
 ```
 
-## Testing
+---
 
-The project includes 14 comprehensive unit tests (100% pass rate):
+## Technology Stack
 
-### Test Suites
-1. **Hash Path Mapper** (3 tests): SHA256 path generation and resolution
-2. **Local File Storage** (3 tests): Raw file I/O operations
-3. **Compressed File Storage** (3 tests): RLE compression integration
-4. **JSON Metadata Store** (5 tests): Persistence and retrieval
-5. **RLE Compressor** (19 tests): Compression/decompression edge cases
-6. **Local File Management** (9 tests): High-level file operations
-7. **Thread-Safe File Management** (1 test): Concurrent access
-8. **Command Parsing** (35 tests): Command syntax validation
-9. **Command Executor** (11 tests): Command routing and execution
-10. **POST Command** (6 tests): File creation logic
-11. **GET Command** (6 tests): File retrieval logic
-12. **DELETE Command** (6 tests): File deletion logic
-13. **SEARCH Command** (7 tests): Content search logic
-14. **Client-Server Communication** (10 tests): Network protocol
+| Component | Technology |
+|-----------|------------|
+| Languages | C++17, Python 3.11 |
+| Build | CMake 3.14+ |
+| Testing | GoogleTest 1.14.0 |
+| Containers | Docker & Docker Compose |
+| Compiler | GCC 11 |
+| Libraries | OpenSSL, nlohmann/json, C++ STL |
 
-### Running Tests
+---
 
-```bash
-# Docker (recommended)
-docker-compose run --rm tests
+## Configuration
 
-# Local build
-mkdir build && cd build
-cmake .. && make
-ctest --output-on-failure
-```
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `OVERDRIVE_PATH` | `/app/files` | Server storage directory |
+| Port | `5555` | TCP listening port |
+| Volume | `./server_data:/app/files` | Persistent storage mount |
 
-## Development
-
-### Local Build (requires CMake 3.14+, GCC 11, OpenSSL, nlohmann-json)
-
-```bash
-# Install dependencies (Ubuntu/Debian)
-sudo apt-get update
-sudo apt-get install -y cmake g++ libssl-dev nlohmann-json3-dev
-
-# Build
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . -- -j$(nproc)
-
-# Run server
-./server_main 5555
-
-# Run client (separate terminal)
-./client_main localhost 5555
-```
-
-### Debugging
-
-```bash
-# Server logs
-docker-compose logs server
-
-# Server with live logs
-docker-compose up server
-
-# Interactive server shell
-docker-compose exec server /bin/bash
-```
-
-## Performance Characteristics
-
-- **Compression Ratio**: Depends on content (best for repeated characters)
-- **Concurrency**: Handles multiple clients simultaneously
-- **Persistence**: Immediate metadata writes (no 3-minute delay)
-- **Thread Safety**: Full concurrent read/write support with shared mutexes
-- **Network**: Line-based protocol with newline delimiters
+---
 
 ## Known Limitations
 
-- File names cannot contain spaces (use underscores instead)
+- File names cannot contain spaces (use underscores)
 - Search is case-sensitive
-- No authentication/authorization (single-user system)
-- RLE compression ineffective for random data
-- No file versioning or history
+- No authentication (single-user system)
+- RLE compression is ineffective for random data
 
-## Future Enhancements
-
-- [ ] User authentication and multi-tenancy
-- [ ] File versioning and history
-- [ ] Advanced compression algorithms (LZ77, Huffman)
-- [ ] RESTful HTTP API
-- [ ] Web-based UI
-- [ ] Distributed storage across multiple nodes
-- [ ] Encryption at rest and in transit
-
-## Contributing
-
-This is an academic project. For questions or issues, please contact the project maintainer.
+---
 
 ## License
 

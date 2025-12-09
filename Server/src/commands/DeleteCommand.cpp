@@ -10,8 +10,8 @@ CommandResult DeleteCommand::execute(const std::vector<std::string>& args) {
         return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 
-    // validate there are arguments
-    if (args.empty()) {
+    // Validate arguments: expecting exactly one argument (the file name)
+    if (args.size() != 1) {
         return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 
@@ -30,6 +30,6 @@ CommandResult DeleteCommand::execute(const std::vector<std::string>& args) {
         return CommandResult(CommandResult::Status::NOT_FOUND);
     }
 
-    // if deletion succeeded - return OK
-    return CommandResult(CommandResult::Status::OK);
+    // if deletion succeeded - return NO_CONTENT status
+    return CommandResult(CommandResult::Status::NO_CONTENT);
 }

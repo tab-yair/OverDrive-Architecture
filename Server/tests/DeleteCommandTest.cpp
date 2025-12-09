@@ -57,8 +57,8 @@ TEST_F(DeleteCommandTest, FileDoesNotExist_ReturnsNotFound) {
     EXPECT_EQ(result.status, CommandResult::Status::NOT_FOUND);
 }
 
-// File exists → remove() called → return OK
-TEST_F(DeleteCommandTest, FileExists_RemoveSuccess_ReturnsOK) {
+// File exists → remove() called → return NO_CONTENT
+TEST_F(DeleteCommandTest, FileExists_RemoveSuccess_ReturnsNoContent) {
     mockFileManager->existsReturnValue = true;
 
     std::vector<std::string> args = {"del.txt"};
@@ -70,7 +70,7 @@ TEST_F(DeleteCommandTest, FileExists_RemoveSuccess_ReturnsOK) {
     EXPECT_EQ(mockFileManager->lastClientId, "1");
     EXPECT_EQ(mockFileManager->lastRemovedFilename, "del.txt");
 
-    EXPECT_EQ(result.status, CommandResult::Status::OK);
+    EXPECT_EQ(result.status, CommandResult::Status::NO_CONTENT);
 }
 
 // remove() throws exception → NOT_FOUND

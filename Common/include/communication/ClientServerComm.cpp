@@ -34,12 +34,26 @@ ClientServerComm::ClientServerComm(const std::string& ip, int port)
         return;
     }
     
-    // Connect to server
-    if (connect(socket, (struct sockaddr*)&sin, sizeof(sin)) < 0) {
+    // Not an IP address, try to resolve as hostname using getaddrinfo
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    
+    std::string port_str = std::to_string(port);
+    if (getaddrinfo(ip.c_str(), port_str.c_str(), &hints, &res) != 0) {
+        ::close(socket);
+        throw std::runtime_error("Failed to resolve hostname");
+    }
+    
+    // Try to connect using the resolved address
+    if (connect(socket, res->ai_addr, res->ai_addrlen) < 0) {
+        freeaddrinfo(res);
         ::close(socket);
         throw std::runtime_error("Failed to connect to server");
     }
-
+    
+    freeaddrinfo(res);
     is_connected = true;
 }
 
