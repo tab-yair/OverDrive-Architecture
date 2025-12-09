@@ -2,7 +2,8 @@
 
 A high-performance client-server file storage system with RLE compression, built with C++17 and Python.
 
-## Overview
+## Overview:
+
 
 OverDrive is a networked file storage system featuring:
 - **Client-Server Architecture**: Multi-threaded server handling multiple concurrent clients
