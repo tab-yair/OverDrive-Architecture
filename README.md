@@ -56,7 +56,7 @@ docker-compose down
 
 The screenshot below demonstrates multiple terminal windows running simultaneously — one server and multiple clients connected at the same time:
 
-![Multiple Terminals Demo](images/running_example_proof.jpg)
+![Multiple Terminals Demo](Images/running_example_proof.jpg)
 
 ---
 
