@@ -19,8 +19,8 @@ CommandResult GetCommand::execute(const std::vector<std::string>& args) {
         return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 
-    // If no filename provided, stop immediately.
-    if (args.empty()) {
+    // Validate arguments: expecting exactly one argument (the file name)
+    if (args.size() != 1) {
         return CommandResult(CommandResult::Status::BAD_REQUEST);
     }
 
