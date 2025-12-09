@@ -43,7 +43,8 @@ inline std::string HTTPAdapter(const CommandResult& result) {
     }
 
     const std::string& statusText = it->second;
-    return result.content.empty() ? statusText : statusText + "\n" + result.content;
+    // Protocol format: STATUS\n\nMESSAGE\n (empty line separator between status and message)
+    return result.content.empty() ? statusText : statusText + "\n\n" + result.content;
 }
 
 #endif // COMMANDRESULT_H
