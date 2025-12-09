@@ -142,19 +142,7 @@ Server starts on `localhost:5555` with health checks enabled.
 
 ### 4. Use Clients
 
-#### Python Client (Recommended for Interactive Use)
-```bash
-echo "POST myfile.txt Hello World" | docker-compose run --rm --no-TTY client-python
-echo "GET myfile.txt" | docker-compose run --rm --no-TTY client-python
-echo "SEARCH Hello" | docker-compose run --rm --no-TTY client-python
-echo "DELETE myfile.txt" | docker-compose run --rm --no-TTY client-python
-```
 
-#### C++ Client
-```bash
-echo "POST file.txt content" | docker-compose run --rm --no-TTY client-cpp
-echo "GET file.txt" | docker-compose run --rm --no-TTY client-cpp
-```
 
 #### Direct TCP Connection (Testing)
 ```bash
@@ -169,33 +157,19 @@ Hello
 ### Example Session
 
 ```bash
-# Start server
+# 1. Run the test suite
+docker-compose --profile test run --rm tests
+
+# 2. Start the server in detached mode
 docker-compose up -d server
 
-# Create files
-echo "POST document.txt Important data" | docker-compose run --rm --no-TTY client-python
-# Output: 201 Created
+# 3. Launch Python client interactively 
+docker-compose --profile client run --rm -it client-python
 
-echo "POST notes.txt Remember this" | docker-compose run --rm --no-TTY client-python
-# Output: 201 Created
+# 4. Launch C++ client interactively
+docker-compose --profile client run --rm -it client-cpp
 
-# Retrieve file
-echo "GET document.txt" | docker-compose run --rm --no-TTY client-python
-# Output:
-# 200 Ok
-# Important data
-
-# Search files
-echo "SEARCH data" | docker-compose run --rm --no-TTY client-python
-# Output:
-# 200 Ok
-# document.txt
-
-# Delete file
-echo "DELETE notes.txt" | docker-compose run --rm --no-TTY client-python
-# Output: 200 Ok
-
-# Stop server
+# 5. Stop all running services
 docker-compose down
 ```
 
