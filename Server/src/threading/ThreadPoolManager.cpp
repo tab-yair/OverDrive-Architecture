@@ -1,7 +1,7 @@
 #include "ThreadPoolManager.h"
 
 // Constructor: Initializes the thread pool with the specified number of threads
-ThreadPoolManager::ThreadPoolManager(size_t numThreads) : stop(false) {
+ThreadPoolManager::ThreadPoolManager(size_t numThreads) {
     for (size_t i = 0; i < numThreads; ++i) {
         workers.emplace_back(&ThreadPoolManager::workerThread, this);
     }
@@ -10,10 +10,7 @@ ThreadPoolManager::ThreadPoolManager(size_t numThreads) : stop(false) {
 // Destructor: Joins all threads and cleans up
 ThreadPoolManager::~ThreadPoolManager() {
     // Signal all threads to stop    
-    {
-        std::unique_lock<std::mutex> lock(queueMutex);
-        stop = true;
-    }
+    stop = true;
     // Notify all worker threads to wake up
     condition.notify_all();
     for (std::thread &worker : workers) {
@@ -41,7 +38,7 @@ void ThreadPoolManager::workerThread() {
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             condition.wait(lock, [this] { return stop || !tasks.empty(); });
-            if (stop && tasks.empty()) {
+            if (stop.load() && tasks.empty()) {
                 return;
             }
             task = std::move(tasks.front());

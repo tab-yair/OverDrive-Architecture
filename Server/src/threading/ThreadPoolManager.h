@@ -7,7 +7,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
-
+#include <atomic>
 #include "IThreadManager.h"
 #include "IRunnable.h"
 
@@ -29,7 +29,7 @@ private:
 
     std::mutex queueMutex;
     std::condition_variable condition;
-    bool stop;
+    std::atomic<bool> stop{false};
 };
 
 #endif // THREADPOOLMANAGER_H
