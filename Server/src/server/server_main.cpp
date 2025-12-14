@@ -7,7 +7,7 @@
 // Server components
 #include "server/server.h"
 #include "handlers/ClientHandlerFactory.h"
-#include "threading/DedicatedThreadManager.h"
+#include "threading/ThreadPoolManager.h"
 #include "commands/ClientCommandFactory.h"
 #include "parsers/CommandParser.h"
 
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
 
 
     // Step 2: Create thread manager
-    std::shared_ptr<IThreadManager> threadManager = std::make_shared<DedicatedThreadManager>();
+    std::shared_ptr<IThreadManager> threadManager = std::make_shared<ThreadPoolManager>(8);
 
     // Step 3: Create command factory
     std::shared_ptr<ICommandFactory> commandFactory = std::make_shared<ClientCommandFactory>(fs);
