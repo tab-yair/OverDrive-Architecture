@@ -112,18 +112,18 @@ TEST_F(LocalFileManagementTest, ListFiles) {
     EXPECT_TRUE(std::find(files.begin(), files.end(), "other.txt") != files.end());
 }
 
-// Search for content in filename or file content
-TEST_F(LocalFileManagementTest, SearchFindsContent) {
-    lf->create("search1.txt", "findme");
-    lf->create("search2.txt", "nomatch");
+// Search only in file content, not in filename
+TEST_F(LocalFileManagementTest, SearchContentOnly) {
+    lf->create("findme.txt", "hello world"); 
+    lf->create("file2.txt", "findme");      
 
     auto results = lf->search("findme");
-    EXPECT_EQ(results.size(), 1);
-    EXPECT_EQ(results[0], "search1.txt");
+    EXPECT_EQ(results.size(), 1);            
+    EXPECT_EQ(results[0], "file2.txt");      
 }
 
-// Searching for non-existent content returns empty
-TEST_F(LocalFileManagementTest, SearchEmpty) {
+// Searching for non-existent content still returns empty
+TEST_F(LocalFileManagementTest, SearchContentEmpty) {
     lf->create("file1.txt", "abc");
     auto results = lf->search("xyz");
     EXPECT_TRUE(results.empty());
