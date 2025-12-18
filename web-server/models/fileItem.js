@@ -1,6 +1,6 @@
 import crypto from 'crypto';
-import { usersStore } from './usersStore'; // הנחה שיש לך usersStore
-import { permissionStore } from './permissionStore'; // הנחה שיש לך permissionStore
+import { usersStore } from './usersStore'; 
+import { permissionStore } from './permissionStore'; 
 
 class FileItem {
     constructor(id, name, type, ownerId, parentId = null, size = 0) {
@@ -51,7 +51,13 @@ const _updateFileOwnerIndex = (fileId, fileRef, oldOwnerId, newOwnerId) => {
 };
 
 // ---------- FILES STORE ----------
+let _permissionStore = null; // internal reference for DI
+
 const filesStore = {
+    // ---------------- DEPENDENCY INJECTION ----------------
+    _setPermissionStore: (store) => {
+        _permissionStore = store;
+    },
     // ---------------- CREATE ----------------
     create: (name, type, ownerId, parentId = null, size = 0) => {
         // Validate owner
@@ -87,6 +93,9 @@ const filesStore = {
         // Update owner index
         if (!filesByOwner.has(ownerId)) filesByOwner.set(ownerId, new Map());
         filesByOwner.get(ownerId).set(id, newItem);
+
+        // Create owner permission for the creator
+        permissionStore.addOwner(id, ownerId);
 
         return { ...newItem };
     },
@@ -185,10 +194,10 @@ const filesStore = {
                 physicalFileIdsToDelete.push(current.id);
             }
 
-            // 3. Metadata Cleanup (The logical part we already wrote)
-            
-            // Clean Permissions
-            permissionStore.deleteAllForFile(current.id);
+            // 3. Clean Permissions using DI
+            if (_permissionStore) {
+                _permissionStore.deleteAllForFile(current.id);
+            }
 
             // Clean Parent Index
             const parentMap = filesByParent.get(current.parentId);
@@ -210,7 +219,7 @@ const filesStore = {
 
         // Return the list of UUIDs that the Controller must tell C++ to delete
         return physicalFileIdsToDelete;
-    }
+    },
 
     // ---------------- DELETE BY OWNER ----------------
     deleteByOwnerId: (ownerId) => {
@@ -221,5 +230,8 @@ const filesStore = {
             .flatMap(fid => filesStore.delete(fid));
     }
 };
+
+// Initialize permissionStore via DI
+filesStore._setPermissionStore(permissionStore);
 
 export { FileItem, filesStore };
