@@ -20,25 +20,25 @@ enable_testing()
 # Library: File Management (path, storage, compressor, metadata)
 add_library(file_management_lib
     # Path mapping
-    Server/src/file/path/HashPathMapper.cpp
+    Storage-Server/src/file/path/HashPathMapper.cpp
     
     # Storage
-    Server/src/file/storage/LocalFileStorage.cpp
-    Server/src/file/storage/CompressedFileStorage.cpp
+    Storage-Server/src/file/storage/LocalFileStorage.cpp
+    Storage-Server/src/file/storage/CompressedFileStorage.cpp
     
     # Compressor
-    Server/src/file/compressor/RLECompressor.cpp
+    Storage-Server/src/file/compressor/RLECompressor.cpp
     
     # Metadata
-    Server/src/file/metadata/JsonMetadataStore.cpp
+    Storage-Server/src/file/metadata/JsonMetadataStore.cpp
 
     # Management
-    Server/src/file/management/LocalFileManagement.cpp
-    Server/src/file/management/ThreadSafeFileManagement.cpp
+    Storage-Server/src/file/management/LocalFileManagement.cpp
+    Storage-Server/src/file/management/ThreadSafeFileManagement.cpp
 )
 
 target_include_directories(file_management_lib PUBLIC
-    Server/src
+    Storage-Server/src
 )
 
 # Find OpenSSL for SHA256
@@ -47,7 +47,7 @@ target_link_libraries(file_management_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
 # Test 1: HashPathMapper
 add_executable(test_hash_path_mapper 
-    Server/tests/test_hash_path_mapper.cpp
+    Storage-Server/tests/test_hash_path_mapper.cpp
 )
 
 target_link_libraries(test_hash_path_mapper
@@ -60,7 +60,7 @@ add_test(NAME test_hash_path_mapper COMMAND test_hash_path_mapper)
 
 # Test 2: LocalFileStorage
 add_executable(test_local_file_storage
-    Server/tests/test_LocalFileStorage.cpp
+    Storage-Server/tests/test_LocalFileStorage.cpp
 )
 
 target_link_libraries(test_local_file_storage
@@ -73,7 +73,7 @@ add_test(NAME test_local_file_storage COMMAND test_local_file_storage)
 
 # Test 3: CompressedFileStorage
 add_executable(test_compressed_file_storage
-    Server/tests/test_compreesedFileStorage.cpp
+    Storage-Server/tests/test_compreesedFileStorage.cpp
 )
 
 target_link_libraries(test_compressed_file_storage
@@ -86,7 +86,7 @@ add_test(NAME test_compressed_file_storage COMMAND test_compressed_file_storage)
 
 # Test 4: JsonMetadataStore
 add_executable(test_json_metadata_store
-    Server/tests/JsonMetaDataStore.cpp
+    Storage-Server/tests/JsonMetaDataStore.cpp
 )
 
 target_link_libraries(test_json_metadata_store
@@ -99,7 +99,7 @@ add_test(NAME test_json_metadata_store COMMAND test_json_metadata_store)
 
 # Test 5: RLECompressor
 add_executable(test_rle_compressor
-    Server/tests/RLECompression_test.cpp
+    Storage-Server/tests/RLECompression_test.cpp
 )
 
 target_link_libraries(test_rle_compressor
@@ -112,7 +112,7 @@ add_test(NAME test_rle_compressor COMMAND test_rle_compressor)
 
 # Test 6: LocalFileManagement
 add_executable(test_local_file_management
-    Server/tests/test_LocalFileManagement.cpp
+    Storage-Server/tests/test_LocalFileManagement.cpp
 )
 target_link_libraries(test_local_file_management
     file_management_lib
@@ -123,7 +123,7 @@ add_test(NAME test_local_file_management COMMAND test_local_file_management)
 
 # Test 7: ThreadSafeFileManagement
 add_executable(test_thread_safe_file_management
-    Server/tests/ThreadSafeFileManagement_test.cpp
+    Storage-Server/tests/ThreadSafeFileManagement_test.cpp
 )
 target_link_libraries(test_thread_safe_file_management
     file_management_lib
@@ -134,7 +134,7 @@ add_test(NAME test_thread_safe_file_management COMMAND test_thread_safe_file_man
 
 # Test 8: CommandParser
 add_executable(test_command_parsing
-    Server/tests/test_CommandParsing.cpp
+    Storage-Server/tests/test_CommandParsing.cpp
 )
 target_link_libraries(test_command_parsing
     server_lib
@@ -145,7 +145,7 @@ add_test(NAME test_command_parsing COMMAND test_command_parsing)
 
 # Test 9: CommandExecutor
 add_executable(test_command_executor
-    Server/tests/test_CommandExecutor.cpp
+    Storage-Server/tests/test_CommandExecutor.cpp
 )
 target_link_libraries(test_command_executor
     server_lib
@@ -157,7 +157,7 @@ add_test(NAME test_command_executor COMMAND test_command_executor)
 
 # Test 10: PostCommand
 add_executable(test_post_command
-    Server/tests/PostCommandTest.cpp
+    Storage-Server/tests/PostCommandTest.cpp
 )
 target_link_libraries(test_post_command
     server_lib
@@ -169,7 +169,7 @@ add_test(NAME test_post_command COMMAND test_post_command)
 
 # Test 11: GetCommand
 add_executable(test_get_command
-    Server/tests/GetCommandTest.cpp
+    Storage-Server/tests/GetCommandTest.cpp
 )
 target_link_libraries(test_get_command
     server_lib
@@ -181,7 +181,7 @@ add_test(NAME test_get_command COMMAND test_get_command)
 
 # Test 12: DeleteCommand
 add_executable(test_delete_command
-    Server/tests/DeleteCommandTest.cpp
+    Storage-Server/tests/DeleteCommandTest.cpp
 )
 target_link_libraries(test_delete_command
     server_lib
@@ -193,7 +193,7 @@ add_test(NAME test_delete_command COMMAND test_delete_command)
 
 # Test 13: SearchCommand
 add_executable(test_search_command
-    Server/tests/SearchCommandTest.cpp
+    Storage-Server/tests/SearchCommandTest.cpp
 )
 target_link_libraries(test_search_command
     server_lib
@@ -205,12 +205,12 @@ add_test(NAME test_search_command COMMAND test_search_command)
 
 # Test 14: ClientServerComm
 add_executable(test_client_server_comm
-    Server/tests/test_ClientServerComm.cpp
+    Storage-Server/tests/test_ClientServerComm.cpp
     Common/include/communication/ClientServerComm.cpp
 )
 target_include_directories(test_client_server_comm PRIVATE
     Common/include
-    Server/include
+    Storage-Server/include
 )
 target_link_libraries(test_client_server_comm
     gtest
@@ -222,23 +222,23 @@ add_test(NAME test_client_server_comm COMMAND test_client_server_comm)
 # Server Executable
 # ==============================================================================
 add_library(server_lib
-    Server/src/server/server.cpp
-    Server/src/handlers/ClientHandler.cpp
-    Server/src/handlers/ClientHandlerFactory.cpp
-    Server/src/commands/ClientCommandFactory.cpp
-    Server/src/commands/PostCommand.cpp
-    Server/src/commands/GetCommand.cpp
-    Server/src/commands/DeleteCommand.cpp
-    Server/src/commands/SearchCommand.cpp
-    Server/src/executors/CommandExecutor.cpp
-    Server/src/parsers/CommandParser.cpp
-    Server/src/threading/DedicatedThreadManager.cpp
+    Storage-Server/src/server/server.cpp
+    Storage-Server/src/handlers/ClientHandler.cpp
+    Storage-Server/src/handlers/ClientHandlerFactory.cpp
+    Storage-Server/src/commands/ClientCommandFactory.cpp
+    Storage-Server/src/commands/PostCommand.cpp
+    Storage-Server/src/commands/GetCommand.cpp
+    Storage-Server/src/commands/DeleteCommand.cpp
+    Storage-Server/src/commands/SearchCommand.cpp
+    Storage-Server/src/executors/CommandExecutor.cpp
+    Storage-Server/src/parsers/CommandParser.cpp
+    Storage-Server/src/threading/DedicatedThreadManager.cpp
     Common/include/communication/ClientServerComm.cpp
 )
 
 target_include_directories(server_lib PUBLIC
-    Server/src
-    Server/include
+    Storage-Server/src
+    Storage-Server/include
     Common/include
 )
 
@@ -249,7 +249,7 @@ target_link_libraries(server_lib PUBLIC
 )
 
 add_executable(server_main
-    Server/src/server/server_main.cpp
+    Storage-Server/src/server/server_main.cpp
 )
 
 target_link_libraries(server_main
@@ -270,8 +270,8 @@ add_library(client_lib
 target_include_directories(client_lib PUBLIC
     Client/src
     Client/include
-    Server/src
-    Server/include
+    Storage-Server/src
+    Storage-Server/include
     Common/include
 )
 
