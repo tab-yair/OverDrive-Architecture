@@ -149,7 +149,7 @@ std::vector<std::string> LocalFileManagement::list() {
 }
 
 // --------------------
-// Search for files containing query in filename or content
+// Search for files containing query in content
 // Returns list of matching file names
 // --------------------
 std::vector<std::string> LocalFileManagement::search(const std::string& query) {
@@ -162,27 +162,14 @@ std::vector<std::string> LocalFileManagement::search(const std::string& query) {
     auto allFiles = list();
     
     for (const auto& fileName : allFiles) {
-        bool matched = false;
-        
-        // Search in filename first (faster)
-        if (fileName.find(query) != string::npos) {
-            matched = true;
-        }
-        // If not found in name, search in content
-        else {
-            try {
-                string fileContent = read(fileName);
-                if (fileContent.find(query) != string::npos) {
-                    matched = true;
-                }
-            } catch (const exception&) {
-                // Skip files that can't be read
-                continue;
+        try {
+            string fileContent = read(fileName);
+            if (fileContent.find(query) != string::npos) {
+                results.push_back(fileName);
             }
-        }
-        
-        if (matched) {
-            results.push_back(fileName);
+        } catch (const exception&) {
+            // Skip files that can't be read
+            continue;
         }
     }
     
