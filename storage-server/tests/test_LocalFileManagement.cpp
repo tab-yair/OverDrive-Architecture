@@ -3,81 +3,57 @@
 #include <fstream>
 #include <algorithm>
 #include "file/management/LocalFileManagement.h"
-#include "file/path/IPathMapper.h"
 #include "file/storage/IFileStorage.h"
-#include "file/metadata/IMetadataStore.h"
 
 namespace fs = std::filesystem;
 
 // ========================
-// Fake / Minimal Implementations
+// Simple fake storage implementation
+// This is enough to test LocalFileManagement without touching real storage
 // ========================
-
-class TempPathMapper : public IPathMapper {
-    fs::path tempDir;
-public:
-    TempPathMapper(const fs::path& dir) : tempDir(dir) {}
-    fs::path resolve(const std::string& logicalFileName) const override {
-        return tempDir / logicalFileName;
-    }
-};
-
 class SimpleFileStorage : public IFileStorage {
 public:
+    // Write content to file
     void writeFile(const fs::path& p, const std::string &content = "") override {
         std::ofstream ofs(p);
         ofs << content;
     }
+
+    // Read content from file
     std::string readFile(const fs::path& p) override {
         std::ifstream ifs(p);
         if (!ifs) throw std::runtime_error("File missing");
         return std::string((std::istreambuf_iterator<char>(ifs)),
                            std::istreambuf_iterator<char>());
     }
+
+    // Delete file
     void deleteFile(const fs::path& p) override {
         fs::remove(p);
     }
 };
 
-class SimpleMetadataStore : public IMetadataStore {
-    std::unordered_map<std::string, FileMetaData> store;
-public:
-    void save(const std::string& name, const FileMetaData& meta) override { store[name] = meta; }
-    std::optional<FileMetaData> load(const std::string& name) const override {
-        auto it = store.find(name);
-        if (it != store.end()) return it->second;
-        return {};
-    }
-    void remove(const std::string& name) override { store.erase(name); }
-    bool exists(const std::string& name) const override { return store.count(name) != 0; }
-    std::vector<std::pair<std::string, FileMetaData>> list() const override { 
-        return std::vector<std::pair<std::string, FileMetaData>>(store.begin(), store.end());
-    }
-};
-
 // ========================
 // Test Fixture
+// Creates a temporary directory and a LocalFileManagement instance for each test
 // ========================
-
 class LocalFileManagementTest : public ::testing::Test {
 protected:
-    fs::path tempDir;
-    std::unique_ptr<LocalFileManagement> lf;
+    fs::path tempDir; // temporary folder for tests
+    std::unique_ptr<LocalFileManagement> lf; // the class under test
 
     void SetUp() override {
+        // Create a temporary directory for files
         tempDir = fs::temp_directory_path() / "lfm_test_dir";
         fs::create_directory(tempDir);
 
-        auto mapper = std::make_unique<TempPathMapper>(tempDir);
+        // Use the simple storage and point LocalFileManagement to tempDir
         auto storage = std::make_unique<SimpleFileStorage>();
-        auto metadata = std::make_unique<SimpleMetadataStore>();
-
-        lf = std::make_unique<LocalFileManagement>(std::move(mapper),
-                                                   std::move(storage),
-                                                   std::move(metadata));
+        lf = std::make_unique<LocalFileManagement>(std::move(storage), tempDir);
     }
 
     void TearDown() override {
+        // Remove the temporary directory after the test
         fs::remove_all(tempDir);
     }
 };
@@ -86,69 +62,78 @@ protected:
 // Tests
 // ========================
 
-// Create + Read a file successfully
+// Test creating a file and reading its content
 TEST_F(LocalFileManagementTest, CreateAndRead) {
-    lf->create("user1", "file1.txt", "Hello World");
-    std::string content = lf->read("user1", "file1.txt");
-    EXPECT_EQ(content, "Hello World");
+    lf->create("file1.txt", "Hello World"); // create file
+    std::string content = lf->read("file1.txt"); // read content
+    EXPECT_EQ(content, "Hello World"); // check content matches
 }
 
-// Create file with duplicate name -> should throw
+// Test creating a duplicate file throws
 TEST_F(LocalFileManagementTest, CreateDuplicateThrows) {
-    lf->create("user1", "file2.txt", "First");
-    EXPECT_THROW(lf->create("user1", "file2.txt", "Second"), std::runtime_error);
+    lf->create("file2.txt", "First"); 
+    EXPECT_THROW(lf->create("file2.txt", "Second"), std::runtime_error); // duplicate
 }
 
-// Write to existing file
+// Test writing to an existing file updates content
 TEST_F(LocalFileManagementTest, WriteUpdatesContent) {
-    lf->create("user1", "file3.txt", "Initial");
-    lf->write("user1", "file3.txt", "Updated");
-    EXPECT_EQ(lf->read("user1", "file3.txt"), "Updated");
+    lf->create("file3.txt", "Initial");
+    lf->write("file3.txt", "Updated");
+    EXPECT_EQ(lf->read("file3.txt"), "Updated");
 }
 
-// Write to non-existent file -> should throw
+// Writing to a non-existent file should throw
 TEST_F(LocalFileManagementTest, WriteNonExistentThrows) {
-    EXPECT_THROW(lf->write("user1", "nonexistent.txt", "data"), std::runtime_error);
+    EXPECT_THROW(lf->write("nonexistent.txt", "data"), std::runtime_error);
 }
 
-// Remove existing file
+// Removing an existing file should succeed
 TEST_F(LocalFileManagementTest, RemoveExistingFile) {
-    lf->create("user1", "file4.txt", "content");
-    lf->remove("user1", "file4.txt");
-    EXPECT_FALSE(lf->exists("user1", "file4.txt"));
+    lf->create("file4.txt", "content");
+    lf->remove("file4.txt");
+    EXPECT_FALSE(lf->exists("file4.txt")); // file no longer exists
 }
 
-// Remove non-existent file -> should throw
+// Removing a non-existent file should throw
 TEST_F(LocalFileManagementTest, RemoveNonExistentThrows) {
-    EXPECT_THROW(lf->remove("user1", "missing.txt"), std::runtime_error);
+    EXPECT_THROW(lf->remove("missing.txt"), std::runtime_error);
 }
 
-// List files 
-TEST_F(LocalFileManagementTest, ListFilesUserScoped) {
-    lf->create("user1", "f1.txt");
-    lf->create("user1", "f2.txt");
-    lf->create("user2", "other.txt");
+// List all files in the directory
+TEST_F(LocalFileManagementTest, ListFiles) {
+    lf->create("f1.txt");
+    lf->create("f2.txt");
+    lf->create("other.txt");
 
-    auto userFiles = lf->list("user1");
-    EXPECT_EQ(userFiles.size(), 3);
-    EXPECT_TRUE(std::find(userFiles.begin(), userFiles.end(), "f1.txt") != userFiles.end());
-    EXPECT_TRUE(std::find(userFiles.begin(), userFiles.end(), "f2.txt") != userFiles.end());
-    EXPECT_TRUE(std::find(userFiles.begin(), userFiles.end(), "other.txt") != userFiles.end());
+    auto files = lf->list();
+    EXPECT_EQ(files.size(), 3); // three files
+    EXPECT_TRUE(std::find(files.begin(), files.end(), "f1.txt") != files.end());
+    EXPECT_TRUE(std::find(files.begin(), files.end(), "f2.txt") != files.end());
+    EXPECT_TRUE(std::find(files.begin(), files.end(), "other.txt") != files.end());
 }
 
-// Search for content (good case)
+// Search for content in filename or file content
 TEST_F(LocalFileManagementTest, SearchFindsContent) {
-    lf->create("user1", "search1.txt", "findme");
-    lf->create("user1", "search2.txt", "nomatch");
+    lf->create("search1.txt", "findme");
+    lf->create("search2.txt", "nomatch");
 
-    auto results = lf->search("user1", "findme");
+    auto results = lf->search("findme");
     EXPECT_EQ(results.size(), 1);
     EXPECT_EQ(results[0], "search1.txt");
 }
 
-// Search for non-existent content -> empty results
+// Searching for non-existent content returns empty
 TEST_F(LocalFileManagementTest, SearchEmpty) {
-    lf->create("user1", "file1.txt", "abc");
-    auto results = lf->search("user1", "xyz");
+    lf->create("file1.txt", "abc");
+    auto results = lf->search("xyz");
     EXPECT_TRUE(results.empty());
+}
+
+
+// validateFileName blocks illegal names
+TEST_F(LocalFileManagementTest, ValidateFileNameRejectsInvalid) {
+    EXPECT_THROW(lf->create("", "data"), std::invalid_argument);      // empty name
+    EXPECT_THROW(lf->create("../escape.txt", "data"), std::invalid_argument); // path traversal
+    EXPECT_THROW(lf->create("subdir/file.txt", "data"), std::invalid_argument); // contains /
+    EXPECT_THROW(lf->create("subdir\\file.txt", "data"), std::invalid_argument); // contains "\\"
 }

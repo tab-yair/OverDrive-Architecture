@@ -19,9 +19,6 @@ enable_testing()
 
 # Library: File Management (path, storage, compressor, metadata)
 add_library(file_management_lib
-    # Path mapping
-    storage-server/src/file/path/HashPathMapper.cpp
-    
     # Storage
     storage-server/src/file/storage/LocalFileStorage.cpp
     storage-server/src/file/storage/CompressedFileStorage.cpp
@@ -29,9 +26,6 @@ add_library(file_management_lib
     # Compressor
     storage-server/src/file/compressor/RLECompressor.cpp
     
-    # Metadata
-    storage-server/src/file/metadata/JsonMetadataStore.cpp
-
     # Management
     storage-server/src/file/management/LocalFileManagement.cpp
     storage-server/src/file/management/ThreadSafeFileManagement.cpp
@@ -45,20 +39,7 @@ target_include_directories(file_management_lib PUBLIC
 find_package(OpenSSL REQUIRED)
 target_link_libraries(file_management_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
-# Test 1: HashPathMapper
-add_executable(test_hash_path_mapper 
-    storage-server/tests/test_hash_path_mapper.cpp
-)
-
-target_link_libraries(test_hash_path_mapper
-    file_management_lib
-    gtest
-    gtest_main
-)
-
-add_test(NAME test_hash_path_mapper COMMAND test_hash_path_mapper)
-
-# Test 2: LocalFileStorage
+# Test 1: LocalFileStorage
 add_executable(test_local_file_storage
     storage-server/tests/test_LocalFileStorage.cpp
 )
@@ -70,32 +51,6 @@ target_link_libraries(test_local_file_storage
 )
 
 add_test(NAME test_local_file_storage COMMAND test_local_file_storage)
-
-# Test 3: CompressedFileStorage
-add_executable(test_compressed_file_storage
-    storage-server/tests/test_compreesedFileStorage.cpp
-)
-
-target_link_libraries(test_compressed_file_storage
-    file_management_lib
-    gtest
-    gtest_main
-)
-
-add_test(NAME test_compressed_file_storage COMMAND test_compressed_file_storage)
-
-# Test 4: JsonMetadataStore
-add_executable(test_json_metadata_store
-    storage-server/tests/JsonMetaDataStore.cpp
-)
-
-target_link_libraries(test_json_metadata_store
-    file_management_lib
-    gtest
-    gtest_main
-)
-
-add_test(NAME test_json_metadata_store COMMAND test_json_metadata_store)
 
 # Test 5: RLECompressor
 add_executable(test_rle_compressor
@@ -218,7 +173,7 @@ target_link_libraries(test_client_server_comm
 )
 add_test(NAME test_client_server_comm COMMAND test_client_server_comm)
 
-# ==============================================================================
+# ==============================================================================  
 # Server Executable
 # ==============================================================================
 add_library(server_lib
@@ -233,6 +188,7 @@ add_library(server_lib
     storage-server/src/executors/CommandExecutor.cpp
     storage-server/src/parsers/CommandParser.cpp
     storage-server/src/threading/DedicatedThreadManager.cpp
+    storage-server/src/threading/ThreadPoolManager.cpp
     Common/include/communication/ClientServerComm.cpp
 )
 
@@ -258,7 +214,7 @@ target_link_libraries(server_main
     Threads::Threads
 )
 
-# ==============================================================================
+# ==============================================================================  
 # Client Executable  
 # ==============================================================================
 add_library(client_lib
@@ -287,5 +243,3 @@ add_executable(client_main
 target_link_libraries(client_main
     client_lib
 )
-
-

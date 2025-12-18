@@ -84,12 +84,3 @@ TEST_F(SearchCommandTest, SearchThrows_ReturnsNotFound) {
     EXPECT_EQ(result.status, CommandResult::Status::NOT_FOUND);
 }
 
-// verify client ID passed correctly
-TEST_F(SearchCommandTest, PassesCorrectClientId) {
-    mockFileManager->searchReturnValue = {};
-
-    std::vector<std::string> args = {"test"};
-    searchCommand->execute(args);
-
-    EXPECT_EQ(mockFileManager->lastClientId, "1");
-}

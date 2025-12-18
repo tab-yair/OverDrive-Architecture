@@ -81,13 +81,3 @@ TEST_F(DeleteCommandTest, RemoveThrows_ReturnsNotFound) {
 
     EXPECT_EQ(result.status, CommandResult::Status::NOT_FOUND);
 }
-
-// Correct clientId is always passed
-TEST_F(DeleteCommandTest, PassesCorrectClientIdToFileManager) {
-    mockFileManager->existsReturnValue = true;
-
-    std::vector<std::string> args = {"abc.txt"};
-    auto result = deleteCommand->execute(args);
-
-    EXPECT_EQ(mockFileManager->lastClientId, "1");
-}

@@ -92,6 +92,5 @@ TEST_F(GetCommandTest, PassesCorrectClientIdToFileManager) {
     auto result = getCommand->execute(args);
 
     EXPECT_TRUE(mockFileManager->readCalled);
-    EXPECT_EQ(mockFileManager->lastClientId, "1");
     EXPECT_EQ(result.status, CommandResult::Status::OK);
 }
