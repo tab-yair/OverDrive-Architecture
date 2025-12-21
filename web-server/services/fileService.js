@@ -372,7 +372,7 @@ class FileService {
         return Permission.can(permission, action);
     }
 
-    // Get file information
+    // Get file information with content from storage-server
     async getFileInfo(fileId, userId) {
         const file = await filesStore.getById(fileId);
         if (!file) {
@@ -384,6 +384,26 @@ class FileService {
             throw new Error("Permission denied");
         }
 
+        // If it's a folder, return without content field
+        if (file.type === 'folder') {
+            return file;
+        }
+
+        // For files, fetch content from storage-server
+        try {
+            const storageResponse = await storageClient.get(fileId);
+            if (storageResponse.success && storageResponse.data) {
+                return {
+                    ...file,
+                    content: storageResponse.data
+                };
+            }
+        } catch (error) {
+            // If file doesn't exist on storage server, continue without content
+            // This can happen if file metadata exists but content hasn't been uploaded yet
+        }
+
+        // Return file metadata without content if storage fetch failed
         return file;
     }
 }
