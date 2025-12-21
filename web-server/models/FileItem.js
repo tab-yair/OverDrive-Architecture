@@ -25,17 +25,6 @@ class FileItem {
         }
         return null;
     }
-    
-    // Convert from HTTP request body - sanitize and clean
-    static fromRequest(body, ownerId) {
-        return {
-            name: body.name?.trim(),
-            type: body.type,
-            ownerId: ownerId,
-            parentId: body.parentId || null,
-            size: body.size || 0
-        };
-    }
 }
 
 export { FileItem };

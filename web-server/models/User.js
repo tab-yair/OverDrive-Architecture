@@ -27,22 +27,6 @@ class User {
         }
         return null;
     }
-    
-    // Convert from HTTP request body - sanitize and clean
-    static fromRequest(body) {
-        return {
-            username: body.username?.trim(),
-            password: body.password,
-            displayName: body.displayName?.trim(),
-            profileImage: body.profileImage || null
-        };
-    }
-    
-    // Convert to safe JSON (without password) - for client response
-    toSafeJSON() {
-        const { password, ...safe } = this;
-        return safe;
-    }
 }
 
 export { User };

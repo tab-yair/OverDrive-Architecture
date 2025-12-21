@@ -40,16 +40,6 @@ class Permission {
 
         return null;
     }
-    
-    // Convert from HTTP request body
-    static fromRequest(body) {
-        return {
-            fileId: body.fileId,
-            userId: body.userId,
-            level: body.level,
-            customPermissions: body.customPermissions || null
-        };
-    }
 }
 
 export { Permission };
