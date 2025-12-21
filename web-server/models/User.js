@@ -32,7 +32,7 @@ class User {
     static toSafeObject(user) {
         if (!user) return null;
         const { password, ...safeUser } = user;
-        return safeUser;
+        return Object.freeze(safeUser); // now immutable
     }
 }
 
