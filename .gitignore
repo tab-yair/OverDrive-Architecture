@@ -42,3 +42,6 @@
 
 # Ignore Visual Studio Code settings and workspace files
 .vscode/
+
+# Ignore all modules_node directories anywhere
+**/modules_node/
