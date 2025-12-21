@@ -10,6 +10,11 @@ class PermissionService {
     
     // Add new permission
     async addPermission(fileId, userId, level, customPermissions = null, requestingUserId) {
+        // Prevent adding OWNER through this method - use addOwner instead
+        if (level === 'OWNER') {
+            throw new Error("Cannot add OWNER permission directly. Use transferOwnership instead.");
+        }
+
         // Basic validation
         const validationError = Permission.validate({ fileId, userId, level, customPermissions });
         if (validationError) {
@@ -34,12 +39,10 @@ class PermissionService {
             throw new Error("Permission denied: You cannot share this file");
         }
 
-        // Check permission doesn't already exist
-        if (await permissionStore.exists(userId, fileId)) {
-            throw new Error("Permission already exists for this user and file");
-        }
-
-        // Create permission
+        // If permission already exists, it will be replaced (old one deleted automatically)
+        // This allows changing permission level for existing users
+        
+        // Create permission (will auto-delete existing one if present)
         const permissionId = generateId();
         const newPermission = await permissionStore.create(permissionId, fileId, userId, level, customPermissions);
 
@@ -56,19 +59,57 @@ class PermissionService {
         return await this.addPermission(fileId, userId, 'EDITOR', null, requestingUserId);
     }
 
-    // Add OWNER permission (transfer ownership)
-    async addOwner(fileId, userId, requestingUserId) {
-        // Only owner can add additional owners
+    // Transfer ownership to a new user
+    async transferOwnership(fileId, newOwnerId, requestingUserId) {
+        // Only current owner can transfer ownership
         const file = await filesStore.getById(fileId);
         if (!file) {
             throw new Error("File does not exist");
         }
 
         if (file.ownerId !== requestingUserId) {
-            throw new Error("Only the owner can add other owners");
+            throw new Error("Only the owner can transfer ownership");
         }
 
-        return await this.addPermission(fileId, userId, 'OWNER', null, requestingUserId);
+        if (newOwnerId === requestingUserId) {
+            throw new Error("You are already the owner of this file");
+        }
+
+        // Check new owner exists
+        const newOwner = await usersStore.getById(newOwnerId);
+        if (!newOwner) {
+            throw new Error("New owner user does not exist");
+        }
+
+        // Downgrade old owner's permission from OWNER to EDITOR
+        const oldOwnerPermission = await permissionStore.getUserPermissionForFile(requestingUserId, fileId);
+        if (oldOwnerPermission && oldOwnerPermission.level === 'OWNER') {
+            await permissionStore.update(oldOwnerPermission.pid, { level: 'EDITOR', customPermissions: null });
+        } else if (!oldOwnerPermission) {
+            // Create EDITOR permission for old owner if they don't have any permission yet
+            const oldOwnerPermId = generateId();
+            await permissionStore.create(oldOwnerPermId, fileId, requestingUserId, 'EDITOR', null);
+        }
+
+        // Remove new owner's existing permission (if exists) to replace it with OWNER
+        const existingPermission = await permissionStore.getUserPermissionForFile(newOwnerId, fileId);
+        if (existingPermission) {
+            await permissionStore.delete(existingPermission.pid);
+        }
+
+        // Update file's ownerId
+        await filesStore.update(fileId, { ownerId: newOwnerId });
+
+        // Create OWNER permission for new owner
+        const permissionId = generateId();
+        const newOwnerPermission = await permissionStore.create(permissionId, fileId, newOwnerId, 'OWNER', null);
+
+        return {
+            success: true,
+            newOwner: newOwnerPermission,
+            previousOwnerDowngradedTo: 'EDITOR',
+            message: "Ownership transferred successfully"
+        };
     }
 
     // Add custom permission
@@ -134,12 +175,12 @@ class PermissionService {
             throw new Error("Permission denied: You cannot remove this permission");
         }
 
-        // Cannot remove owner's permission
-        if (permission.level === 'OWNER' && file.ownerId === permission.userId) {
-            throw new Error("Cannot remove owner's permission");
+        // Cannot remove the current owner's permission
+        if (file.ownerId === permission.userId) {
+            throw new Error("Cannot remove owner's permission. Transfer ownership first.");
         }
 
-        const success = await await permissionStore.delete(permissionId);
+        const success = await permissionStore.delete(permissionId);
         return { success, message: "Permission removed successfully" };
     }
 
@@ -159,17 +200,19 @@ class PermissionService {
         const permissions = await permissionStore.getByFileId(fileId);
         
         // Enrich data with user details
-        const enrichedPermissions = permissions.map(perm => {
-            const user = await usersStore.getById(perm.userId);
-            return {
-                ...perm,
-                user: user ? {
-                    id: user.id,
-                    username: user.username,
-                    displayName: user.displayName
-                } : null
-            };
-        });
+        const enrichedPermissions = await Promise.all(
+            permissions.map(async (perm) => {
+                const user = await usersStore.getById(perm.userId);
+                return {
+                    ...perm,
+                    user: user ? {
+                        id: user.id,
+                        username: user.username,
+                        displayName: user.displayName
+                    } : null
+                };
+            })
+        );
 
         return enrichedPermissions;
     }
@@ -184,13 +227,17 @@ class PermissionService {
         const permissions = await permissionStore.getByUserId(userId);
         
         // Enrich data with file details
-        const accessibleFiles = permissions.map(perm => {
-            const file = await filesStore.getById(perm.fileId);
-            return {
-                ...perm,
-                file: file || null
-            };
-        }).filter(item => item.file !== null);
+        const enrichedPermissions = await Promise.all(
+            permissions.map(async (perm) => {
+                const file = await filesStore.getById(perm.fileId);
+                return {
+                    ...perm,
+                    file: file || null
+                };
+            })
+        );
+        
+        const accessibleFiles = enrichedPermissions.filter(item => item.file !== null);
 
         return accessibleFiles;
     }
@@ -270,72 +317,6 @@ class PermissionService {
         return results;
     }
 
-    // Revoke sharing from all users (except owner)
-    async revokeAllSharing(fileId, requestingUserId) {
-        const file = await filesStore.getById(fileId);
-        if (!file) {
-            throw new Error("File not found");
-        }
-
-        // Only owner can revoke all sharing
-        if (file.ownerId !== requestingUserId) {
-            throw new Error("Only the owner can revoke all sharing");
-        }
-
-        const permissions = await permissionStore.getByFileId(fileId);
-        let revokedCount = 0;
-
-        for (const perm of permissions) {
-            // Don't delete owner's permission
-            if (perm.userId !== file.ownerId) {
-                await await permissionStore.delete(perm.pid);
-                revokedCount++;
-            }
-        }
-
-        return {
-            success: true,
-            revokedCount,
-            message: `${revokedCount} permission(s) revoked`
-        };
-    }
-
-    // Get user permission summary
-    async getUserPermissionSummary(userId) {
-        const user = await usersStore.getById(userId);
-        if (!user) {
-            throw new Error("User not found");
-        }
-
-        const allPermissions = await permissionStore.getByUserId(userId);
-        
-        const summary = {
-            total: allPermissions.length,
-            byLevel: {
-                OWNER: 0,
-                EDITOR: 0,
-                VIEWER: 0,
-                CUSTOM: 0
-            },
-            filesOwned: 0,
-            filesSharedWithMe: 0
-        };
-
-        allPermissions.forEach(perm => {
-            summary.byLevel[perm.level]++;
-            
-            const file = await filesStore.getById(perm.fileId);
-            if (file) {
-                if (file.ownerId === userId) {
-                    summary.filesOwned++;
-                } else {
-                    summary.filesSharedWithMe++;
-                }
-            }
-        });
-
-        return summary;
-    }
 }
 
 // Create singleton instance

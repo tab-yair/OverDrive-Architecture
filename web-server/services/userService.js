@@ -184,60 +184,6 @@ class UserService {
         }
     }
 
-    // Get user statistics
-    async getUserStatistics(userId) {
-        const user = usersStore.getById(userId);
-        
-        if (!user) {
-            throw new Error("User not found");
-        }
-
-        // Count files and folders
-        const userFiles = filesStore.getByOwnerId(userId);
-        const filesCount = userFiles.filter(f => f.type === 'file').length;
-        const foldersCount = userFiles.filter(f => f.type === 'folder').length;
-
-        // Calculate total size
-        const totalSize = userFiles
-            .filter(f => f.type === 'file')
-            .reduce((sum, f) => sum + (f.size || 0), 0);
-
-        // Count files shared with others
-        const sharedFiles = userFiles.filter(f => {
-            const permissions = permissionStore.getByFileId(f.id);
-            return permissions.length > 1; // More than one permission = sharing
-        }).length;
-
-        // Count files shared with this user
-        const receivedPermissions = permissionStore.getByUserId(userId);
-        const sharedWithMe = receivedPermissions.filter(p => {
-            const file = filesStore.getById(p.fileId);
-            return file && file.ownerId !== userId;
-        }).length;
-
-        return {
-            userId: user.id,
-            username: user.username,
-            displayName: user.displayName,
-            filesCount,
-            foldersCount,
-            totalSize,
-            totalSizeFormatted: this._formatBytes(totalSize),
-            sharedFiles,
-            sharedWithMe,
-            createdAt: user.createdAt
-        };
-    }
-
-    // Helper to format bytes
-    _formatBytes(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-    }
-
     // Check if user exists
     async userExists(username) {
         return usersStore.exists(username);

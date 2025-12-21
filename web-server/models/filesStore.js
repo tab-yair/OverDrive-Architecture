@@ -54,9 +54,14 @@ const filesStore = {
         return Array.from(filesById.values()).map(f => ({ ...f }));
     },
 
-    async update(id, updates) {
+    async update(id, updates, expectedUpdatedAt = null) {
         const file = filesById.get(id);
         if (!file) return null;
+
+        // Optimistic locking: check if file was modified since it was read
+        if (expectedUpdatedAt !== null && file.updatedAt !== expectedUpdatedAt) {
+            throw new Error('CONFLICT: File was modified by another process');
+        }
 
         if (updates.parentId !== undefined && updates.parentId !== file.parentId) {
             const oldParentMap = filesByParent.get(file.parentId);
