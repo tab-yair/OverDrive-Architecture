@@ -27,6 +27,13 @@ class User {
         }
         return null;
     }
+
+    // Convert user to safe object without password
+    static toSafeObject(user) {
+        if (!user) return null;
+        const { password, ...safeUser } = user;
+        return safeUser;
+    }
 }
 
 export { User };

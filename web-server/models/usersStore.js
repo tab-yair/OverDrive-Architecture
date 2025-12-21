@@ -11,17 +11,17 @@ const usersStore = {
         const newUser = new User(id, username, password, displayName, profileImage);
         usersById.set(id, newUser);
         usersByUsername.set(username, newUser);
-        return { ...newUser };
+        return User.toSafeObject(newUser);
     },
 
     async getById(id) {
         const user = usersById.get(id);
-        return user ? { ...user } : null;
+        return User.toSafeObject(user);
     },
 
     async getByUsername(username) {
         const user = usersByUsername.get(username);
-        return user ? { ...user } : null;
+        return User.toSafeObject(user);
     },
 
     async exists(username) {
@@ -29,7 +29,7 @@ const usersStore = {
     },
 
     async getAll() {
-        return Array.from(usersById.values()).map(u => ({ ...u }));
+        return Array.from(usersById.values()).map(u => User.toSafeObject(u));
     },
 
     async update(id, updates) {
@@ -43,7 +43,7 @@ const usersStore = {
         }
 
         Object.assign(user, updates);
-        return { ...user };
+        return User.toSafeObject(user);
     },
 
     async delete(id) {
