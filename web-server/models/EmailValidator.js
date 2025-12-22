@@ -64,22 +64,26 @@ class EmailValidator {
 
         // === Gmail-specific validation ===
         if (domain === 'gmail.com' || domain === 'googlemail.com') {
+            const lowerLocalPart = localPart.toLowerCase();
             
-            // Remove +suffix for length check
-            const realUsername = localPart.split('+')[0];
-
-            if (realUsername.length < 6 || realUsername.length > 30) {
+            // Check username length (6-30 characters)
+            if (localPart.length < 6 || localPart.length > 30) {
                  return { valid: false, reason: "Gmail username must be between 6 and 30 characters" };
             }
 
-            // Gmail allows: letters, numbers, dots, and plus (case-insensitive)
+            // Check for reserved usernames
+            if (lowerLocalPart === 'abuse' || lowerLocalPart === 'postmaster') {
+                return { valid: false, reason: "This username is reserved and cannot be used" };
+            }
+
+            // Gmail allows: letters, numbers, and dots only (no plus sign)
             // No consecutive dots, no dots at start/end
-            const gmailRegex = /^(?!\.)(?!.*\.\.)(?!.*\.$)[a-z0-9.+]+$/;
+            const gmailRegex = /^(?!\.)(?!.*\.\.)(?!.*\.$)[a-z0-9.]+$/;
             
-            if (!gmailRegex.test(localPart.toLowerCase())) {
+            if (!gmailRegex.test(lowerLocalPart)) {
                 return { 
                     valid: false, 
-                    reason: "Gmail username can only contain letters, numbers, dots, and plus (no consecutive dots or dots at edges)" 
+                    reason: "Gmail username can only contain letters, numbers, and dots (no consecutive dots or dots at edges)" 
                 };
             }
 
@@ -120,12 +124,7 @@ class EmailValidator {
         if (normalizedDomain === 'gmail.com' || normalizedDomain === 'googlemail.com') {
             normalizedDomain = 'gmail.com'; // unify googlemail -> gmail
             
-            // 1. Remove +suffix (e.g., john+work@gmail.com -> john@gmail.com)
-            if (normalizedLocal.includes('+')) {
-                normalizedLocal = normalizedLocal.split('+')[0];
-            }
-            
-            // 2. Remove all dots (Gmail ignores them)
+            // Remove all dots (Gmail ignores them)
             normalizedLocal = normalizedLocal.replace(/\./g, '');
         }
 
