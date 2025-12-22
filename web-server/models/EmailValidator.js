@@ -1,0 +1,150 @@
+/**
+ * Email validation and normalization utility
+ * Handles Gmail-specific rules and standard RFC 5321 validation
+ */
+class EmailValidator {
+
+    /**
+     * Main validation function
+     */
+    static validate(email) {
+        // 1. Sanity checks
+        if (!email || typeof email !== 'string') {
+            return { valid: false, reason: "No email address provided" };
+        }
+        
+        const rawEmail = email.trim();
+        
+        // Overall length (RFC 5321)
+        if (rawEmail.length > 254) {
+            return { valid: false, reason: "Email address too long (over 254 characters)" };
+        }
+
+        // Check for exactly one @ symbol
+        const parts = rawEmail.split('@');
+        if (parts.length !== 2) {
+            return { valid: false, reason: "Invalid format (missing @ or multiple @)" };
+        }
+
+        let [localPart, domain] = parts;
+        
+        // Check for empty or invalid domain
+        if (!domain || domain.startsWith('.') || domain.endsWith('.')) {
+             return { valid: false, reason: "Invalid domain" };
+        }
+
+        domain = domain.toLowerCase();
+
+        // 2. Syntax validation
+        const syntaxResult = this.checkSyntax(localPart, domain);
+        
+        if (!syntaxResult.valid) {
+            return syntaxResult;
+        }
+
+        // 3. Create normalized email
+        const normalizedEmail = this.normalize(localPart, domain);
+
+        return { 
+            valid: true, 
+            originalEmail: rawEmail,
+            normalizedEmail: normalizedEmail,
+            isGmail: domain === 'gmail.com' || domain === 'googlemail.com'
+        };
+    }
+
+    /**
+     * Syntax validation logic
+     */
+    static checkSyntax(localPart, domain) {
+        // Check local part length (RFC 5321)
+        if (localPart.length === 0 || localPart.length > 64) {
+            return { valid: false, reason: "Username must be between 1 and 64 characters" };
+        }
+
+        // === Gmail-specific validation ===
+        if (domain === 'gmail.com' || domain === 'googlemail.com') {
+            
+            // Remove +suffix for length check
+            const realUsername = localPart.split('+')[0];
+
+            if (realUsername.length < 6 || realUsername.length > 30) {
+                 return { valid: false, reason: "Gmail username must be between 6 and 30 characters" };
+            }
+
+            // Gmail allows: letters, numbers, dots, and plus (case-insensitive)
+            // No consecutive dots, no dots at start/end
+            const gmailRegex = /^(?!\.)(?!.*\.\.)(?!.*\.$)[a-z0-9.+]+$/;
+            
+            if (!gmailRegex.test(localPart.toLowerCase())) {
+                return { 
+                    valid: false, 
+                    reason: "Gmail username can only contain letters, numbers, dots, and plus (no consecutive dots or dots at edges)" 
+                };
+            }
+
+        } 
+        // === Standard RFC validation ===
+        else {
+            // Check for dots at start/end
+            if (localPart.startsWith('.') || localPart.endsWith('.')) {
+                return { valid: false, reason: "Username cannot start or end with a dot" };
+            }
+            
+            // Standard allowed characters (RFC 5322)
+            const standardRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/;
+            
+            if (!standardRegex.test(localPart)) {
+                return { valid: false, reason: "Username contains invalid characters" };
+            }
+            
+            // Domain structure validation: at least one dot and TLD of 2+ characters
+            const domainRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/;
+            if (!domainRegex.test(domain)) {
+                return { valid: false, reason: "Invalid domain structure" };
+            }
+        }
+
+        return { valid: true };
+    }
+
+    /**
+     * Normalization function (Critical for DB Uniqueness)
+     * Ensures that emails like john.doe@gmail.com and johndoe@gmail.com are treated as identical
+     */
+    static normalize(localPart, domain) {
+        let normalizedLocal = localPart.toLowerCase();
+        let normalizedDomain = domain; // already lowercase
+
+        // Gmail-specific normalization
+        if (normalizedDomain === 'gmail.com' || normalizedDomain === 'googlemail.com') {
+            normalizedDomain = 'gmail.com'; // unify googlemail -> gmail
+            
+            // 1. Remove +suffix (e.g., john+work@gmail.com -> john@gmail.com)
+            if (normalizedLocal.includes('+')) {
+                normalizedLocal = normalizedLocal.split('+')[0];
+            }
+            
+            // 2. Remove all dots (Gmail ignores them)
+            normalizedLocal = normalizedLocal.replace(/\./g, '');
+        }
+
+        return `${normalizedLocal}@${normalizedDomain}`;
+    }
+    
+    /**
+     * Helper function: Compare two email addresses
+     */
+    static areSame(email1, email2) {
+        const result1 = this.validate(email1);
+        const result2 = this.validate(email2);
+        
+        if (!result1.valid || !result2.valid) {
+            return false;
+        }
+        
+        return result1.normalizedEmail === result2.normalizedEmail;
+    }
+}
+
+export { EmailValidator };

@@ -35,13 +35,6 @@ class FileService {
             }
         }
 
-        // Check name uniqueness in folder
-        const siblings = await filesStore.getByParentId(parentId);
-        const duplicateName = siblings.find(s => s.name === name && s.type === type);
-        if (duplicateName) {
-            throw new Error(`A ${type} named "${name}" already exists in this folder`);
-        }
-
         // Create file/folder
         const fileId = generateId();
         const newFile = await filesStore.create(fileId, name, type, ownerId, parentId, size);
@@ -160,27 +153,7 @@ class FileService {
             }
         }
 
-        // Check name uniqueness at destination
-        const finalName = newName || file.name;
-        const siblings = await filesStore.getByParentId(newParentId);
-        const duplicate = siblings.find(s => s.id !== fileId && s.name === finalName && s.type === file.type);
-        if (duplicate) {
-            throw new Error(`A ${file.type} named "${finalName}" already exists in destination`);
-        }
-
         return { parentId: newParentId };
-    }
-
-    // Helper: Validate and prepare name update
-    async _validateAndUpdateName(fileId, file, newName, targetParentId) {
-        const parentId = targetParentId !== undefined ? targetParentId : file.parentId;
-        const siblings = await filesStore.getByParentId(parentId);
-        const duplicate = siblings.find(s => s.id !== fileId && s.name === newName && s.type === file.type);
-        if (duplicate) {
-            throw new Error(`A ${file.type} named "${newName}" already exists in this folder`);
-        }
-
-        return { name: newName };
     }
 
     // PATCH - Update file/folder (name, parent, content, or any combination)
@@ -225,13 +198,7 @@ class FileService {
 
             // 3. Update name (rename)
             if (updates.name !== undefined) {
-                const nameUpdates = await this._validateAndUpdateName(
-                    fileId,
-                    file,
-                    updates.name,
-                    updates.parentId
-                );
-                Object.assign(metadataUpdates, nameUpdates);
+                metadataUpdates.name = updates.name;
             }
 
             // 4. Update metadata in store with optimistic locking
