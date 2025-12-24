@@ -1,4 +1,4 @@
-import { User } from './User.js';
+const { User } = require('./User.js');
 
 // In-memory user storage with indexing for efficient lookups
 // Can be replaced with MongoDB in future iterations
@@ -56,4 +56,4 @@ const usersStore = {
     }
 };
 
-export { usersStore };
+module.exports = { usersStore };

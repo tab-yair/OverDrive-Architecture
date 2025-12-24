@@ -1,4 +1,4 @@
-import { Permission } from './Permission.js';
+const { Permission } = require('./Permission.js');
 
 // In-memory permission storage with multi-key indexing
 // Can be replaced with MongoDB in future iterations
@@ -127,4 +127,4 @@ const permissionStore = {
     }
 };
 
-export { permissionStore };
+module.exports = { permissionStore };

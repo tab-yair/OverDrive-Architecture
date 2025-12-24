@@ -1,8 +1,8 @@
-import { Permission } from '../models/Permission.js';
-import { permissionStore } from '../models/permissionStore.js';
-import { usersStore } from '../models/usersStore.js';
-import { filesStore } from '../models/filesStore.js';
-import { generateId } from '../utils/idGenerator.js';
+const { Permission } = require('../models/Permission.js');
+const { permissionStore } = require('../models/permissionStore.js');
+const { usersStore } = require('../models/usersStore.js');
+const { filesStore } = require('../models/filesStore.js');
+const { generateId } = require('../utils/idGenerator.js');
 
 // Business logic layer for permission management
 // Handles complex validations, add/update/delete, permission checks, file sharing
@@ -322,4 +322,4 @@ class PermissionService {
 // Create singleton instance
 const permissionService = new PermissionService();
 
-export { PermissionService, permissionService };
+module.exports = { PermissionService, permissionService };

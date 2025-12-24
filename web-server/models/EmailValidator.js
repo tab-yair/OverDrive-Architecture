@@ -146,4 +146,4 @@ class EmailValidator {
     }
 }
 
-export { EmailValidator };
+module.exports = { EmailValidator };

@@ -1,4 +1,4 @@
-import { EmailValidator } from './EmailValidator.js';
+const { EmailValidator } = require('./EmailValidator.js');
 
 class User {
     constructor(id, username, password, displayName, profileImage) {
@@ -40,4 +40,4 @@ class User {
     }
 }
 
-export { User };
+module.exports = { User };

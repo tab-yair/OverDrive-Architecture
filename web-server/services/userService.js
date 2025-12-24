@@ -1,9 +1,9 @@
-import { User } from '../models/User.js';
-import { EmailValidator } from '../models/EmailValidator.js';
-import { usersStore } from '../models/usersStore.js';
-import { filesStore } from '../models/filesStore.js';
-import { permissionStore } from '../models/permissionStore.js';
-import { generateId } from '../utils/idGenerator.js';
+const { User } = require('../models/User.js');
+const { EmailValidator } = require('../models/EmailValidator.js');
+const { usersStore } = require('../models/usersStore.js');
+const { filesStore } = require('../models/filesStore.js');
+const { permissionStore } = require('../models/permissionStore.js');
+const { generateId } = require('../utils/idGenerator.js');
 
 // Business logic layer for user management
 // Handles complex validations, authentication, file and permission relationships
@@ -206,4 +206,4 @@ class UserService {
 // Create singleton instance
 const userService = new UserService();
 
-export { UserService, userService };
+module.exports = { UserService, userService };

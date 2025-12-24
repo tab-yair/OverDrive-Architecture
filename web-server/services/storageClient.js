@@ -1,4 +1,4 @@
-import net from 'net';
+const net = require('net');
 
 // Connection pool for reusing TCP connections
 class ConnectionPool {
@@ -291,4 +291,4 @@ process.on('SIGTERM', async () => {
     process.exit(0);
 });
 
-export { StorageServerClient, storageClient };
+module.exports = { StorageServerClient, storageClient };

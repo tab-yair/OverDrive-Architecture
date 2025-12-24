@@ -42,4 +42,4 @@ class Permission {
     }
 }
 
-export { Permission };
+module.exports = { Permission };

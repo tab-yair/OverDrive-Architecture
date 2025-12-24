@@ -1,10 +1,10 @@
-import { FileItem } from '../models/FileItem.js';
-import { Permission } from '../models/Permission.js';
-import { filesStore } from '../models/filesStore.js';
-import { usersStore } from '../models/usersStore.js';
-import { permissionStore } from '../models/permissionStore.js';
-import { storageClient } from './storageClient.js';
-import { generateId } from '../utils/idGenerator.js';
+const { FileItem } = require('../models/FileItem.js');
+const { Permission } = require('../models/Permission.js');
+const { filesStore } = require('../models/filesStore.js');
+const { usersStore } = require('../models/usersStore.js');
+const { permissionStore } = require('../models/permissionStore.js');
+const { storageClient } = require('./storageClient.js');
+const { generateId } = require('../utils/idGenerator.js');
 
 // Business logic layer for file management
 // Handles complex validations, storage-server communication, permission management
@@ -423,4 +423,4 @@ class FileService {
 // Create singleton instance
 const fileService = new FileService();
 
-export { FileService, fileService };
+module.exports = { FileService, fileService };
