@@ -27,4 +27,4 @@ class FileItem {
     }
 }
 
-export { FileItem };
+module.exports = { FileItem };

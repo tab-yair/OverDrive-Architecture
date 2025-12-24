@@ -1,4 +1,4 @@
-import { FileItem } from './FileItem.js';
+const { FileItem } = require('./FileItem.js');
 
 // In-memory file storage with indexing for efficient lookups
 // Can be replaced with MongoDB in future iterations
@@ -187,7 +187,7 @@ const filesStore = {
 };
 
 // Initialize DI
-import { permissionStore } from './permissionStore.js';
+const { permissionStore } = require('./permissionStore.js');
 filesStore._setPermissionStore(permissionStore);
 
-export { filesStore };
+module.exports = { filesStore };

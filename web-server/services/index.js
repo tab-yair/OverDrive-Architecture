@@ -2,7 +2,18 @@
  * Services Index - Central export for all services
  */
 
-export { userService, UserService } from './userService.js';
-export { fileService, FileService } from './fileService.js';
-export { permissionService, PermissionService } from './permissionService.js';
-export { storageClient, StorageServerClient } from './storageClient.js';
+const { userService, UserService } = require('./userService.js');
+const { fileService, FileService } = require('./fileService.js');
+const { permissionService, PermissionService } = require('./permissionService.js');
+const { storageClient, StorageServerClient } = require('./storageClient.js');
+
+module.exports = {
+    userService,
+    UserService,
+    fileService,
+    FileService,
+    permissionService,
+    PermissionService,
+    storageClient,
+    StorageServerClient
+};

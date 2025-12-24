@@ -148,30 +148,30 @@ std::vector<std::string> LocalFileManagement::list() {
     return fileList;
 }
 
-// --------------------
-// Search for files containing query in content
-// Returns list of matching file names
-// --------------------
-std::vector<std::string> LocalFileManagement::search(const std::string& query) {
-    vector<std::string> results;
-    
-    if (query.empty()) {
+// Search for files containing the specified content substring or this is in theie name ( even if the file dont own by the user)
+std::vector<std::string> LocalFileManagement::search(const std::string& userID, const std::string& content) {
+    std::vector<std::string> results;
+    // if content.empty() return empty results
+    if (content.empty()) {
         return results;
     }
-    
-    auto allFiles = list();
-    
-    for (const auto& fileName : allFiles) {
-        try {
-            string fileContent = read(fileName);
-            if (fileContent.find(query) != string::npos) {
-                results.push_back(fileName);
+
+    auto allMetadata = metadataStore->list();
+    for (const auto& [key, metadata] : allMetadata) {
+        if (metadata.logicalName.find(content) != std::string::npos) {
+            results.push_back(metadata.logicalName);
+        } else {
+            // Read file content to check for substring
+            auto physicalPath = pathMapper->resolve(metadata.logicalName);
+            try {
+                std::string fileContent = storage->readFile(physicalPath);
+                if (fileContent.find(content) != std::string::npos) {
+                    results.push_back(metadata.logicalName);
+                }
+            } catch (...) {
+                throw std::runtime_error("Failed to read file during search: " + metadata.logicalName);
             }
-        } catch (const exception&) {
-            // Skip files that can't be read
-            continue;
         }
     }
-    
     return results;
 }
