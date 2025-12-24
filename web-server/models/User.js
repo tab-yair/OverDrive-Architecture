@@ -1,3 +1,5 @@
+const { EmailValidator } = require('./EmailValidator.js');
+
 class User {
     constructor(id, username, password, displayName, profileImage) {
         this.id = id;
@@ -10,8 +12,10 @@ class User {
     
     // Basic user data validation
     static validate(data) {
-        if (!data.username || data.username.length < 2) {
-            return "Username is too short";
+        // Validate email format for username using EmailValidator
+        const emailResult = EmailValidator.validate(data.username);
+        if (!emailResult.valid) {
+            return `Invalid email: ${emailResult.reason}`;
         }
         if (!data.password || data.password.length < 4) {
             return "Password must be at least 4 characters";
@@ -36,4 +40,4 @@ class User {
     }
 }
 
-export { User };
+module.exports = { User };

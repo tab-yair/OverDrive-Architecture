@@ -1,23 +1,28 @@
-import { User } from '../models/User.js';
-import { usersStore } from '../models/usersStore.js';
-import { filesStore } from '../models/filesStore.js';
-import { permissionStore } from '../models/permissionStore.js';
-import { generateId } from '../utils/idGenerator.js';
+const { User } = require('../models/User.js');
+const { EmailValidator } = require('../models/EmailValidator.js');
+const { usersStore } = require('../models/usersStore.js');
+const { filesStore } = require('../models/filesStore.js');
+const { permissionStore } = require('../models/permissionStore.js');
+const { generateId } = require('../utils/idGenerator.js');
 
 // Business logic layer for user management
 // Handles complex validations, authentication, file and permission relationships
 class UserService {
     
     // Create new user
-    async createUser(username, password, displayName, profileImage = null) {
+    async createUser({ username, password, displayName, profileImage = null }) {
         // Basic validation
         const validationError = User.validate({ username, password, displayName, profileImage });
         if (validationError) {
             throw new Error(validationError);
         }
 
-        // Check username uniqueness
-        if (usersStore.exists(username)) {
+        // Get normalized email for storage
+        const emailResult = EmailValidator.validate(username);
+        const normalizedEmail = emailResult.normalizedEmail;
+
+        // Check username uniqueness (using normalized email)
+        if (usersStore.exists(normalizedEmail)) {
             throw new Error("Username already exists");
         }
 
@@ -27,7 +32,8 @@ class UserService {
         // Future: add password hashing here
         // const hashedPassword = await bcrypt.hash(password, 10);
         
-        const newUser = usersStore.create(userId, username, password, displayName, profileImage);
+        // Store normalized email in DB
+        const newUser = usersStore.create(userId, normalizedEmail, password, displayName, profileImage);
 
         // Return without password
         const { password: _, ...userWithoutPassword } = newUser;
@@ -36,7 +42,14 @@ class UserService {
 
     // Authenticate user (login)
     async authenticate(username, password) {
-        const user = usersStore.getByUsername(username);
+        // Normalize email for lookup
+        const emailResult = EmailValidator.validate(username);
+        if (!emailResult.valid) {
+            throw new Error("Invalid username or password");
+        }
+        const normalizedEmail = emailResult.normalizedEmail;
+        
+        const user = usersStore.getByUsername(normalizedEmail);
         
         if (!user) {
             throw new Error("Invalid username or password");
@@ -193,4 +206,4 @@ class UserService {
 // Create singleton instance
 const userService = new UserService();
 
-export { UserService, userService };
+module.exports = { UserService, userService };

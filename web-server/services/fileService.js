@@ -1,17 +1,17 @@
-import { FileItem } from '../models/FileItem.js';
-import { Permission } from '../models/Permission.js';
-import { filesStore } from '../models/filesStore.js';
-import { usersStore } from '../models/usersStore.js';
-import { permissionStore } from '../models/permissionStore.js';
-import { storageClient } from './storageClient.js';
-import { generateId } from '../utils/idGenerator.js';
+const { FileItem } = require('../models/FileItem.js');
+const { Permission } = require('../models/Permission.js');
+const { filesStore } = require('../models/filesStore.js');
+const { usersStore } = require('../models/usersStore.js');
+const { permissionStore } = require('../models/permissionStore.js');
+const { storageClient } = require('./storageClient.js');
+const { generateId } = require('../utils/idGenerator.js');
 
 // Business logic layer for file management
 // Handles complex validations, storage-server communication, permission management
 class FileService {
     
     // Create new file or folder
-    async createFile(name, type, ownerId, parentId = null, size = 0) {
+    async createFile({ name, type, ownerId, parentId = null, size = 0 }) {
         // Basic validation
         const validationError = FileItem.validate({ name, type, ownerId });
         if (validationError) {
@@ -33,13 +33,6 @@ class FileService {
             if (parent.type !== 'folder') {
                 throw new Error("Parent is not a folder");
             }
-        }
-
-        // Check name uniqueness in folder
-        const siblings = await filesStore.getByParentId(parentId);
-        const duplicateName = siblings.find(s => s.name === name && s.type === type);
-        if (duplicateName) {
-            throw new Error(`A ${type} named "${name}" already exists in this folder`);
         }
 
         // Create file/folder
@@ -160,27 +153,7 @@ class FileService {
             }
         }
 
-        // Check name uniqueness at destination
-        const finalName = newName || file.name;
-        const siblings = await filesStore.getByParentId(newParentId);
-        const duplicate = siblings.find(s => s.id !== fileId && s.name === finalName && s.type === file.type);
-        if (duplicate) {
-            throw new Error(`A ${file.type} named "${finalName}" already exists in destination`);
-        }
-
         return { parentId: newParentId };
-    }
-
-    // Helper: Validate and prepare name update
-    async _validateAndUpdateName(fileId, file, newName, targetParentId) {
-        const parentId = targetParentId !== undefined ? targetParentId : file.parentId;
-        const siblings = await filesStore.getByParentId(parentId);
-        const duplicate = siblings.find(s => s.id !== fileId && s.name === newName && s.type === file.type);
-        if (duplicate) {
-            throw new Error(`A ${file.type} named "${newName}" already exists in this folder`);
-        }
-
-        return { name: newName };
     }
 
     // PATCH - Update file/folder (name, parent, content, or any combination)
@@ -225,13 +198,7 @@ class FileService {
 
             // 3. Update name (rename)
             if (updates.name !== undefined) {
-                const nameUpdates = await this._validateAndUpdateName(
-                    fileId,
-                    file,
-                    updates.name,
-                    updates.parentId
-                );
-                Object.assign(metadataUpdates, nameUpdates);
+                metadataUpdates.name = updates.name;
             }
 
             // 4. Update metadata in store with optimistic locking
@@ -300,37 +267,43 @@ class FileService {
     }
 
     // SEARCH - Search files by name (metadata) AND content (physical files)
-    async searchFiles(query, userId) {
+    async searchFiles({ query, userId }) {
         try {
-            const matchedFiles = new Map(); // fileId -> file object
+            // Get all files the user has access to - convert to Set for O(1) lookups
+            const accessibleFileIdsArray = await permissionStore.getAccessibleFileIds(userId);
+            const accessibleFileIds = new Set(accessibleFileIdsArray);
 
-            // 1. Get all files the user has access to (efficient)
-            const accessibleFileIds = await permissionStore.getAccessibleFileIds(userId);
-            
-            // 2. Search by file name in metadata - only among accessible files
-            for (const fileId of accessibleFileIds) {
+            // ===== Stage 1: Parallel Collection =====
+            // Collect candidate IDs from both metadata and storage server
+            const metadataMatches = new Set(); // IDs that match by logical name
+            const storageMatches = new Set();  // IDs returned by storage server
+
+            // 1A. Search by logical name in metadata - parallel fetch
+            const metadataFetchPromises = Array.from(accessibleFileIds).map(async (fileId) => {
                 const file = await filesStore.getById(fileId);
                 if (file && file.name.includes(query)) {
-                    matchedFiles.set(fileId, file);
+                    return fileId;
                 }
-            }
+                return null;
+            });
+            
+            const metadataResults = await Promise.all(metadataFetchPromises);
+            metadataResults.forEach(fileId => {
+                if (fileId !== null) {
+                    metadataMatches.add(fileId);
+                }
+            });
 
-            // 3. Search by content in physical files (storage-server)
-            // Storage server searches ALL files (no permission filtering)
+            // 1B. Search by content/physical-name in storage server
             try {
                 const storageResponse = await storageClient.search(query);
-
                 if (storageResponse.success && storageResponse.data) {
-                    // Parse response - storage server returns space-separated file IDs
                     const contentMatches = storageResponse.data.split(' ').filter(id => id.trim());
                     
-                    // Filter storage results: only keep files user has access to
+                    // Only keep accessible files - O(1) lookup with Set
                     for (const fileId of contentMatches) {
-                        if (accessibleFileIds.includes(fileId) && !matchedFiles.has(fileId)) {
-                            const file = await filesStore.getById(fileId);
-                            if (file) {
-                                matchedFiles.set(fileId, file);
-                            }
+                        if (accessibleFileIds.has(fileId)) {
+                            storageMatches.add(fileId);
                         }
                     }
                 }
@@ -338,8 +311,47 @@ class FileService {
                 // Continue even if storage search fails - we still have metadata results
             }
 
-            // 4. Return results
-            return Array.from(matchedFiles.values());
+            // ===== Stage 2: Merge =====
+            // Union of both candidate sets (includes false positives)
+            const allCandidateIds = new Set([...metadataMatches, ...storageMatches]);
+
+            // ===== Stage 3: Validation & Filtering =====
+            // Filter out false positives (files that matched only by physical ID)
+            // Use parallelism for better performance
+            
+            const validationPromises = Array.from(allCandidateIds).map(async (fileId) => {
+                const file = await filesStore.getById(fileId);
+                if (!file) return null;
+
+                // If matched by logical name -> APPROVED (no content check needed)
+                if (metadataMatches.has(fileId)) {
+                    return file;
+                }
+
+                // Otherwise, verify match by content (since it wasn't in logical name)
+                // This filters out false positives from physical ID matches
+                if (file.type === 'file') {
+                    try {
+                        const storageResponse = await storageClient.get(fileId);
+                        if (storageResponse.success && storageResponse.data) {
+                            // Check if query actually appears in content
+                            if (storageResponse.data.includes(query)) {
+                                return file;
+                            }
+                        }
+                    } catch (error) {
+                        // If can't fetch content, assume it's a false positive and skip
+                    }
+                }
+                
+                // REJECTED: folders not in metadataMatches, or files without content match
+                return null;
+            });
+
+            const validationResults = await Promise.all(validationPromises);
+            const validatedFiles = validationResults.filter(file => file !== null);
+
+            return validatedFiles;
         } catch (error) {
             throw new Error(`Search failed: ${error.message}`);
         }
@@ -411,4 +423,4 @@ class FileService {
 // Create singleton instance
 const fileService = new FileService();
 
-export { FileService, fileService };
+module.exports = { FileService, fileService };

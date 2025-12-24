@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+const crypto = require('crypto');
 
 /**
  * Central ID generation utility
@@ -10,4 +10,4 @@ function generateId() {
     return crypto.randomUUID();
 }
 
-export { generateId };
+module.exports = { generateId };

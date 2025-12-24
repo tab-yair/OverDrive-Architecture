@@ -2,4 +2,6 @@
  * Utilities Index - Central export for utility functions
  */
 
-export { generateId } from './idGenerator.js';
+const { generateId } = require('./idGenerator.js');
+
+module.exports = { generateId };

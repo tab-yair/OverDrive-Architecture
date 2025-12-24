@@ -1,15 +1,15 @@
-import { Permission } from '../models/Permission.js';
-import { permissionStore } from '../models/permissionStore.js';
-import { usersStore } from '../models/usersStore.js';
-import { filesStore } from '../models/filesStore.js';
-import { generateId } from '../utils/idGenerator.js';
+const { Permission } = require('../models/Permission.js');
+const { permissionStore } = require('../models/permissionStore.js');
+const { usersStore } = require('../models/usersStore.js');
+const { filesStore } = require('../models/filesStore.js');
+const { generateId } = require('../utils/idGenerator.js');
 
 // Business logic layer for permission management
 // Handles complex validations, add/update/delete, permission checks, file sharing
 class PermissionService {
     
     // Add new permission
-    async addPermission(fileId, userId, level, customPermissions = null, requestingUserId) {
+    async addPermission({ fileId, userId, level, customPermissions = null, requestingUserId }) {
         // Prevent adding OWNER through this method - use addOwner instead
         if (level === 'OWNER') {
             throw new Error("Cannot add OWNER permission directly. Use transferOwnership instead.");
@@ -51,12 +51,12 @@ class PermissionService {
 
     // Add VIEWER permission
     async addViewer(fileId, userId, requestingUserId) {
-        return await this.addPermission(fileId, userId, 'VIEWER', null, requestingUserId);
+        return await this.addPermission({ fileId, userId, level: 'VIEWER', requestingUserId });
     }
 
     // Add EDITOR permission
     async addEditor(fileId, userId, requestingUserId) {
-        return await this.addPermission(fileId, userId, 'EDITOR', null, requestingUserId);
+        return await this.addPermission({ fileId, userId, level: 'EDITOR', requestingUserId });
     }
 
     // Transfer ownership to a new user
@@ -122,7 +122,7 @@ class PermissionService {
             throw new Error("Custom permissions must include: canRead, canWrite, canDelete, canShare");
         }
 
-        return await this.addPermission(fileId, userId, 'CUSTOM', customPermissions, requestingUserId);
+        return await this.addPermission({ fileId, userId, level: 'CUSTOM', customPermissions, requestingUserId });
     }
 
     // Update existing permission level
@@ -307,7 +307,7 @@ class PermissionService {
 
         for (const userId of userIds) {
             try {
-                const permission = await this.addPermission(fileId, userId, level, null, requestingUserId);
+                const permission = await this.addPermission({ fileId, userId, level, requestingUserId });
                 results.successful.push({ userId, permission });
             } catch (error) {
                 results.failed.push({ userId, error: error.message });
@@ -322,4 +322,4 @@ class PermissionService {
 // Create singleton instance
 const permissionService = new PermissionService();
 
-export { PermissionService, permissionService };
+module.exports = { PermissionService, permissionService };
