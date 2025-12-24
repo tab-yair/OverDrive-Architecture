@@ -16,12 +16,12 @@ const createUser = asyncHandler(async (req, res) => {
     }
 
     // Call service to create user
-    const user = await userService.createUser(username, password, displayName, profileImage);
+    const user = await userService.createUser({ username, password, displayName, profileImage });
 
-    // Return 201 Created with Location header
+    // Return 201 Created with Location header (empty body per assignment spec)
     res.status(201)
        .location(`/api/users/${user.id}`)
-       .json({ id: user.id });
+       .end();
 });
 
 /**

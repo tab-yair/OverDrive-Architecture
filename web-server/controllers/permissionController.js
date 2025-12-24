@@ -38,18 +38,17 @@ const addPermission = asyncHandler(async (req, res) => {
     }
 
     // Add permission
-    const permission = await permissionService.addPermission(
+    const permission = await permissionService.addPermission({
         fileId,
-        targetUserId,
-        normalizedLevel,
-        null,
-        req.userId
-    );
+        userId: targetUserId,
+        level: normalizedLevel,
+        requestingUserId: req.userId
+    });
 
-    // Return 201 Created with Location header
+    // Return 201 Created with Location header (empty body per assignment spec)
     res.status(201)
        .location(`/api/files/${fileId}/permissions/${permission.id}`)
-       .json({ id: permission.id });
+       .end();
 });
 
 /**

@@ -35,23 +35,23 @@ const createFile = asyncHandler(async (req, res) => {
     const size = type === 'file' && content ? Buffer.byteLength(content) : 0;
 
     // Create file metadata
-    const file = await fileService.createFile(
+    const file = await fileService.createFile({
         name,
         type,
-        req.userId,
-        parentId || null,
+        ownerId: req.userId,
+        parentId,
         size
-    );
+    });
 
     // If it's a file (not folder), upload to storage server
     if (type === 'file') {
         await fileService.uploadFile(file.id, content);
     }
 
-    // Return 201 Created with Location header
+    // Return 201 Created with Location header (empty body per assignment spec)
     res.status(201)
        .location(`/api/files/${file.id}`)
-       .json({ id: file.id });
+       .end();
 });
 
 /**
@@ -104,27 +104,10 @@ const deleteFile = asyncHandler(async (req, res) => {
     res.status(204).end();
 });
 
-/**
- * GET /api/files/search/:q
- * Search files by name and content
- */
-const searchFiles = asyncHandler(async (req, res) => {
-    const { q } = req.params;
-
-    if (!q || q.trim().length === 0) {
-        throw new Error('Search query cannot be empty');
-    }
-
-    const results = await fileService.searchFiles(q, req.userId);
-
-    res.status(200).json(results);
-});
-
 module.exports = {
     getAllFiles,
     createFile,
     getFileById,
     updateFile,
-    deleteFile,
-    searchFiles
+    deleteFile
 };

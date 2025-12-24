@@ -11,7 +11,7 @@ const { generateId } = require('../utils/idGenerator.js');
 class FileService {
     
     // Create new file or folder
-    async createFile(name, type, ownerId, parentId = null, size = 0) {
+    async createFile({ name, type, ownerId, parentId = null, size = 0 }) {
         // Basic validation
         const validationError = FileItem.validate({ name, type, ownerId });
         if (validationError) {
@@ -267,7 +267,7 @@ class FileService {
     }
 
     // SEARCH - Search files by name (metadata) AND content (physical files)
-    async searchFiles(query, userId) {
+    async searchFiles({ query, userId }) {
         try {
             // Get all files the user has access to - convert to Set for O(1) lookups
             const accessibleFileIdsArray = await permissionStore.getAccessibleFileIds(userId);

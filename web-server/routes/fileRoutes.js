@@ -7,9 +7,6 @@ const permissionController = require('../controllers/permissionController');
 // All file routes require authentication
 router.use(requireAuth);
 
-// Search (must be before /:id to avoid conflict)
-router.get('/search/:q', fileController.searchFiles);
-
 // File CRUD
 router.get('/', fileController.getAllFiles);
 router.post('/', fileController.createFile);

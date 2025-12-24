@@ -8,6 +8,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const userRoutes = require('./routes/userRoutes');
 const tokenRoutes = require('./routes/tokenRoutes');
 const fileRoutes = require('./routes/fileRoutes');
+const searchRoutes = require('./routes/searchRoutes');
 
 // Middleware
 app.use(express.json());
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use('/api/users', userRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/search', searchRoutes);
 
 // 404 handler - catches all unmatched routes
 app.use((req, res) => {

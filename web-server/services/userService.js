@@ -10,7 +10,7 @@ const { generateId } = require('../utils/idGenerator.js');
 class UserService {
     
     // Create new user
-    async createUser(username, password, displayName, profileImage = null) {
+    async createUser({ username, password, displayName, profileImage = null }) {
         // Basic validation
         const validationError = User.validate({ username, password, displayName, profileImage });
         if (validationError) {
