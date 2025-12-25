@@ -30,6 +30,14 @@ const createUser = asyncHandler(async (req, res) => {
  */
 const getUserById = asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const requestingUserId = req.userId; // Set by requireAuth middleware
+
+    // Users can only access their own profile
+    if (id !== requestingUserId) {
+        const error = new Error('Access denied');
+        error.status = 403;
+        throw error;
+    }
 
     // Call service to get user
     const user = await userService.getUserById(id);
