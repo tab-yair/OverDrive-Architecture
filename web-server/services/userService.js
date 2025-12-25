@@ -22,7 +22,7 @@ class UserService {
         const normalizedEmail = emailResult.normalizedEmail;
 
         // Check username uniqueness (using normalized email)
-        if (usersStore.exists(normalizedEmail)) {
+        if (await usersStore.exists(normalizedEmail)) {
             throw new Error("Username already exists");
         }
 
@@ -33,7 +33,7 @@ class UserService {
         // const hashedPassword = await bcrypt.hash(password, 10);
         
         // Store normalized email in DB
-        const newUser = usersStore.create(userId, normalizedEmail, password, displayName, profileImage);
+        const newUser = await usersStore.create(userId, normalizedEmail, password, displayName, profileImage);
 
         // Return without password
         const { password: _, ...userWithoutPassword } = newUser;
@@ -49,7 +49,7 @@ class UserService {
         }
         const normalizedEmail = emailResult.normalizedEmail;
         
-        const user = usersStore.getByUsername(normalizedEmail);
+        const user = await usersStore.getByUsername(normalizedEmail);
         
         if (!user) {
             throw new Error("Invalid username or password");
@@ -70,7 +70,7 @@ class UserService {
 
     // Get user by ID
     async getUserById(userId) {
-        const user = usersStore.getById(userId);
+        const user = await usersStore.getById(userId);
         
         if (!user) {
             throw new Error("User not found");
@@ -83,7 +83,7 @@ class UserService {
 
     // Get user by username
     async getUserByUsername(username) {
-        const user = usersStore.getByUsername(username);
+        const user = await usersStore.getByUsername(username);
         
         if (!user) {
             throw new Error("User not found");

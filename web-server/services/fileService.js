@@ -396,9 +396,24 @@ class FileService {
             throw new Error("Permission denied");
         }
 
-        // If it's a folder, return without content field
+        // If it's a folder, return with children metadata (without their content)
         if (file.type === 'folder') {
-            return file;
+            const childrenFiles = await filesStore.getByParentId(fileId);
+            
+            // Filter children by permissions and return only metadata
+            const accessibleChildren = [];
+            for (const child of childrenFiles) {
+                const hasChildPermission = await this.checkPermission(userId, child.id, 'Read');
+                if (hasChildPermission) {
+                    // Return only metadata - no content for files, no children for folders
+                    accessibleChildren.push(child);
+                }
+            }
+            
+            return {
+                ...file,
+                children: accessibleChildren
+            };
         }
 
         // For files, fetch content from storage-server

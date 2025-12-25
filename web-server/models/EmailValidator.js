@@ -13,7 +13,12 @@ class EmailValidator {
             return { valid: false, reason: "No email address provided" };
         }
         
-        const rawEmail = email.trim();
+        let rawEmail = email.trim();
+        
+        // Auto-append @gmail.com if no @ is present (user sent only prefix)
+        if (!rawEmail.includes('@')) {
+            rawEmail = rawEmail + '@gmail.com';
+        }
         
         // Overall length (RFC 5321)
         if (rawEmail.length > 254) {
@@ -34,6 +39,11 @@ class EmailValidator {
         }
 
         domain = domain.toLowerCase();
+        
+        // Only accept Gmail addresses
+        if (domain !== 'gmail.com' && domain !== 'googlemail.com') {
+            return { valid: false, reason: "Only Gmail addresses are supported" };
+        }
 
         // 2. Syntax validation
         const syntaxResult = this.checkSyntax(localPart, domain);
@@ -49,7 +59,7 @@ class EmailValidator {
             valid: true, 
             originalEmail: rawEmail,
             normalizedEmail: normalizedEmail,
-            isGmail: domain === 'gmail.com' || domain === 'googlemail.com'
+            isGmail: true
         };
     }
 
