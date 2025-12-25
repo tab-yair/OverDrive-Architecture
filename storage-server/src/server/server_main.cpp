@@ -28,12 +28,13 @@ int main(int argc, char* argv[]) {
     
     std::filesystem::path basePath = envPath;
 
-    if (argc != 2) {
-        // std::cerr << "Usage: server <port>\n";
+    // Expect 3 arguments: executable, port, pool_size
+    if (argc != 3) {
         return 1;
     }
     
     int port = std::stoi(argv[1]);
+    int poolSize = std::stoi(argv[2]);
     
     // Step 1: Create file management system
     // 1.1 Create base storage
@@ -57,9 +58,8 @@ int main(int argc, char* argv[]) {
     // 1.5 Wrap in thread-safe wrapper (shared_ptr for multiple client handlers)
     auto fs = std::make_shared<ThreadSafeFileManagement>(std::move(coreManager));
 
-
-    // Step 2: Create thread manager
-    std::shared_ptr<IThreadManager> threadManager = std::make_shared<ThreadPoolManager>(8);
+    // Step 2: Create thread manager with dynamic pool size
+    std::shared_ptr<IThreadManager> threadManager = std::make_shared<ThreadPoolManager>(poolSize);
 
     // Step 3: Create command factory
     std::shared_ptr<ICommandFactory> commandFactory = std::make_shared<ClientCommandFactory>(fs);

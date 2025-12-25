@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy all source files
-COPY . /src
+COPY . .
 
 # Build and run tests
 RUN mkdir build && cd build && \

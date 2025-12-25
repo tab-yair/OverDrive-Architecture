@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Create storage directory and set Env
-RUN mkdir -p /app/files
+RUN mkdir -p /app/files && chmod 777 /app/files
 ENV OVERDRIVE_PATH=/app/files
 
 # COPY the executable. 
