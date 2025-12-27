@@ -16,14 +16,14 @@ const asyncHandler = (fn) => (req, res, next) => {
 const getStatusFromError = (error) => {
     const message = error.message.toLowerCase();
 
+    // 401 Unauthorized - check BEFORE 400 since "invalid username or password" contains "invalid"
+    if (message.includes('invalid username or password') || message.includes('unauthorized')) {
+        return 401;
+    }
+
     // 400 Bad Request
     if (message.includes('required') || message.includes('invalid') || message.includes('must be')) {
         return 400;
-    }
-
-    // 401 Unauthorized
-    if (message.includes('unauthorized') || message.includes('invalid username or password')) {
-        return 401;
     }
 
     // 403 Forbidden
@@ -50,7 +50,8 @@ const getStatusFromError = (error) => {
  * Must be registered after all routes
  */
 const errorHandler = (err, req, res, next) => {
-    const status = getStatusFromError(err);
+    // Use explicit status if set on error, otherwise derive from message
+    const status = err.status || getStatusFromError(err);
 
     // Log error for debugging (only in development)
     if (process.env.NODE_ENV !== 'production') {

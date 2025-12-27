@@ -99,7 +99,7 @@ class ConnectionPool {
 // TCP client for storage-server using command-line protocol
 // Handles POST, GET, DELETE, SEARCH operations to C++ server
 class StorageServerClient {
-    constructor(host = 'localhost', port = 8080, poolSize = 5) {
+    constructor(host = 'localhost', port = 5555, poolSize = 5) {
         this.host = host;
         this.port = port;
         this.pool = new ConnectionPool(host, port, poolSize);
@@ -134,59 +134,30 @@ class StorageServerClient {
                 const dataHandler = (data) => {
                     responseData += data.toString();
                     
-                    // Server protocol: "STATUS\n" or "STATUS\n\nCONTENT\n"
-                    // Status codes that NEVER return content: 204, 404, 400
-                    // Status codes that MAY return content: 200, 201
-                    //
-                    // IMPORTANT: ClientServerComm::send() adds \n and sends the ENTIRE
-                    // message (including final \n) atomically via a while loop.
-                    // Therefore, if responseData.endsWith('\n'), the COMPLETE message
-                    // has been received (no partial body possible).
-                    
+                    // Check if we have a full response (ends with \n)
                     if (responseData.includes('\n')) {
-                        const lines = responseData.split('\n');
-                        const firstLine = lines[0];
+                        const parts = responseData.trim().split('\n');
+                        const firstLine = parts[0];
                         
-                        // Check for valid status line (e.g., "200 OK", "404 Not Found")
-                        const statusMatch = firstLine.match(/^(\d+)\s+(.+)$/);
+                        // Try to parse status code from first line
+                        const statusCode = parseInt(firstLine);
                         
-                        if (statusMatch) {
-                            const statusCode = parseInt(statusMatch[1]);
-                            const statusText = statusMatch[2];
+                        // If valid status code, resolve promise
+                        if (!isNaN(statusCode)) {
+                            cleanup();
+                            this.pool.release(connection);
                             
-                            // Determine if this status expects content
-                            const expectsNoContent = [204, 404, 400].includes(statusCode);
-                            
-                            if (expectsNoContent && responseData.endsWith('\n')) {
-                                // Status-only response - complete when ends with \n
-                                cleanup();
-                                const success = statusCode >= 200 && statusCode < 300;
-                                
-                                this.pool.release(connection);
-                                resolve({
-                                    success,
-                                    status: statusCode,
-                                    statusText,
-                                    data: undefined
-                                });
-                            } else if (!expectsNoContent && responseData.includes('\n\n') && responseData.endsWith('\n')) {
-                                // Response with content - complete when has \n\n and ends with \n
-                                cleanup();
-                                
-                                const trimmed = responseData.trim();
-                                const parts = trimmed.split('\n\n');
-                                const content = parts.length > 1 ? parts.slice(1).join('\n\n') : '';
-                                const success = statusCode >= 200 && statusCode < 300;
-                                
-                                this.pool.release(connection);
-                                resolve({
-                                    success,
-                                    status: statusCode,
-                                    statusText,
-                                    data: content || undefined
-                                });
-                            }
-                            // else: incomplete message, keep waiting
+                            // Extract content if present
+                            const content = responseData.includes('\n\n') 
+                                ? responseData.split('\n\n')[1].trim() 
+                                : (parts.length > 1 ? parts.slice(1).join('\n') : undefined);
+
+                            resolve({
+                                success: statusCode >= 200 && statusCode < 300,
+                                status: statusCode,
+                                statusText: firstLine.replace(/^\d+\s*/, '') || "OK",
+                                data: content
+                            });
                         }
                     }
                 };
@@ -206,7 +177,7 @@ class StorageServerClient {
                     // CRITICAL: Command must NOT contain \n except at the end
                     // The C++ server's receive() uses \n as delimiter and will
                     // stop reading when it encounters one, causing protocol errors.
-                    // We use base64 encoding for content to avoid this issue.
+                    // Content with newlines is rejected - single-line content only.
                     if (command.includes('\n')) {
                         cleanup();
                         connection.destroy();
@@ -236,27 +207,20 @@ class StorageServerClient {
 
     // POST - Save file to server
     async post(fileId, content) {
-        // Encode content to base64
-        const encodedContent = Buffer.isBuffer(content) 
-            ? content.toString('base64') 
-            : Buffer.from(content).toString('base64');
+        // Store content as plain text (newlines will be rejected by sendCommand)
+        const textContent = Buffer.isBuffer(content)
+            ? content.toString()
+            : content;
 
-        const command = `POST ${fileId} ${encodedContent}`;
-        
+        const command = `POST ${fileId} ${textContent}`;
+
         return await this.sendCommand(command);
     }
 
     // GET - Retrieve file from server
     async get(fileId) {
         const command = `GET ${fileId}`;
-        const response = await this.sendCommand(command);
-        
-        // Decode from base64 if needed
-        if (response.data && response.data.content) {
-            response.data.content = Buffer.from(response.data.content, 'base64');
-        }
-        
-        return response;
+        return await this.sendCommand(command);
     }
 
     // DELETE - Remove file from server
@@ -275,8 +239,8 @@ class StorageServerClient {
 
 // Create singleton instance
 const storageClient = new StorageServerClient(
-    process.env.STORAGE_SERVER_HOST || 'localhost',
-    parseInt(process.env.STORAGE_SERVER_PORT || '8080'),
+    process.env.STORAGE_SERVER_HOST || 'storage-server', 
+    parseInt(process.env.STORAGE_SERVER_PORT || '5555'),
     parseInt(process.env.STORAGE_SERVER_POOL_SIZE || '5')
 );
 

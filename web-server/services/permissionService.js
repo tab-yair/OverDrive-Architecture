@@ -128,12 +128,27 @@ class PermissionService {
     // Update existing permission level
     async updatePermission(permissionId, updates, requestingUserId) {
         const permission = await permissionStore.getById(permissionId);
-        
+
         if (!permission) {
             throw new Error("Permission not found");
         }
 
-        // Check requester can modify this permission
+        const file = await filesStore.getById(permission.fileId);
+        if (!file) {
+            throw new Error("Associated file not found");
+        }
+
+        // If trying to set OWNER level, only current owner can do this
+        // This triggers ownership transfer instead of regular update
+        if (updates.level === 'OWNER') {
+            if (file.ownerId !== requestingUserId) {
+                throw new Error("Permission denied: Only the owner can transfer ownership");
+            }
+            // Transfer ownership to the user whose permission is being updated
+            return await this.transferOwnership(permission.fileId, permission.userId, requestingUserId);
+        }
+
+        // For non-OWNER updates, check requester can modify this permission
         const canShare = await this.canUserShareFile(requestingUserId, permission.fileId);
         if (!canShare) {
             throw new Error("Permission denied: You cannot modify this permission");
@@ -141,7 +156,7 @@ class PermissionService {
 
         // Validate updates
         if (updates.level) {
-            const validLevels = ['VIEWER', 'EDITOR', 'OWNER', 'CUSTOM'];
+            const validLevels = ['VIEWER', 'EDITOR', 'CUSTOM'];
             if (!validLevels.includes(updates.level)) {
                 throw new Error("Invalid permission level");
             }

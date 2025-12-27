@@ -41,13 +41,18 @@ LocalFileManagement::LocalFileManagement(std::unique_ptr<IFileStorage> storage)
 // Allows subdirectories but blocks ".." patterns that could escape basePath
 // --------------------
 void LocalFileManagement::validateFileName(const std::string& fileName) const {
-     if (fileName.empty()) {
+    if (fileName.empty()) {
         throw std::invalid_argument("File name cannot be empty");
     }
 
-    // Prevent path separators - no subdirectories allowed
-    if (fileName.find('/') != std::string::npos || fileName.find('\\') != std::string::npos) {
-        throw std::invalid_argument("File name cannot contain path separators (no subdirectories allowed)");
+    // Prevent path traversal attempts
+    if (fileName.find("..") != std::string::npos) {
+        throw std::invalid_argument("Path traversal attempt detected (..)");
+    }
+    
+    // Prevent absolute paths
+    if (fileName.find('/') != std::string::npos) {
+         throw std::invalid_argument("File name cannot contain forward slashes");
     }
 }
 
@@ -148,28 +153,31 @@ std::vector<std::string> LocalFileManagement::list() {
     return fileList;
 }
 
-// Search for files containing the specified content substring or this is in theie name ( even if the file dont own by the user)
-std::vector<std::string> LocalFileManagement::search(const std::string& userID, const std::string& content) {
+// Search for files containing the specified substring in their name OR their content
+std::vector<std::string> LocalFileManagement::search(const std::string& query) {
     std::vector<std::string> results;
-    // if content.empty() return empty results
-    if (content.empty()) {
+    
+    if (query.empty()) {
         return results;
     }
 
-    auto allMetadata = metadataStore->list();
-    for (const auto& [key, metadata] : allMetadata) {
-        if (metadata.logicalName.find(content) != std::string::npos) {
-            results.push_back(metadata.logicalName);
+    // 1. Get all files in the base directory
+    std::vector<std::string> allFiles = list();
+
+    for (const auto& fileName : allFiles) {
+        // 2. Check if the query is in the file name
+        if (fileName.find(query) != std::string::npos) {
+            results.push_back(fileName);
         } else {
-            // Read file content to check for substring
-            auto physicalPath = pathMapper->resolve(metadata.logicalName);
+            // 3. Check if the query is in the file content
             try {
-                std::string fileContent = storage->readFile(physicalPath);
-                if (fileContent.find(content) != std::string::npos) {
-                    results.push_back(metadata.logicalName);
+                std::string fileContent = read(fileName); // Uses existing read logic (including decompression)
+                if (fileContent.find(query) != std::string::npos) {
+                    results.push_back(fileName);
                 }
             } catch (...) {
-                throw std::runtime_error("Failed to read file during search: " + metadata.logicalName);
+                // If a file is corrupted or unreadable, we skip it during search
+                continue; 
             }
         }
     }

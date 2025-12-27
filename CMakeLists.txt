@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.14)
-project(OverDriveTests LANGUAGES CXX)
+project(OverDriveSystem LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Required packages
 find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
 
-# GoogleTest
+# GoogleTest setup
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -17,164 +19,24 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-# Library: File Management (path, storage, compressor, metadata)
+# ==============================================================================
+# Library: File Management
+# ==============================================================================
 add_library(file_management_lib
-    # Storage
     storage-server/src/file/storage/LocalFileStorage.cpp
     storage-server/src/file/storage/CompressedFileStorage.cpp
-    
-    # Compressor
     storage-server/src/file/compressor/RLECompressor.cpp
-    
-    # Management
     storage-server/src/file/management/LocalFileManagement.cpp
     storage-server/src/file/management/ThreadSafeFileManagement.cpp
 )
 
-target_include_directories(file_management_lib PUBLIC
-    storage-server/src
+target_include_directories(file_management_lib PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/storage-server/src
 )
-
-# Find OpenSSL for SHA256
-find_package(OpenSSL REQUIRED)
 target_link_libraries(file_management_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
-# Test 1: LocalFileStorage
-add_executable(test_local_file_storage
-    storage-server/tests/test_LocalFileStorage.cpp
-)
-
-target_link_libraries(test_local_file_storage
-    file_management_lib
-    gtest
-    gtest_main
-)
-
-add_test(NAME test_local_file_storage COMMAND test_local_file_storage)
-
-# Test 5: RLECompressor
-add_executable(test_rle_compressor
-    storage-server/tests/RLECompression_test.cpp
-)
-
-target_link_libraries(test_rle_compressor
-    file_management_lib
-    gtest
-    gtest_main
-)
-
-add_test(NAME test_rle_compressor COMMAND test_rle_compressor)
-
-# Test 6: LocalFileManagement
-add_executable(test_local_file_management
-    storage-server/tests/test_LocalFileManagement.cpp
-)
-target_link_libraries(test_local_file_management
-    file_management_lib
-    gtest
-    gtest_main
-)
-add_test(NAME test_local_file_management COMMAND test_local_file_management)
-
-# Test 7: ThreadSafeFileManagement
-add_executable(test_thread_safe_file_management
-    storage-server/tests/ThreadSafeFileManagement_test.cpp
-)
-target_link_libraries(test_thread_safe_file_management
-    file_management_lib
-    gtest
-    gtest_main
-)
-add_test(NAME test_thread_safe_file_management COMMAND test_thread_safe_file_management)
-
-# Test 8: CommandParser
-add_executable(test_command_parsing
-    storage-server/tests/test_CommandParsing.cpp
-)
-target_link_libraries(test_command_parsing
-    server_lib
-    gtest
-    gtest_main
-)
-add_test(NAME test_command_parsing COMMAND test_command_parsing)
-
-# Test 9: CommandExecutor
-add_executable(test_command_executor
-    storage-server/tests/test_CommandExecutor.cpp
-)
-target_link_libraries(test_command_executor
-    server_lib
-    file_management_lib
-    gtest
-    gtest_main
-)
-add_test(NAME test_command_executor COMMAND test_command_executor)
-
-# Test 10: PostCommand
-add_executable(test_post_command
-    storage-server/tests/PostCommandTest.cpp
-)
-target_link_libraries(test_post_command
-    server_lib
-    file_management_lib
-    gtest
-    gtest_main
-)
-add_test(NAME test_post_command COMMAND test_post_command)
-
-# Test 11: GetCommand
-add_executable(test_get_command
-    storage-server/tests/GetCommandTest.cpp
-)
-target_link_libraries(test_get_command
-    server_lib
-    file_management_lib
-    gtest
-    gtest_main
-)
-add_test(NAME test_get_command COMMAND test_get_command)
-
-# Test 12: DeleteCommand
-add_executable(test_delete_command
-    storage-server/tests/DeleteCommandTest.cpp
-)
-target_link_libraries(test_delete_command
-    server_lib
-    file_management_lib
-    gtest
-    gtest_main
-)
-add_test(NAME test_delete_command COMMAND test_delete_command)
-
-# Test 13: SearchCommand
-add_executable(test_search_command
-    storage-server/tests/SearchCommandTest.cpp
-)
-target_link_libraries(test_search_command
-    server_lib
-    file_management_lib
-    gtest
-    gtest_main
-)
-add_test(NAME test_search_command COMMAND test_search_command)
-
-# Test 14: ClientServerComm
-add_executable(test_client_server_comm
-    storage-server/tests/test_ClientServerComm.cpp
-    Common/include/communication/ClientServerComm.cpp
-)
-target_include_directories(test_client_server_comm PRIVATE
-    Common/include
-    storage-server/include
-)
-target_link_libraries(test_client_server_comm
-    gtest
-    gtest_main
-)
-add_test(NAME test_client_server_comm COMMAND test_client_server_comm)
-
-# ==============================================================================  
-# Server Executable
+# ==============================================================================
+# Library: Server Logic (Includes ThreadPool)
 # ==============================================================================
 add_library(server_lib
     storage-server/src/server/server.cpp
@@ -188,58 +50,66 @@ add_library(server_lib
     storage-server/src/executors/CommandExecutor.cpp
     storage-server/src/parsers/CommandParser.cpp
     storage-server/src/threading/DedicatedThreadManager.cpp
-    storage-server/src/threading/ThreadPoolManager.cpp
+    storage-server/src/threading/ThreadPoolManager.cpp # Pool required for Ex3 [cite: 75]
     Common/include/communication/ClientServerComm.cpp
 )
 
 target_include_directories(server_lib PUBLIC
-    storage-server/src
-    storage-server/include
-    Common/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/storage-server/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/storage-server/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Common/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Client/include
 )
 
-target_link_libraries(server_lib PUBLIC
-    file_management_lib
-    OpenSSL::SSL
-    OpenSSL::Crypto
-)
-
-add_executable(server_main
-    storage-server/src/server/server_main.cpp
-)
-
-target_link_libraries(server_main
-    server_lib
-    file_management_lib
+target_link_libraries(server_lib PUBLIC 
+    file_management_lib 
     Threads::Threads
 )
 
-# ==============================================================================  
-# Client Executable  
 # ==============================================================================
+# Executables
+# ==============================================================================
+# Storage Server
+add_executable(server_main storage-server/src/server/server_main.cpp)
+target_link_libraries(server_main server_lib)
+
+# Client Application
 add_library(client_lib
     Client/src/Client/Client.cpp
     Client/src/communication/UserClientComm.cpp
     Common/include/communication/ClientServerComm.cpp
 )
-
-target_include_directories(client_lib PUBLIC
-    Client/src
-    Client/include
-    storage-server/src
-    storage-server/include
-    Common/include
+target_include_directories(client_lib PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/Client/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Client/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/Common/include
 )
+add_executable(client_main Client/src/Client/client_main.cpp)
+target_link_libraries(client_main client_lib OpenSSL::SSL OpenSSL::Crypto)
 
-target_link_libraries(client_lib PUBLIC
-    OpenSSL::SSL
-    OpenSSL::Crypto
-)
+# ==============================================================================
+# Tests (All 14 Tests included)
+# ==============================================================================
+# Macro to simplify repetitive test definitions
+macro(add_od_test TEST_NAME SRC_FILE)
+    add_executable(${TEST_NAME} ${SRC_FILE})
+    target_link_libraries(${TEST_NAME} server_lib file_management_lib gtest gtest_main)
+    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+endmacro()
 
-add_executable(client_main
-    Client/src/Client/client_main.cpp
-)
+add_od_test(test_local_file_storage storage-server/tests/test_LocalFileStorage.cpp)
+add_od_test(test_rle_compressor storage-server/tests/RLECompression_test.cpp)
+add_od_test(test_local_file_management storage-server/tests/test_LocalFileManagement.cpp)
+add_od_test(test_thread_safe_file_management storage-server/tests/ThreadSafeFileManagement_test.cpp)
+add_od_test(test_command_parsing storage-server/tests/test_CommandParsing.cpp)
+add_od_test(test_command_executor storage-server/tests/test_CommandExecutor.cpp)
+add_od_test(test_post_command storage-server/tests/PostCommandTest.cpp)
+add_od_test(test_get_command storage-server/tests/GetCommandTest.cpp)
+add_od_test(test_delete_command storage-server/tests/DeleteCommandTest.cpp)
+add_od_test(test_search_command storage-server/tests/SearchCommandTest.cpp)
 
-target_link_libraries(client_main
-    client_lib
-)
+# Specialized Test: ClientServerComm needs specific include directories
+add_executable(test_client_server_comm storage-server/tests/test_ClientServerComm.cpp Common/include/communication/ClientServerComm.cpp)
+target_include_directories(test_client_server_comm PRIVATE Common/include storage-server/include)
+target_link_libraries(test_client_server_comm gtest gtest_main)
+add_test(NAME test_client_server_comm COMMAND test_client_server_comm)  

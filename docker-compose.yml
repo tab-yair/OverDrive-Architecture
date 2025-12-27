@@ -1,18 +1,18 @@
-version: '3.8'
-
 services:
-  server:
+  # C++ Storage Server (Exercise 2)
+  storage-server:
     build:
       context: .
-      dockerfile: Dockerfile.server
-    container_name: overdrive-server
+      dockerfile: storage-server/Dockerfile
+    container_name: overdrive-storage-server
     environment:
       - OVERDRIVE_PATH=/app/files
     ports:
       - "5555:5555"
     volumes:
       - ./server_data:/app/files
-    command: ["5555"]
+    # Passing Arguments: [Port] [ThreadPoolSize]
+    command: ["5555", "10"] 
     networks:
       - overdrive_net
     healthcheck:
@@ -20,46 +20,60 @@ services:
       interval: 5s
       timeout: 3s
       retries: 3
-      start_period: 5s
 
+  # Node.js Web Server (Exercise 3)
+  web-server:
+    build:
+      context: ./web-server
+    container_name: overdrive-web-server
+    ports:
+      - "3000:3000"
+    depends_on:
+      storage-server:
+        condition: service_healthy
+    environment:
+      - PORT=3000
+      - STORAGE_SERVER_HOST=storage-server
+      - STORAGE_SERVER_PORT=5555
+    networks:
+      - overdrive_net
   tests:
     build:
       context: .
       dockerfile: Dockerfile.tests
     container_name: overdrive-tests
-    profiles: ["test"]
+    profiles: ["test"] # Only runs with --profile test
     networks:
       - overdrive_net
-    # No volumes or depends_on here to prevent creating ./server_data
 
   client-cpp:
     build:
       context: .
-      dockerfile: Dockerfile.client-cpp
+      dockerfile: Client/Dockerfile.client-cpp
     container_name: overdrive-client-cpp
     depends_on:
-      server:
+      storage-server:
         condition: service_healthy
-    networks:
-      - overdrive_net
+    profiles: ["client"]
     stdin_open: true
     tty: true
-    command: ["server", "5555"]
-    profiles: ["client"]
+    command: ["storage-server", "5555"]
+    networks:
+      - overdrive_net
 
   client-python:
     build:
       context: .
-      dockerfile: Dockerfile.client-python
+      dockerfile: Client/Dockerfile.client-python
     container_name: overdrive-client-python
     depends_on:
-      server:
+      storage-server:
         condition: service_healthy
     networks:
       - overdrive_net
     stdin_open: true
     tty: true
-    command: ["server", "5555"]
+    command: ["storage-server", "5555"]
     profiles: ["client"]
 
 networks:

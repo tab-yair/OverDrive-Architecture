@@ -45,14 +45,18 @@ class UserService {
         // Normalize email for lookup
         const emailResult = EmailValidator.validate(username);
         if (!emailResult.valid) {
-            throw new Error("Invalid username or password");
+            const error = new Error("Invalid username or password");
+            error.status = 401;
+            throw error;
         }
         const normalizedEmail = emailResult.normalizedEmail;
-        
-        const user = await usersStore.getByUsername(normalizedEmail);
+
+        const user = await usersStore.getByUsernameWithPassword(normalizedEmail);
         
         if (!user) {
-            throw new Error("Invalid username or password");
+            const error = new Error("Invalid username or password");
+            error.status = 401;
+            throw error;
         }
 
         // Future: use bcrypt here
@@ -60,7 +64,9 @@ class UserService {
         const isValid = user.password === password;
 
         if (!isValid) {
-            throw new Error("Invalid username or password");
+            const error = new Error("Invalid username or password");
+            error.status = 401;
+            throw error;
         }
 
         // Return without password
@@ -96,7 +102,7 @@ class UserService {
 
     // Get all users
     async getAllUsers() {
-        const users = usersStore.getAll();
+        const users = await usersStore.getAll();
         
         // Return without passwords
         return users.map(({ password, ...userWithoutPassword }) => userWithoutPassword);
@@ -104,7 +110,7 @@ class UserService {
 
     // Update user details
     async updateUser(userId, updates) {
-        const user = usersStore.getById(userId);
+        const user = await usersStore.getById(userId);
         
         if (!user) {
             throw new Error("User not found");
@@ -127,13 +133,13 @@ class UserService {
 
         // Check username uniqueness if changing
         if (updates.username && updates.username !== user.username) {
-            if (usersStore.exists(updates.username)) {
+            if (await usersStore.exists(updates.username)) {
                 throw new Error("Username already exists");
             }
         }
 
         // Execute update
-        const updatedUser = usersStore.update(userId, updates);
+        const updatedUser = await usersStore.update(userId, updates);
 
         // Return without password
         const { password: _, ...userWithoutPassword } = updatedUser;
@@ -142,7 +148,7 @@ class UserService {
 
     // Change password
     async changePassword(userId, oldPassword, newPassword) {
-        const user = usersStore.getById(userId);
+        const user = await usersStore.getById(userId);
         
         if (!user) {
             throw new Error("User not found");
@@ -159,7 +165,7 @@ class UserService {
         }
 
         // Update password
-        usersStore.update(userId, { password: newPassword });
+        await usersStore.update(userId, { password: newPassword });
 
         return { success: true, message: "Password changed successfully" };
     }
@@ -199,7 +205,7 @@ class UserService {
 
     // Check if user exists
     async userExists(username) {
-        return usersStore.exists(username);
+        return await usersStore.exists(username);
     }
 }
 

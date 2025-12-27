@@ -266,90 +266,78 @@ class FileService {
         }
     }
 
-    // SEARCH - Search files by name (metadata) AND content (physical files)
+    // SEARCH - Search files by name (metadata) AND content (C++ storage server)
     async searchFiles({ query, userId }) {
         try {
             // Get all files the user has access to - convert to Set for O(1) lookups
             const accessibleFileIdsArray = await permissionStore.getAccessibleFileIds(userId);
             const accessibleFileIds = new Set(accessibleFileIdsArray);
 
-            // ===== Stage 1: Parallel Collection =====
-            // Collect candidate IDs from both metadata and storage server
-            const metadataMatches = new Set(); // IDs that match by logical name
-            const storageMatches = new Set();  // IDs returned by storage server
-
-            // 1A. Search by logical name in metadata - parallel fetch
-            const metadataFetchPromises = Array.from(accessibleFileIds).map(async (fileId) => {
-                const file = await filesStore.getById(fileId);
-                if (file && file.name.includes(query)) {
-                    return fileId;
-                }
-                return null;
-            });
-            
-            const metadataResults = await Promise.all(metadataFetchPromises);
-            metadataResults.forEach(fileId => {
-                if (fileId !== null) {
-                    metadataMatches.add(fileId);
-                }
-            });
-
-            // 1B. Search by content/physical-name in storage server
-            try {
-                const storageResponse = await storageClient.search(query);
-                if (storageResponse.success && storageResponse.data) {
-                    const contentMatches = storageResponse.data.split(' ').filter(id => id.trim());
-                    
-                    // Only keep accessible files - O(1) lookup with Set
-                    for (const fileId of contentMatches) {
-                        if (accessibleFileIds.has(fileId)) {
-                            storageMatches.add(fileId);
-                        }
-                    }
-                }
-            } catch (storageError) {
-                // Continue even if storage search fails - we still have metadata results
+            // If user has no accessible files, return empty early
+            if (accessibleFileIds.size === 0) {
+                return [];
             }
 
-            // ===== Stage 2: Merge =====
-            // Union of both candidate sets (includes false positives)
-            const allCandidateIds = new Set([...metadataMatches, ...storageMatches]);
+            // ===== Stage 1: Parallel Search =====
+            // Search metadata (name) and content (C++ server) in parallel
+            const metadataMatches = new Set();
+            const storageMatches = new Set();
 
-            // ===== Stage 3: Validation & Filtering =====
-            // Filter out false positives (files that matched only by physical ID)
-            // Use parallelism for better performance
-            
-            const validationPromises = Array.from(allCandidateIds).map(async (fileId) => {
-                const file = await filesStore.getById(fileId);
-                if (!file) return null;
+            // 1A. Search by logical name in metadata
+            const metadataSearchPromise = (async () => {
+                const promises = Array.from(accessibleFileIds).map(async (fileId) => {
+                    const file = await filesStore.getById(fileId);
+                    if (file && file.name.includes(query)) {
+                        return fileId;
+                    }
+                    return null;
+                });
+                const results = await Promise.all(promises);
+                results.forEach(fileId => {
+                    if (fileId !== null) {
+                        metadataMatches.add(fileId);
+                    }
+                });
+            })();
 
-                // If matched by logical name -> APPROVED (no content check needed)
-                if (metadataMatches.has(fileId)) {
-                    return file;
-                }
+            // 1B. Search by content via C++ storage server SEARCH command
+            const storageSearchPromise = (async () => {
+                try {
+                    const searchResponse = await storageClient.search(query);
+                    if (searchResponse.success && searchResponse.data) {
+                        // C++ server returns newline-separated file IDs
+                        const matchedIds = searchResponse.data
+                            .split('\n')
+                            .map(id => id.trim())
+                            .filter(id => id.length > 0);
 
-                // Otherwise, verify match by content (since it wasn't in logical name)
-                // This filters out false positives from physical ID matches
-                if (file.type === 'file') {
-                    try {
-                        const storageResponse = await storageClient.get(fileId);
-                        if (storageResponse.success && storageResponse.data) {
-                            // Check if query actually appears in content
-                            if (storageResponse.data.includes(query)) {
-                                return file;
+                        // Only include IDs user has access to (security filter)
+                        for (const id of matchedIds) {
+                            if (accessibleFileIds.has(id)) {
+                                storageMatches.add(id);
                             }
                         }
-                    } catch (error) {
-                        // If can't fetch content, assume it's a false positive and skip
                     }
+                } catch (error) {
+                    // Storage server search failed - continue with metadata only
                 }
-                
-                // REJECTED: folders not in metadataMatches, or files without content match
-                return null;
-            });
+            })();
 
-            const validationResults = await Promise.all(validationPromises);
-            const validatedFiles = validationResults.filter(file => file !== null);
+            // Wait for both searches to complete
+            await Promise.all([metadataSearchPromise, storageSearchPromise]);
+
+            // ===== Stage 2: Merge & Return =====
+            // Union of both sets
+            const allMatchedIds = new Set([...metadataMatches, ...storageMatches]);
+
+            // Fetch full file objects for all matched IDs
+            const validatedFiles = [];
+            for (const fileId of allMatchedIds) {
+                const file = await filesStore.getById(fileId);
+                if (file) {
+                    validatedFiles.push(file);
+                }
+            }
 
             return validatedFiles;
         } catch (error) {
