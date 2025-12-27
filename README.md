@@ -38,7 +38,7 @@ docker-compose run --rm tests
 ```
 
 ## API Usage Guide (Interactive Demo)
-Follow these steps to explore the system. Replace <placeholder> values with actual IDs returned from the server.
+Follow these steps to explore the system. Replace <...> values with actual IDs returned from the server.
 
 ### 1. Identity & Access
 1.1 Register User
@@ -256,14 +256,19 @@ OverDrive/
 ---
 
 
-## Search Logic
-The system implements a fallback search mechanism:
-1. Metadata Search: The Web Server first checks if any file/folder name matches the query.
-2. Content Search: If no match is found, the request is delegated to the C++ Storage Server, which performs a deep scan of compressed file contents using the SEARCH protocol command. 
+## The system performs a dual search on both file names and content, with filtering:
+1. Metadata Search – The Web Server searches for files and folders by name, limited to those the user has access to.
+2. Content Search – Requests for content search are sent to the C++ Storage Server. Since the server may return IDs of irrelevant files (due to its internal ID system), results are filtered to include only files the user can access. An additional check is performed on the file content to confirm a real match, and any non-matching files are discarded.
+
+---
 
 ## Known Limitations
 
-- Gmail Restriction: Only @gmail.com addresses are allowed for registration.
+- Gmail Restriction:
+     Only @gmail.com addresses are allowed for registration.
+     Username requirements: Must be between 6–30 characters.
+     If the user enters the username without @gmail.com, it is automatically appended.
+     Normalization is applied: dots (.) and uppercase letters are ignored or converted to lowercase.
 - In-Memory Users: User data resets on Web Server restart (unless persistent store is attached).
 - Search Case-Sensitivity: Search is currently case-sensitive.
 
