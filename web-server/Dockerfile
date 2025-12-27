@@ -17,7 +17,7 @@ COPY . .
 EXPOSE 3000
 
 # Set environment variable
-ENV NODE_ENV=testing
+ENV NODE_ENV=production
 
 # Start the Node.js server
 CMD ["node", "server.js"]
