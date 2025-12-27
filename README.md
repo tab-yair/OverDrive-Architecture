@@ -60,8 +60,8 @@ Expected Response: 200 OK. Body: {"user-id": "..."}.
 1.3 Get User Profile
 ```Bash
 curl -i -X GET http://localhost:3000/api/users/<USER_ID>
-Expected Response: 200 OK. Body: User object (ID, username, displayName).
 ```
+Expected Response: 200 OK. Body: User object (ID, username, displayName).
 
 ### 2. File & Folder Management
 2.1 Create Folder
