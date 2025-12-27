@@ -38,42 +38,99 @@ docker-compose run --rm tests
 ```
 
 ## API Usage Guide (Interactive Demo)
-Follow these steps to explore the system. Replace the placeholders (e.g., <...>) with the actual values returned from your terminal.
+Follow these steps to explore the system. Replace <placeholder> values with actual IDs returned from the server.
 
-### 1. Register a New User
-Requirement: Email must be @gmail.com and username part must be 6-30 characters.
-
-```bash
-curl -X POST http://localhost:3000/api/users \
+### 1. Identity & Access
+1.1 Register User
+```Bash
+curl -i -X POST http://localhost:3000/api/users \
      -H "Content-Type: application/json" \
-     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<6_OR_MORE_CHARS>\",\"displayName\":\"<YOUR_NAME>\"}"
+     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\",\"displayName\":\"<NAME>\"}"
 ```
-Take note of the Location header in the response to get your USER_ID.
+Expected Response: 201 Created. Header Location contains the USER_ID.
 
-### 2. Create a folder
-```bash
-curl -X POST http://localhost:3000/api/files \
+1.2 User Login
+```Bash
+curl -i -X POST http://localhost:3000/api/tokens \
+     -H "Content-Type: application/json" \
+     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\"}"
+```
+Expected Response: 200 OK. Body: {"user-id": "..."}.
+
+1.3 Get User Profile
+```Bash
+curl -i -X GET http://localhost:3000/api/users/<USER_ID>
+Expected Response: 200 OK. Body: User object (ID, username, displayName).
+```
+
+### 2. File & Folder Management
+2.1 Create Folder
+```Bash
+curl -i -X POST http://localhost:3000/api/files \
      -H "user-id: <USER_ID>" \
      -H "Content-Type: application/json" \
-     -d "{\"name\":\"<FOLDER_NAME>\",\"type\":\"folder\"}"
+     -d "{\"name\":\"Work_Project\",\"type\":\"folder\"}"
 ```
+Expected Response: 201 Created. Header Location contains the FOLDER_ID.
 
-### 3. Upload a File
-You can upload a file to the root or specify a parentId to put it inside a folder.
-```bash
-curl -X POST http://localhost:3000/api/files \
+2.2 Upload File (with RLE Compression)
+```Bash
+curl -i -X POST http://localhost:3000/api/files \
      -H "user-id: <USER_ID>" \
      -H "Content-Type: application/json" \
-     -d "{\"name\":\"<FILENAME>\",\"content\":\"<YOUR_TEXT_HERE>\",\"type\":\"file\",\"parentId\":\"<FOLDER_ID_OR_NULL>\"}"
+     -d "{\"name\":\"notes.txt\",\"content\":\"AAAAABBBBB\",\"type\":\"file\",\"parentId\":\"<FOLDER_ID_OR_NULL>\"}"
 ```
+Expected Response: 201 Created. Data is automatically compressed in the C++ backend.
 
-### 4. Search by Name or Content
-```bash
-curl -X GET "http://localhost:3000/api/files?search=<SEARCH_TERM>" \
+2.3 List All Files (Tree Root)
+```Bash
+curl -i -X GET http://localhost:3000/api/files \
      -H "user-id: <USER_ID>"
 ```
+Expected Response: 200 OK. Returns an array of file/folder objects.
+
+2.4 Get File Metadata & Content
+```Bash
+curl -i -X GET http://localhost:3000/api/files/<FILE_ID> \
+     -H "user-id: <USER_ID>"
+```
+Expected Response: 200 OK. Content is transparently decompressed and returned as plain text.
+
+2.5 Update File/Folder Name
+```Bash
+curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
+     -H "user-id: <USER_ID>" \
+     -H "Content-Type: application/json" \
+     -d "{\"name\":\"new_filename.txt\"}"
+```
+Expected Response: 204 No Content.
+
+2.6 Delete File/Folder
+```Bash
+curl -i -X DELETE http://localhost:3000/api/files/<FILE_ID> \
+     -H "user-id: <USER_ID>"
+```
+Expected Response: 204 No Content.
+
+### 3. Advanced Features
+3.1 Smart Search (Name & Content)
+```Bash
+curl -i -X GET "http://localhost:3000/api/files?search=<TERM>" \
+     -H "user-id: <USER_ID>"
+```
+Expected Response: 200 OK. Searches file names and performs deep-content search within compressed RLE data.
+
+3.2 Grant Permissions (RBAC)
+```Bash
+curl -i -X POST http://localhost:3000/api/files/<FILE_ID>/permissions \
+     -H "user-id: <OWNER_ID>" \
+     -H "Content-Type: application/json" \
+     -d "{\"targetUserId\":\"<GUEST_ID>\",\"permissionLevel\":\"VIEWER\"}"
+```
+Expected Response: 201 Created. Supported levels: VIEWER, EDITOR, OWNER.
 
 ---
+
 ## Project Execution Demo: Full User and File Lifecycle
 
 ### Phase 1: Identity & Access Management
@@ -90,13 +147,10 @@ This phase demonstrates the robustness of the user authentication and validation
 ### Phase 2: Smart Storage & Content Search
 This phase showcases the system's core storage capabilities and C++ integration:
 
-File Hierarchy: POST /api/files - Supports creating both folders and files, establishing a structured file system.
-
-RLE Compression: POST /api/files - Transmits data to the C++ storage server where it is compressed using Run-Length Encoding (RLE).
-
-Smart Search: GET /api/files?search=... - Performs a deep-content search. The C++ server decompresses data on-the-fly to find matches within compressed files.
-
-Data Retrieval: GET /api/files/:id - Seamlessly retrieves and decodes the storage, returning the original plain text to the user.
+1. File Hierarchy: POST /api/files - Supports creating both folders and files, establishing a structured file system.
+2. RLE Compression: POST /api/files - Transmits data to the C++ storage server where it is compressed using Run-Length Encoding (RLE).
+3. Smart Search: GET /api/files?search=... - Performs a deep-content search. The C++ server decompresses data on-the-fly to find matches within compressed files.
+4. Data Retrieval: GET /api/files/:id - Seamlessly retrieves and decodes the storage, returning the original plain text to the user.
 
 ![Project Execution Demo](Images/p2_storge_and_search.png)
 
