@@ -257,6 +257,7 @@ OverDrive/
 
 
 ## The system performs a dual search on both file names and content, with filtering:
+
 1. Metadata Search – The Web Server searches for files and folders by name, limited to those the user has access to.
 2. Content Search – Requests for content search are sent to the C++ Storage Server. Since the server may return IDs of irrelevant files (due to its internal ID system), results are filtered to include only files the user can access. An additional check is performed on the file content to confirm a real match, and any non-matching files are discarded.
 
@@ -265,9 +266,13 @@ OverDrive/
 ## Known Limitations
 
 - Gmail Restriction:
+     
      Only @gmail.com addresses are allowed for registration.
+     
      Username requirements: Must be between 6–30 characters.
+     
      If the user enters the username without @gmail.com, it is automatically appended.
+     
      Normalization is applied: dots (.) and uppercase letters are ignored or converted to lowercase.
 - In-Memory Users: User data resets on Web Server restart (unless persistent store is attached).
 - Search Case-Sensitivity: Search is currently case-sensitive.
