@@ -24,6 +24,10 @@ const usersStore = {
         return User.toSafeObject(user);
     },
 
+    async getByUsernameWithPassword(username) {
+        return usersByUsername.get(username) || null;
+    },
+
     async exists(username) {
         return usersByUsername.has(username);
     },

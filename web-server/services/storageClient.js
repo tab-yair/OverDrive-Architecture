@@ -177,7 +177,7 @@ class StorageServerClient {
                     // CRITICAL: Command must NOT contain \n except at the end
                     // The C++ server's receive() uses \n as delimiter and will
                     // stop reading when it encounters one, causing protocol errors.
-                    // We use base64 encoding for content to avoid this issue.
+                    // Content with newlines is rejected - single-line content only.
                     if (command.includes('\n')) {
                         cleanup();
                         connection.destroy();
@@ -207,27 +207,20 @@ class StorageServerClient {
 
     // POST - Save file to server
     async post(fileId, content) {
-        // Encode content to base64
-        const encodedContent = Buffer.isBuffer(content) 
-            ? content.toString('base64') 
-            : Buffer.from(content).toString('base64');
+        // Store content as plain text (newlines will be rejected by sendCommand)
+        const textContent = Buffer.isBuffer(content)
+            ? content.toString()
+            : content;
 
-        const command = `POST ${fileId} ${encodedContent}`;
-        
+        const command = `POST ${fileId} ${textContent}`;
+
         return await this.sendCommand(command);
     }
 
     // GET - Retrieve file from server
     async get(fileId) {
         const command = `GET ${fileId}`;
-        const response = await this.sendCommand(command);
-        
-        // Decode from base64 if needed
-        if (response.data && response.data.content) {
-            response.data.content = Buffer.from(response.data.content, 'base64');
-        }
-        
-        return response;
+        return await this.sendCommand(command);
     }
 
     // DELETE - Remove file from server

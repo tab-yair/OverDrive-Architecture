@@ -50,8 +50,8 @@ class UserService {
             throw error;
         }
         const normalizedEmail = emailResult.normalizedEmail;
-        
-        const user = await usersStore.getByUsername(normalizedEmail);
+
+        const user = await usersStore.getByUsernameWithPassword(normalizedEmail);
         
         if (!user) {
             const error = new Error("Invalid username or password");

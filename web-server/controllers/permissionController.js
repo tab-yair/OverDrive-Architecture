@@ -1,4 +1,4 @@
-const permissionService = require('../services/permissionService');
+const {permissionService} = require('../services/permissionService');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 /**
@@ -47,7 +47,7 @@ const addPermission = asyncHandler(async (req, res) => {
 
     // Return 201 Created with Location header (empty body per assignment spec)
     res.status(201)
-       .location(`/api/files/${fileId}/permissions/${permission.id}`)
+       .location(`/api/files/${fileId}/permissions/${permission.pid}`)
        .end();
 });
 
