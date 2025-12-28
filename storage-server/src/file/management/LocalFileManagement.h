@@ -15,7 +15,7 @@ class LocalFileManagement : public IFileManagement {
         std::unique_ptr<IFileStorage> storage; // Underlying file storage with compression
         std::filesystem::path basePath; // Base directory for file storage
         
-        // Security: Validates fileName against path traversal attacks
+        // Validates fileName is not empty
         void validateFileName(const std::string& fileName) const;
         
         // Constructs full filesystem path from basePath and fileName
