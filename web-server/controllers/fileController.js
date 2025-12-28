@@ -15,7 +15,16 @@ const getAllFiles = asyncHandler(async (req, res) => {
  * Create new file or folder
  */
 const createFile = asyncHandler(async (req, res) => {
-    const { name, type, content, parentId } = req.body;
+    const { name, type, content, parentId, ...extraFields } = req.body;
+
+    // Check for unexpected fields
+    const allowedFields = ['name', 'type', 'content', 'parentId'];
+    const receivedFields = Object.keys(req.body);
+    const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
+    
+    if (invalidFields.length > 0) {
+        throw new Error(`Invalid fields: ${invalidFields.join(', ')}. Only name, type, content, and parentId are allowed`);
+    }
 
     // Validate required fields
     if (!name) {
@@ -72,7 +81,16 @@ const getFileById = asyncHandler(async (req, res) => {
  */
 const updateFile = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { name, content, parentId } = req.body;
+    const { name, content, parentId, ...extraFields } = req.body;
+
+    // Check for unexpected fields
+    const allowedFields = ['name', 'content', 'parentId'];
+    const receivedFields = Object.keys(req.body);
+    const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
+    
+    if (invalidFields.length > 0) {
+        throw new Error(`Invalid fields: ${invalidFields.join(', ')}. Only name, content, and parentId are allowed`);
+    }
 
     // At least one field must be provided
     if (name === undefined && content === undefined && parentId === undefined) {

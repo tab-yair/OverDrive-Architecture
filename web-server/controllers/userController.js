@@ -6,7 +6,18 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * Register a new user
  */
 const createUser = asyncHandler(async (req, res) => {
-    const { username, password, firstName, lastName, profileImage } = req.body;
+    const { username, password, firstName, lastName, profileImage, ...extraFields } = req.body;
+
+    // Check for unexpected fields
+    const allowedFields = ['username', 'password', 'firstName', 'lastName', 'profileImage'];
+    const receivedFields = Object.keys(req.body);
+    const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
+    
+    if (invalidFields.length > 0) {
+        const error = new Error(`Invalid fields: ${invalidFields.join(', ')}. Only username, password, firstName, lastName, and profileImage are allowed`);
+        error.status = 400;
+        throw error;
+    }
 
     // Validate required fields (lastName and profileImage are optional)
     if (!username || !password || !firstName) {
