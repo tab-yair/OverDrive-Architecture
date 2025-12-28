@@ -179,11 +179,11 @@ This final phase demonstrates the complete lifecycle of a secure resource and th
 | `GET` | `/api/users/:id` | `user-id` | **Get User Profile**: Retrieve user details (username, displayName, profileImage) |
 | `POST` | `/api/tokens` | - | **Login**: Authenticate user and retrieve user-id |
 | `POST` | `/api/files` | `user-id` | **Create**: Upload a new file or create a folder |
-| `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders at root level (/) with permission|
+| `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
 | `GET` | `/api/files/:id` | `user-id` | **Fetch**: Get full metadata and content of a specific file/folder |
-| `PATCH` | `/api/files/:id` | `user-id` | **Update**: Edit file/folder name or content or location |
+| `PATCH` | `/api/files/:id` | `user-id` | **Update**: Update file/folder name or content or location |
 | `DELETE` | `/api/files/:id` | `user-id` | **Delete**: Remove a file or folder (includes recursive deletion) |
-| `GET` | `/api/files?search=...` | `user-id` | **Search**: Global search by name or content |
+| `GET` | `/api/search/:query` | `user-id` | **Search**: Global search by name or content |
 | `GET` | `/api/files/:id/permissions` | `user-id` | **Get Permissions**: Retrieve all permissions for a specific file/folder |
 | `POST` | `/api/files/:id/permissions` | `user-id` | **Grant Permission**: Create new permission for a user (VIEWER, EDITOR, OWNER) |
 | `PATCH` | `/api/files/:id/permissions/:pId` | `user-id` | **Update Permission**: Modify an existing permission level |
