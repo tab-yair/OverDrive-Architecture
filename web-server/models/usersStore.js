@@ -7,7 +7,7 @@ const usersById = new Map();
 const usersByUsername = new Map();
 
 const usersStore = {
-    async create(id, username, password, displayName, profileImage) {
+    async create(id, username, password, displayName, profileImage = null) {
         const newUser = new User(id, username, password, displayName, profileImage);
         usersById.set(id, newUser);
         usersByUsername.set(username, newUser);

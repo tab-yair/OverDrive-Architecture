@@ -1,7 +1,7 @@
 const { EmailValidator } = require('./EmailValidator.js');
 
 class User {
-    constructor(id, username, password, displayName, profileImage) {
+    constructor(id, username, password, displayName, profileImage = null) {
         this.id = id;
         this.username = username;
         this.password = password;

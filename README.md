@@ -175,22 +175,31 @@ This final phase demonstrates the complete lifecycle of a secure resource and th
 
 | Method | Endpoint | Required Headers | Description |
 |:---:|:---|:---:|:---|
-| `POST` | `/api/users` | - | **Register**: Create a new account (Gmail only, 6+ char password) |
-| `POST` | `/api/tokens` | - | **Login**: Authenticate user and retrieve session/token data |
+| `POST` | `/api/users` | - | **Register**: Create a new account (Gmail only, 4+ char password). `profileImage` is optional (Base64) and defaults to `null` |
+| `GET` | `/api/users/:id` | `user-id` | **Get User Profile**: Retrieve user details (username, displayName, profileImage) |
+| `POST` | `/api/tokens` | - | **Login**: Authenticate user and retrieve user-id |
 | `POST` | `/api/files` | `user-id` | **Create**: Upload a new file or create a folder |
-| `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders owned by the user |
-| `GET` | `/api/files/:id` | `user-id` | **Fetch**: Get full metadata and content of a specific resource |
-| `GET` | `/api/files?search=...` | `user-id` | **Search**: Global search by name (Metadata) or content (C++ Scan) |
+| `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders at root level (/) with permission|
+| `GET` | `/api/files/:id` | `user-id` | **Fetch**: Get full metadata and content of a specific file/folder |
+| `PATCH` | `/api/files/:id` | `user-id` | **Update**: Edit file/folder name or content or location |
 | `DELETE` | `/api/files/:id` | `user-id` | **Delete**: Remove a file or folder (includes recursive deletion) |
+| `GET` | `/api/files?search=...` | `user-id` | **Search**: Global search by name or content |
+| `GET` | `/api/files/:id/permissions` | `user-id` | **Get Permissions**: Retrieve all permissions for a specific file/folder |
+| `POST` | `/api/files/:id/permissions` | `user-id` | **Grant Permission**: Create new permission for a user (VIEWER, EDITOR, OWNER) |
+| `PATCH` | `/api/files/:id/permissions/:pId` | `user-id` | **Update Permission**: Modify an existing permission level |
+| `DELETE` | `/api/files/:id/permissions/:pId` | `user-id` | **Revoke Permission**: Remove a specific permission |
 
 ---
 
 ### Status Codes
-- `200 Ok` - Success.
+- `200 OK` - Success.
 - `201 Created` - Resource created successfully.
-- `400 Bad Request` - Validation failed (e.g., non-Gmail address).
+- `204 No Content` - Success with no response body (update/delete operations).
+- `400 Bad Request` - Validation failed (e.g., invalid email, missing fields).
 - `401 Unauthorized` - Missing or invalid user-id.
-- `404 Not Found` - Resource or Owner does not exist.
+- `403 Forbidden` - User lacks permission to access the resource.
+- `404 Not Found` - Resource or User does not exist.
+- `409 Conflict` - Resource already exists (e.g., duplicate username).
 
 ---
 
