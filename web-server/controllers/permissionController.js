@@ -19,7 +19,16 @@ const getPermissions = asyncHandler(async (req, res) => {
  */
 const addPermission = asyncHandler(async (req, res) => {
     const { id: fileId } = req.params;
-    const { targetUserId, permissionLevel } = req.body;
+    const { targetUserId, permissionLevel, ...extraFields } = req.body;
+
+    // Check for unexpected fields
+    const allowedFields = ['targetUserId', 'permissionLevel'];
+    const receivedFields = Object.keys(req.body);
+    const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
+    
+    if (invalidFields.length > 0) {
+        throw new Error(`Invalid fields: ${invalidFields.join(', ')}. Only targetUserId and permissionLevel are allowed`);
+    }
 
     // Validate input
     if (!targetUserId) {
@@ -58,11 +67,20 @@ const addPermission = asyncHandler(async (req, res) => {
  */
 const updatePermission = asyncHandler(async (req, res) => {
     const { pId: permissionId } = req.params;
-    const { permissionLevel } = req.body;
+    const { permissionLevel, ...extraFields } = req.body;
+
+    // Check for unexpected fields
+    const allowedFields = ['permissionLevel'];
+    const receivedFields = Object.keys(req.body);
+    const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
+    
+    if (invalidFields.length > 0) {
+        throw new Error(`Invalid fields: ${invalidFields.join(', ')}. Only permissionLevel is allowed`);
+    }
 
     // Permission level must be provided
     if (!permissionLevel) {
-        throw new Error('permission Level is required');
+        throw new Error('permissionLevel is required');
     }
 
     // Build updates object

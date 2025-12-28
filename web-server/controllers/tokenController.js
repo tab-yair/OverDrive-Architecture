@@ -7,7 +7,18 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * Returns user-id if successful (will change to JWT in Exercise 4)
  */
 const login = asyncHandler(async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, ...extraFields } = req.body;
+
+    // Check for unexpected fields
+    const allowedFields = ['username', 'password'];
+    const receivedFields = Object.keys(req.body);
+    const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
+    
+    if (invalidFields.length > 0) {
+        const error = new Error(`Invalid fields: ${invalidFields.join(', ')}. Only username and password are allowed`);
+        error.status = 400;
+        throw error;
+    }
 
     // Validate input
     if (!username || !password) {
