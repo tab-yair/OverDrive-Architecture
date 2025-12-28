@@ -186,8 +186,8 @@ This final phase demonstrates the complete lifecycle of a secure resource and th
 | `DELETE` | `/api/files/:id` | `user-id` | **Delete**: Remove a file or folder (includes recursive deletion) |
 | `GET` | `/api/search/:query` | `user-id` | **Search**: Global search by name or content |
 | `GET` | `/api/files/:id/permissions` | `user-id` | **Get Permissions**: Retrieve all permissions for a specific file/folder |
-| `POST` | `/api/files/:id/permissions` | `user-id` | **Grant Permission**: Create new permission for a user (VIEWER, EDITOR, OWNER) |
-| `PATCH` | `/api/files/:id/permissions/:pId` | `user-id` | **Update Permission**: Modify an existing permission level |
+| `POST` | `/api/files/:id/permissions` | `user-id` | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
+| `PATCH` | `/api/files/:id/permissions/:pId` | `user-id` | **Update Permission**: Modify permission level only. Body: `{ permissionLevel }`. Allowed levels: VIEWER or EDITOR. Use POST with OWNER level for ownership transfer |
 | `DELETE` | `/api/files/:id/permissions/:pId` | `user-id` | **Revoke Permission**: Remove a specific permission |
 
 ---

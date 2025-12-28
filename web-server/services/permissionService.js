@@ -10,11 +10,6 @@ class PermissionService {
     
     // Add new permission
     async addPermission({ fileId, userId, level, customPermissions = null, requestingUserId }) {
-        // Prevent adding OWNER through this method - use addOwner instead
-        if (level === 'OWNER') {
-            throw new Error("Cannot add OWNER permission directly. Use transferOwnership instead.");
-        }
-
         // Basic validation
         const validationError = Permission.validate({ fileId, userId, level, customPermissions });
         if (validationError) {
@@ -33,7 +28,17 @@ class PermissionService {
             throw new Error("User does not exist");
         }
 
-        // Check requester is owner or has Share permission
+        // Special handling for OWNER level - this is ownership transfer
+        if (level === 'OWNER') {
+            // Only current owner can transfer ownership
+            if (file.ownerId !== requestingUserId) {
+                throw new Error("Permission denied: Only the owner can transfer ownership");
+            }
+            // Transfer ownership to the new user
+            return await this.transferOwnership(fileId, userId, requestingUserId);
+        }
+
+        // For non-OWNER permissions, check requester is owner or has Share permission
         const canShare = await this.canUserShareFile(requestingUserId, fileId);
         if (!canShare) {
             throw new Error("Permission denied: You cannot share this file");
@@ -125,7 +130,7 @@ class PermissionService {
         return await this.addPermission({ fileId, userId, level: 'CUSTOM', customPermissions, requestingUserId });
     }
 
-    // Update existing permission level
+    // Update existing permission level only
     async updatePermission(permissionId, updates, requestingUserId) {
         const permission = await permissionStore.getById(permissionId);
 
@@ -138,35 +143,33 @@ class PermissionService {
             throw new Error("Associated file not found");
         }
 
-        // If trying to set OWNER level, only current owner can do this
-        // This triggers ownership transfer instead of regular update
-        if (updates.level === 'OWNER') {
-            if (file.ownerId !== requestingUserId) {
-                throw new Error("Permission denied: Only the owner can transfer ownership");
-            }
-            // Transfer ownership to the user whose permission is being updated
-            return await this.transferOwnership(permission.fileId, permission.userId, requestingUserId);
-        }
-
-        // For non-OWNER updates, check requester can modify this permission
+        // Check requester has permission to modify this permission
         const canShare = await this.canUserShareFile(requestingUserId, permission.fileId);
         if (!canShare) {
             throw new Error("Permission denied: You cannot modify this permission");
         }
 
-        // Validate updates
-        if (updates.level) {
-            const validLevels = ['VIEWER', 'EDITOR', 'CUSTOM'];
-            if (!validLevels.includes(updates.level)) {
-                throw new Error("Invalid permission level");
-            }
-
-            if (updates.level === 'CUSTOM' && !updates.customPermissions) {
-                throw new Error("Custom permissions required for CUSTOM level");
-            }
+        // Only allow level changes (not userId changes)
+        if (!updates.level) {
+            throw new Error("Only permission level can be updated via PATCH");
         }
 
-        const updatedPermission = await permissionStore.update(permissionId, updates);
+        // Validate level
+        const validLevels = ['VIEWER', 'EDITOR', 'CUSTOM'];
+        if (!validLevels.includes(updates.level)) {
+            throw new Error("Invalid permission level. OWNER transfer must be done via POST.");
+        }
+
+        if (updates.level === 'CUSTOM' && !updates.customPermissions) {
+            throw new Error("Custom permissions required for CUSTOM level");
+        }
+
+        // Cannot change owner's permission level
+        if (permission.level === 'OWNER') {
+            throw new Error("Cannot change owner's permission level. Transfer ownership via POST first.");
+        }
+
+        const updatedPermission = await permissionStore.update(permissionId, { level: updates.level, customPermissions: updates.customPermissions });
         return updatedPermission;
     }
 
