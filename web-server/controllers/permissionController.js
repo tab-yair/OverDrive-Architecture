@@ -53,28 +53,33 @@ const addPermission = asyncHandler(async (req, res) => {
 
 /**
  * PATCH /api/files/:id/permissions/:pId
- * Update permission level (e.g., VIEWER -> EDITOR)
+ * Update permission level only
+ * Send only permissionLevel to change
  */
 const updatePermission = asyncHandler(async (req, res) => {
     const { pId: permissionId } = req.params;
     const { permissionLevel } = req.body;
 
-    // Validate input
+    // Permission level must be provided
     if (!permissionLevel) {
-        throw new Error('permissionLevel is required');
+        throw new Error('permission Level is required');
     }
 
-    // Validate and normalize permission level
-    const validLevels = ['VIEWER', 'EDITOR', 'OWNER'];
+    // Build updates object
+    const updates = {};
+
+    // Handle permission level change (OWNER not allowed, use POST for transfer)
+    const validLevels = ['VIEWER', 'EDITOR'];
     const normalizedLevel = permissionLevel.toUpperCase();
     if (!validLevels.includes(normalizedLevel)) {
-        throw new Error('permissionLevel must be VIEWER, EDITOR, or OWNER');
+        throw new Error('permissionLevel must be VIEWER or EDITOR (use POST for ownership transfer)');
     }
+    updates.level = normalizedLevel;
 
     // Update permission
     await permissionService.updatePermission(
         permissionId,
-        { level: normalizedLevel },
+        updates,
         req.userId
     );
 

@@ -37,22 +37,11 @@ LocalFileManagement::LocalFileManagement(std::unique_ptr<IFileStorage> storage)
 }
 
 // --------------------
-// Security validation against path traversal attacks
-// Allows subdirectories but blocks ".." patterns that could escape basePath
+// Validates fileName is not empty
 // --------------------
 void LocalFileManagement::validateFileName(const std::string& fileName) const {
     if (fileName.empty()) {
         throw std::invalid_argument("File name cannot be empty");
-    }
-
-    // Prevent path traversal attempts
-    if (fileName.find("..") != std::string::npos) {
-        throw std::invalid_argument("Path traversal attempt detected (..)");
-    }
-    
-    // Prevent absolute paths
-    if (fileName.find('/') != std::string::npos) {
-         throw std::invalid_argument("File name cannot contain forward slashes");
     }
 }
 

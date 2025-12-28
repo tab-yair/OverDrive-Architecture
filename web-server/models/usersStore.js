@@ -7,8 +7,8 @@ const usersById = new Map();
 const usersByUsername = new Map();
 
 const usersStore = {
-    async create(id, username, password, displayName, profileImage) {
-        const newUser = new User(id, username, password, displayName, profileImage);
+    async create(id, username, password, firstName, lastName = null, profileImage = null) {
+        const newUser = new User(id, username, password, firstName, lastName, profileImage);
         usersById.set(id, newUser);
         usersByUsername.set(username, newUser);
         return User.toSafeObject(newUser);

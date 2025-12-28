@@ -10,9 +10,9 @@ const { generateId } = require('../utils/idGenerator.js');
 class UserService {
     
     // Create new user
-    async createUser({ username, password, displayName, profileImage = null }) {
+    async createUser({ username, password, firstName, lastName = null, profileImage = null }) {
         // Basic validation
-        const validationError = User.validate({ username, password, displayName, profileImage });
+        const validationError = User.validate({ username, password, firstName, lastName, profileImage });
         if (validationError) {
             throw new Error(validationError);
         }
@@ -33,7 +33,7 @@ class UserService {
         // const hashedPassword = await bcrypt.hash(password, 10);
         
         // Store normalized email in DB
-        const newUser = await usersStore.create(userId, normalizedEmail, password, displayName, profileImage);
+        const newUser = await usersStore.create(userId, normalizedEmail, password, firstName, lastName, profileImage);
 
         // Return without password
         const { password: _, ...userWithoutPassword } = newUser;
@@ -117,11 +117,12 @@ class UserService {
         }
 
         // Validate updates
-        if (updates.username || updates.password || updates.displayName || updates.profileImage !== undefined) {
+        if (updates.username || updates.password || updates.firstName || updates.lastName !== undefined || updates.profileImage !== undefined) {
             const validationData = {
                 username: updates.username || user.username,
                 password: updates.password || user.password,
-                displayName: updates.displayName || user.displayName,
+                firstName: updates.firstName || user.firstName,
+                lastName: updates.lastName !== undefined ? updates.lastName : user.lastName,
                 profileImage: updates.profileImage !== undefined ? updates.profileImage : user.profileImage
             };
             

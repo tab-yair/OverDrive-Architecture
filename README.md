@@ -45,9 +45,10 @@ Follow these steps to explore the system. Replace <...> values with actual IDs r
 ```Bash
 curl -i -X POST http://localhost:3000/api/users \
      -H "Content-Type: application/json" \
-     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\",\"displayName\":\"<NAME>\"}"
+     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\",\"firstName\":\"<FIRST_NAME>\",\"lastName\":\"<LAST_NAME>\"}"
 ```
 Expected Response: 201 Created. Header Location contains the USER_ID.
+Note: `lastName` and `profileImage` are optional fields.
 
 1.2 User Login
 ```Bash
@@ -61,7 +62,7 @@ Expected Response: 200 OK. Body: {"user-id": "..."}.
 ```Bash
 curl -i -X GET http://localhost:3000/api/users/<USER_ID>
 ```
-Expected Response: 200 OK. Body: User object (ID, username, displayName).
+Expected Response: 200 OK. Body: User object (ID, username, firstName, lastName, profileImage).
 
 ### 2. File & Folder Management
 2.1 Create Folder
@@ -175,22 +176,31 @@ This final phase demonstrates the complete lifecycle of a secure resource and th
 
 | Method | Endpoint | Required Headers | Description |
 |:---:|:---|:---:|:---|
-| `POST` | `/api/users` | - | **Register**: Create a new account (Gmail only, 6+ char password) |
-| `POST` | `/api/tokens` | - | **Login**: Authenticate user and retrieve session/token data |
+| `POST` | `/api/users` | - | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
+| `GET` | `/api/users/:id` | `user-id` | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
+| `POST` | `/api/tokens` | - | **Login**: Authenticate user and retrieve user-id |
 | `POST` | `/api/files` | `user-id` | **Create**: Upload a new file or create a folder |
-| `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders owned by the user |
-| `GET` | `/api/files/:id` | `user-id` | **Fetch**: Get full metadata and content of a specific resource |
-| `GET` | `/api/files?search=...` | `user-id` | **Search**: Global search by name (Metadata) or content (C++ Scan) |
+| `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
+| `GET` | `/api/files/:id` | `user-id` | **Fetch**: Get full metadata and content of a specific file/folder |
+| `PATCH` | `/api/files/:id` | `user-id` | **Update**: Update file/folder name or content or location |
 | `DELETE` | `/api/files/:id` | `user-id` | **Delete**: Remove a file or folder (includes recursive deletion) |
+| `GET` | `/api/search/:query` | `user-id` | **Search**: Global search by name or content |
+| `GET` | `/api/files/:id/permissions` | `user-id` | **Get Permissions**: Retrieve all permissions for a specific file/folder |
+| `POST` | `/api/files/:id/permissions` | `user-id` | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
+| `PATCH` | `/api/files/:id/permissions/:pId` | `user-id` | **Update Permission**: Modify permission level only. Body: `{ permissionLevel }`. Allowed levels: VIEWER or EDITOR. Use POST with OWNER level for ownership transfer |
+| `DELETE` | `/api/files/:id/permissions/:pId` | `user-id` | **Revoke Permission**: Remove a specific permission |
 
 ---
 
 ### Status Codes
-- `200 Ok` - Success.
+- `200 OK` - Success.
 - `201 Created` - Resource created successfully.
-- `400 Bad Request` - Validation failed (e.g., non-Gmail address).
+- `204 No Content` - Success with no response body (update/delete operations).
+- `400 Bad Request` - Validation failed (e.g., invalid email, missing fields).
 - `401 Unauthorized` - Missing or invalid user-id.
-- `404 Not Found` - Resource or Owner does not exist.
+- `403 Forbidden` - User lacks permission to access the resource.
+- `404 Not Found` - Resource or User does not exist.
+- `409 Conflict` - Resource already exists (e.g., duplicate username).
 
 ---
 
