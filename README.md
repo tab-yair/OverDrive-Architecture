@@ -45,9 +45,10 @@ Follow these steps to explore the system. Replace <...> values with actual IDs r
 ```Bash
 curl -i -X POST http://localhost:3000/api/users \
      -H "Content-Type: application/json" \
-     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\",\"displayName\":\"<NAME>\"}"
+     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\",\"firstName\":\"<FIRST_NAME>\",\"lastName\":\"<LAST_NAME>\"}"
 ```
 Expected Response: 201 Created. Header Location contains the USER_ID.
+Note: `lastName` and `profileImage` are optional fields.
 
 1.2 User Login
 ```Bash
@@ -61,7 +62,7 @@ Expected Response: 200 OK. Body: {"user-id": "..."}.
 ```Bash
 curl -i -X GET http://localhost:3000/api/users/<USER_ID>
 ```
-Expected Response: 200 OK. Body: User object (ID, username, displayName).
+Expected Response: 200 OK. Body: User object (ID, username, firstName, lastName, profileImage).
 
 ### 2. File & Folder Management
 2.1 Create Folder
@@ -175,8 +176,8 @@ This final phase demonstrates the complete lifecycle of a secure resource and th
 
 | Method | Endpoint | Required Headers | Description |
 |:---:|:---|:---:|:---|
-| `POST` | `/api/users` | - | **Register**: Create a new account (Gmail only, 4+ char password). `profileImage` is optional (Base64) and defaults to `null` |
-| `GET` | `/api/users/:id` | `user-id` | **Get User Profile**: Retrieve user details (username, displayName, profileImage) |
+| `POST` | `/api/users` | - | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
+| `GET` | `/api/users/:id` | `user-id` | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
 | `POST` | `/api/tokens` | - | **Login**: Authenticate user and retrieve user-id |
 | `POST` | `/api/files` | `user-id` | **Create**: Upload a new file or create a folder |
 | `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|

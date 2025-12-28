@@ -6,17 +6,17 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * Register a new user
  */
 const createUser = asyncHandler(async (req, res) => {
-    const { username, password, displayName, profileImage } = req.body;
+    const { username, password, firstName, lastName, profileImage } = req.body;
 
-    // Validate required fields (profileImage is optional)
-    if (!username || !password || !displayName) {
-        const error = new Error('Username, password, and displayName are required');
+    // Validate required fields (lastName and profileImage are optional)
+    if (!username || !password || !firstName) {
+        const error = new Error('Username, password, and firstName are required');
         error.status = 400;
         throw error;
     }
 
-    // Call service to create user (profileImage defaults to null if not provided)
-    const user = await userService.createUser({ username, password, displayName, profileImage });
+    // Call service to create user (lastName and profileImage default to null if not provided)
+    const user = await userService.createUser({ username, password, firstName, lastName, profileImage });
 
     // Return 201 Created with Location header (empty body per assignment spec)
     res.status(201)

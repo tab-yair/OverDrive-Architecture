@@ -223,7 +223,8 @@ class PermissionService {
                     user: user ? {
                         id: user.id,
                         username: user.username,
-                        displayName: user.displayName
+                        firstName: user.firstName,
+                        lastName: user.lastName
                     } : null
                 };
             })

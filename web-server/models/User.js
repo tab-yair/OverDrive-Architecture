@@ -1,11 +1,12 @@
 const { EmailValidator } = require('./EmailValidator.js');
 
 class User {
-    constructor(id, username, password, displayName, profileImage = null) {
+    constructor(id, username, password, firstName, lastName = null, profileImage = null) {
         this.id = id;
         this.username = username;
         this.password = password;
-        this.displayName = displayName;
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.profileImage = profileImage;
         this.createdAt = new Date();
     }
@@ -20,8 +21,8 @@ class User {
         if (!data.password || data.password.length < 4) {
             return "Password must be at least 4 characters";
         }
-        if (!data.displayName) {
-            return "Display name is required";
+        if (!data.firstName) {
+            return "First name is required";
         }
         if (data.profileImage && !data.profileImage.startsWith('data:image/')) {
             return "Invalid image format. Must be Base64 image string";
