@@ -305,9 +305,11 @@ class FileService {
                 try {
                     const searchResponse = await storageClient.search(query);
                     if (searchResponse.success && searchResponse.data) {
-                        // C++ server returns newline-separated file IDs
-                        const matchedIds = searchResponse.data
-                            .split('\n')
+                        // C++ server returns space-separated file IDs
+                        // Clean any newlines or extra whitespace first
+                        const cleanedData = searchResponse.data.replace(/\s+/g, ' ').trim();
+                        const matchedIds = cleanedData
+                            .split(' ')
                             .map(id => id.trim())
                             .filter(id => id.length > 0);
 

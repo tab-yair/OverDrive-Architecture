@@ -37,6 +37,38 @@ To verify the system integrity (C++ logic and Protocol):
 docker-compose run --rm tests
 ```
 
+## API Reference
+
+| Method | Endpoint | Required Headers | Description |
+|:---:|:---|:---:|:---|
+| `POST` | `/api/users` | - | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
+| `GET` | `/api/users/:id` | `user-id` | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
+| `POST` | `/api/tokens` | - | **Login**: Authenticate user and retrieve user-id |
+| `POST` | `/api/files` | `user-id` | **Create**: Upload a new file or create a folder |
+| `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
+| `GET` | `/api/files/:id` | `user-id` | **Fetch**: Get full metadata and content of a specific file/folder |
+| `PATCH` | `/api/files/:id` | `user-id` | **Update**: Update file/folder name or content or location |
+| `DELETE` | `/api/files/:id` | `user-id` | **Delete**: Remove a file or folder (includes recursive deletion) |
+| `GET` | `/api/search/:query` | `user-id` | **Search**: Global search by name or content |
+| `GET` | `/api/files/:id/permissions` | `user-id` | **Get Permissions**: Retrieve all permissions for a specific file/folder |
+| `POST` | `/api/files/:id/permissions` | `user-id` | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
+| `PATCH` | `/api/files/:id/permissions/:pId` | `user-id` | **Update Permission**: Modify permission level. Body: `{ permissionLevel }`. Allowed levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
+| `DELETE` | `/api/files/:id/permissions/:pId` | `user-id` | **Revoke Permission**: Remove a specific permission |
+
+---
+
+### Status Codes
+- `200 OK` - Success.
+- `201 Created` - Resource created successfully.
+- `204 No Content` - Success with no response body (update/delete operations).
+- `400 Bad Request` - Validation failed (e.g., invalid email, missing fields).
+- `401 Unauthorized` - Missing or invalid user-id.
+- `403 Forbidden` - User lacks permission to access the resource.
+- `404 Not Found` - Resource or User does not exist.
+- `409 Conflict` - Resource already exists (e.g., duplicate username).
+
+---
+
 ## API Usage Guide (Interactive Demo)
 Follow these steps to explore the system. Replace <...> values with actual IDs returned from the server.
 
@@ -60,7 +92,8 @@ Expected Response: 200 OK. Body: {"user-id": "..."}.
 
 1.3 Get User Profile
 ```Bash
-curl -i -X GET http://localhost:3000/api/users/<USER_ID>
+curl -i -X GET http://localhost:3000/api/users/<USER_ID> \
+     -H "user-id: <USER_ID>"
 ```
 Expected Response: 200 OK. Body: User object (ID, username, firstName, lastName, profileImage).
 
@@ -97,14 +130,28 @@ curl -i -X GET http://localhost:3000/api/files/<FILE_ID> \
 ```
 Expected Response: 200 OK. Content is transparently decompressed and returned as plain text.
 
-2.5 Update File/Folder Name
+2.5 Update File/Folder (Name, Content, or Location)
 ```Bash
+# Update name
 curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
      -H "user-id: <USER_ID>" \
      -H "Content-Type: application/json" \
      -d "{\"name\":\"new_filename.txt\"}"
+
+# Update content (files only)
+curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
+     -H "user-id: <USER_ID>" \
+     -H "Content-Type: application/json" \
+     -d "{\"content\":\"Updated content\"}"
+
+# Move to different parent folder
+curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
+     -H "user-id: <USER_ID>" \
+     -H "Content-Type: application/json" \
+     -d "{\"parentId\":\"<NEW_FOLDER_ID>\"}"
 ```
 Expected Response: 204 No Content.
+Note: You can update name, content, and/or parentId in any combination.
 
 2.6 Delete File/Folder
 ```Bash
@@ -116,91 +163,125 @@ Expected Response: 204 No Content.
 ### 3. Advanced Features
 3.1 Smart Search (Name & Content)
 ```Bash
-curl -i -X GET "http://localhost:3000/api/files?search=<TERM>" \
+curl -i -X GET http://localhost:3000/api/search/<TERM> \
      -H "user-id: <USER_ID>"
 ```
 Expected Response: 200 OK. Searches file names and performs deep-content search within compressed RLE data.
 
-3.2 Grant Permissions (RBAC)
+3.2 Get File/Folder Permissions
+```Bash
+curl -i -X GET http://localhost:3000/api/files/<FILE_ID>/permissions \
+     -H "user-id: <USER_ID>"
+```
+Expected Response: 200 OK. Returns array of all permissions for the file/folder.
+
+3.3 Grant Permission (RBAC)
 ```Bash
 curl -i -X POST http://localhost:3000/api/files/<FILE_ID>/permissions \
      -H "user-id: <OWNER_ID>" \
      -H "Content-Type: application/json" \
      -d "{\"targetUserId\":\"<GUEST_ID>\",\"permissionLevel\":\"VIEWER\"}"
 ```
-Expected Response: 201 Created. Supported levels: VIEWER, EDITOR, OWNER.
+Expected Response: 201 Created. Header Location contains the permission ID.
+Supported levels: VIEWER, EDITOR, OWNER.
+
+3.4 Update Permission Level (or Transfer Ownership)
+```Bash
+# Change permission level to EDITOR
+curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID>/permissions/<PERMISSION_ID> \
+     -H "user-id: <OWNER_ID>" \
+     -H "Content-Type: application/json" \
+     -d "{\"permissionLevel\":\"EDITOR\"}"
+
+# Transfer ownership to the user who has this permission
+curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID>/permissions/<PERMISSION_ID> \
+     -H "user-id: <OWNER_ID>" \
+     -H "Content-Type: application/json" \
+     -d "{\"permissionLevel\":\"OWNER\"}"
+```
+Expected Response: 204 No Content.
+Note: Supported levels are VIEWER, EDITOR, or OWNER. When setting OWNER, ownership is transferred to the user who has this permission (requester must be current owner).
+
+3.5 Revoke Permission
+```Bash
+curl -i -X DELETE http://localhost:3000/api/files/<FILE_ID>/permissions/<PERMISSION_ID> \
+     -H "user-id: <OWNER_ID>"
+```
+Expected Response: 204 No Content.
 
 ---
 
-## Project Execution Demo: Full User and File Lifecycle
+## Project Execution Demo: Complete API Walkthrough
 
-### Phase 1: Identity & Access Management
-This phase demonstrates the robustness of the user authentication and validation layer:
+This section provides a visual, step-by-step demonstration of the entire OverDrive system lifecycle, from user registration to collaborative file management with permissions.
 
-1. User Registration: POST /api/users - Creates a new user with strict email validation (minimum 6 characters) and secure password storage. Returns 201 Created.
+### 1. User Registration & Conflict Handling
+**POST /api/users** - Creating users Alicia and Robert with Gmail validation (6-30 character usernames). The system enforces duplicate prevention, returning **409 Conflict** when attempting to register an existing email.
 
-2. Conflict Handling: POST /api/users - Attempts to register an existing email, proving the system prevents duplicate accounts. Returns 409 Conflict.
-
-3. Secure Authentication: POST /api/tokens - Validates credentials and generates a unique user-id for session management. Returns 200 OK.
-
-![Project Execution Demo](Images/p1_register_users.png)
-
-### Phase 2: Smart Storage & Content Search
-This phase showcases the system's core storage capabilities and C++ integration:
-
-1. File Hierarchy: POST /api/files - Supports creating both folders and files, establishing a structured file system.
-2. RLE Compression: POST /api/files - Transmits data to the C++ storage server where it is compressed using Run-Length Encoding (RLE).
-3. Smart Search: GET /api/files?search=... - Performs a deep-content search. The C++ server decompresses data on-the-fly to find matches within compressed files.
-4. Data Retrieval: GET /api/files/:id - Seamlessly retrieves and decodes the storage, returning the original plain text to the user.
-
-![Project Execution Demo](Images/p2_storge_and_search.png)
-
-### Phase 3: Permissions, Security & Resource Lifecycle
-This final phase demonstrates the complete lifecycle of a secure resource and the system's access control logic:
-
-1. Resource Creation: POST /api/files – The owner (Admin) creates a new sensitive file. Returns 201 Created.
-
-2. Unauthorized Access (Blocking): GET /api/files/:id – A Guest user attempts to access the file without permission. Returns 403 Forbidden, validating the security middleware.
-
-3. Role-Based Permission Granting: POST /api/files/:id/permissions – The owner explicitly grants the VIEWER role to the Guest user. Returns 201 Created.
-
-4. Authorized Access (Elevation): GET /api/files/:id – The Guest user attempts to access the file again. Now, with permissions granted, the system returns 200 OK and the decrypted content.
-
-5. Secure Deletion: DELETE /api/files/:id – The owner removes the resource. Returns 204 No Content, confirming the file is purged from both the metadata and storage layers.
-
-![Project Execution Demo](Images/p3_permissions_security_and_resource_lifecycle.png)
+![User Registration](Images/1.png)
 
 ---
 
-## API Reference
+### 2. Authentication & Profile Retrieval
+**POST /api/tokens** - Users authenticate and receive a unique `user-id` for session management. **GET /api/users/:id** - Verifying that user data (username, firstName, lastName) is correctly stored and retrieved.
 
-| Method | Endpoint | Required Headers | Description |
-|:---:|:---|:---:|:---|
-| `POST` | `/api/users` | - | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
-| `GET` | `/api/users/:id` | `user-id` | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
-| `POST` | `/api/tokens` | - | **Login**: Authenticate user and retrieve user-id |
-| `POST` | `/api/files` | `user-id` | **Create**: Upload a new file or create a folder |
-| `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
-| `GET` | `/api/files/:id` | `user-id` | **Fetch**: Get full metadata and content of a specific file/folder |
-| `PATCH` | `/api/files/:id` | `user-id` | **Update**: Update file/folder name or content or location |
-| `DELETE` | `/api/files/:id` | `user-id` | **Delete**: Remove a file or folder (includes recursive deletion) |
-| `GET` | `/api/search/:query` | `user-id` | **Search**: Global search by name or content |
-| `GET` | `/api/files/:id/permissions` | `user-id` | **Get Permissions**: Retrieve all permissions for a specific file/folder |
-| `POST` | `/api/files/:id/permissions` | `user-id` | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
-| `PATCH` | `/api/files/:id/permissions/:pId` | `user-id` | **Update Permission**: Modify permission level only. Body: `{ permissionLevel }`. Allowed levels: VIEWER or EDITOR. Use POST with OWNER level for ownership transfer |
-| `DELETE` | `/api/files/:id/permissions/:pId` | `user-id` | **Revoke Permission**: Remove a specific permission |
+![Authentication](Images/2.png)
 
 ---
 
-### Status Codes
-- `200 OK` - Success.
-- `201 Created` - Resource created successfully.
-- `204 No Content` - Success with no response body (update/delete operations).
-- `400 Bad Request` - Validation failed (e.g., invalid email, missing fields).
-- `401 Unauthorized` - Missing or invalid user-id.
-- `403 Forbidden` - User lacks permission to access the resource.
-- `404 Not Found` - Resource or User does not exist.
-- `409 Conflict` - Resource already exists (e.g., duplicate username).
+### 3. File Hierarchy Creation
+**POST /api/files** - Alicia creates a folder named "Work_Project" and then uploads a file "notes.txt" inside it using `parentId` to establish the hierarchy.
+
+![Folder and File Creation](Images/3.png)
+
+---
+
+### 4. Root-Level Files & Listing
+**POST /api/files** - Alicia creates "readme.txt" at the root level (no parent). **GET /api/files** - Listing all files and folders to verify the current structure.
+
+![File Listing](Images/4.png)
+
+---
+
+### 5. File Updates - Name & Content
+**PATCH /api/files/:id** - Alicia renames "notes.txt" to "important_notes.txt" and then updates its content to text starting with "ZZZZZZZZZ". Both operations return **204 No Content**.
+
+![File Updates](Images/5.png)
+
+---
+
+### 6. File Movement & Search Initialization
+**PATCH /api/files/:id** - Moving "important_notes.txt" from "Work_Project" to root by setting `parentId` to `null`. Introduction to **GET /api/search/:query** for content-based searching.
+
+![File Movement](Images/6.png)
+
+---
+
+### 7. Deep Content Search in Compressed Data
+**GET /api/search/:query** - Demonstrating full-text search capabilities. Searching for "ZZZZZ" finds the file with that content, and searching "OverDrive" locates the readme file. The C++ backend performs decompression on-the-fly for content matching.
+
+![Content Search](Images/7.png)
+
+---
+
+### 8. Access Control & Permission Granting
+**GET /api/files/:id** - Robert attempts to access Alicia's file and receives **403 Forbidden**. **GET /api/files/:id/permissions** - Alicia checks current permissions. **POST /api/files/:id/permissions** - Alicia grants Robert **VIEWER** access (**201 Created**).
+
+![Access Control](Images/8.png)
+
+---
+
+### 9. Authorized Access & Permission Upgrade
+**GET /api/files/:id** - Robert successfully reads the file content with his VIEWER permission. **PATCH /api/files/:id/permissions/:pId** - Alicia upgrades Robert from **VIEWER** to **EDITOR** (**204 No Content**).
+
+![Permission Upgrade](Images/9.png)
+
+---
+
+### 10. Collaborative Editing & Final State
+**PATCH /api/files/:id** - Robert (now an EDITOR) modifies the file content to "Guest modified this content". **GET /api/files/:id/permissions** - Final verification shows Alicia as **OWNER** and Robert as **EDITOR**, demonstrating full RBAC functionality.
+
+![Collaborative Editing](Images/10.png)
 
 ---
 
