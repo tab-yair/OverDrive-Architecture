@@ -86,15 +86,15 @@ const updatePermission = asyncHandler(async (req, res) => {
     // Build updates object
     const updates = {};
 
-    // Handle permission level change (OWNER not allowed, use POST for transfer)
-    const validLevels = ['VIEWER', 'EDITOR'];
+    // Validate and normalize permission level
+    const validLevels = ['VIEWER', 'EDITOR', 'OWNER'];
     const normalizedLevel = permissionLevel.toUpperCase();
     if (!validLevels.includes(normalizedLevel)) {
-        throw new Error('permissionLevel must be VIEWER or EDITOR (use POST for ownership transfer)');
+        throw new Error('permissionLevel must be VIEWER, EDITOR, or OWNER');
     }
     updates.level = normalizedLevel;
 
-    // Update permission
+    // Update permission (service will handle OWNER as ownership transfer)
     await permissionService.updatePermission(
         permissionId,
         updates,

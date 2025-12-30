@@ -155,18 +155,25 @@ class PermissionService {
         }
 
         // Validate level
-        const validLevels = ['VIEWER', 'EDITOR', 'CUSTOM'];
+        const validLevels = ['VIEWER', 'EDITOR', 'CUSTOM', 'OWNER'];
         if (!validLevels.includes(updates.level)) {
-            throw new Error("Invalid permission level. OWNER transfer must be done via POST.");
+            throw new Error("Invalid permission level");
+        }
+
+        // Special handling for OWNER level - this is ownership transfer
+        if (updates.level === 'OWNER') {
+            // Transfer ownership to the user who has this permission
+            // transferOwnership will validate that requester is the current owner
+            return await this.transferOwnership(permission.fileId, permission.userId, requestingUserId);
         }
 
         if (updates.level === 'CUSTOM' && !updates.customPermissions) {
             throw new Error("Custom permissions required for CUSTOM level");
         }
 
-        // Cannot change owner's permission level
+        // Cannot change owner's permission level to something else
         if (permission.level === 'OWNER') {
-            throw new Error("Cannot change owner's permission level. Transfer ownership via POST first.");
+            throw new Error("Cannot change owner's permission level. Transfer ownership first.");
         }
 
         const updatedPermission = await permissionStore.update(permissionId, { level: updates.level, customPermissions: updates.customPermissions });
