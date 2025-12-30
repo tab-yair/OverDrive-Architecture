@@ -211,43 +211,77 @@ Expected Response: 204 No Content.
 
 ---
 
-## Project Execution Demo: Full User and File Lifecycle
+## Project Execution Demo: Complete API Walkthrough
 
-### Phase 1: Identity & Access Management
-This phase demonstrates the robustness of the user authentication and validation layer:
+This section provides a visual, step-by-step demonstration of the entire OverDrive system lifecycle, from user registration to collaborative file management with permissions.
 
-1. User Registration: POST /api/users - Creates a new user with strict email validation (minimum 6 characters) and secure password storage. Returns 201 Created.
+### 1. User Registration & Conflict Handling
+**POST /api/users** - Creating users Alicia and Robert with Gmail validation (6-30 character usernames). The system enforces duplicate prevention, returning **409 Conflict** when attempting to register an existing email.
 
-2. Conflict Handling: POST /api/users - Attempts to register an existing email, proving the system prevents duplicate accounts. Returns 409 Conflict.
+![User Registration](Images/1.png)
 
-3. Secure Authentication: POST /api/tokens - Validates credentials and generates a unique user-id for session management. Returns 200 OK.
+---
 
-![Project Execution Demo](Images/p1_register_users.png)
+### 2. Authentication & Profile Retrieval
+**POST /api/tokens** - Users authenticate and receive a unique `user-id` for session management. **GET /api/users/:id** - Verifying that user data (username, firstName, lastName) is correctly stored and retrieved.
 
-### Phase 2: Smart Storage & Content Search
-This phase showcases the system's core storage capabilities and C++ integration:
+![Authentication](Images/2.png)
 
-1. File Hierarchy: POST /api/files - Supports creating both folders and files, establishing a structured file system.
-2. RLE Compression: POST /api/files - Transmits data to the C++ storage server where it is compressed using Run-Length Encoding (RLE).
-3. Smart Search: GET /api/search/:query - Performs a deep-content search. The C++ server decompresses data on-the-fly to find matches within compressed files.
-4. Data Retrieval: GET /api/files/:id - Seamlessly retrieves and decodes the storage, returning the original plain text to the user.
+---
 
-![Project Execution Demo](Images/p2_storge_and_search.png)
+### 3. File Hierarchy Creation
+**POST /api/files** - Alicia creates a folder named "Work_Project" and then uploads a file "notes.txt" inside it using `parentId` to establish the hierarchy.
 
-### Phase 3: Permissions, Security & Resource Lifecycle
-This final phase demonstrates the complete lifecycle of a secure resource and the system's access control logic:
+![Folder and File Creation](Images/3.png)
 
-1. Resource Creation: POST /api/files – The owner (Admin) creates a new sensitive file. Returns 201 Created.
+---
 
-2. Unauthorized Access (Blocking): GET /api/files/:id – A Guest user attempts to access the file without permission. Returns 403 Forbidden, validating the security middleware.
+### 4. Root-Level Files & Listing
+**POST /api/files** - Alicia creates "readme.txt" at the root level (no parent). **GET /api/files** - Listing all files and folders to verify the current structure.
 
-3. Role-Based Permission Granting: POST /api/files/:id/permissions – The owner explicitly grants the VIEWER role to the Guest user. Returns 201 Created.
+![File Listing](Images/4.png)
 
-4. Authorized Access (Elevation): GET /api/files/:id – The Guest user attempts to access the file again. Now, with permissions granted, the system returns 200 OK and the decrypted content.
+---
 
-5. Secure Deletion: DELETE /api/files/:id – The owner removes the resource. Returns 204 No Content, confirming the file is purged from both the metadata and storage layers.
+### 5. File Updates - Name & Content
+**PATCH /api/files/:id** - Alicia renames "notes.txt" to "important_notes.txt" and then updates its content to text starting with "ZZZZZZZZZ". Both operations return **204 No Content**.
 
-![Project Execution Demo](Images/p3_permissions_security_and_resource_lifecycle.png)
+![File Updates](Images/5.png)
+
+---
+
+### 6. File Movement & Search Initialization
+**PATCH /api/files/:id** - Moving "important_notes.txt" from "Work_Project" to root by setting `parentId` to `null`. Introduction to **GET /api/search/:query** for content-based searching.
+
+![File Movement](Images/6.png)
+
+---
+
+### 7. Deep Content Search in Compressed Data
+**GET /api/search/:query** - Demonstrating full-text search capabilities. Searching for "ZZZZZ" finds the file with that content, and searching "OverDrive" locates the readme file. The C++ backend performs decompression on-the-fly for content matching.
+
+![Content Search](Images/7.png)
+
+---
+
+### 8. Access Control & Permission Granting
+**GET /api/files/:id** - Robert attempts to access Alicia's file and receives **403 Forbidden**. **GET /api/files/:id/permissions** - Alicia checks current permissions. **POST /api/files/:id/permissions** - Alicia grants Robert **VIEWER** access (**201 Created**).
+
+![Access Control](Images/8.png)
+
+---
+
+### 9. Authorized Access & Permission Upgrade
+**GET /api/files/:id** - Robert successfully reads the file content with his VIEWER permission. **PATCH /api/files/:id/permissions/:pId** - Alicia upgrades Robert from **VIEWER** to **EDITOR** (**204 No Content**).
+
+![Permission Upgrade](Images/9.png)
+
+---
+
+### 10. Collaborative Editing & Final State
+**PATCH /api/files/:id** - Robert (now an EDITOR) modifies the file content to "Guest modified this content". **GET /api/files/:id/permissions** - Final verification shows Alicia as **OWNER** and Robert as **EDITOR**, demonstrating full RBAC functionality.
+
+![Collaborative Editing](Images/10.png)
 
 ---
 
