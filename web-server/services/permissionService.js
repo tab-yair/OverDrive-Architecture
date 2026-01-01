@@ -28,17 +28,12 @@ class PermissionService {
             throw new Error("User does not exist");
         }
 
-        // Special handling for OWNER level - this is ownership transfer
+        // POST cannot transfer ownership - only PATCH can
         if (level === 'OWNER') {
-            // Only current owner can transfer ownership
-            if (file.ownerId !== requestingUserId) {
-                throw new Error("Permission denied: Only the owner can transfer ownership");
-            }
-            // Transfer ownership to the new user
-            return await this.transferOwnership(fileId, userId, requestingUserId);
+            throw new Error("Cannot grant OWNER permission via POST. Use PATCH on existing permission to transfer ownership.");
         }
 
-        // For non-OWNER permissions, check requester is owner or has Share permission
+        // Check requester is owner or has Share permission
         const canShare = await this.canUserShareFile(requestingUserId, fileId);
         if (!canShare) {
             throw new Error("Permission denied: You cannot share this file");
@@ -50,6 +45,11 @@ class PermissionService {
         // Create permission (will auto-delete existing one if present)
         const permissionId = generateId();
         const newPermission = await permissionStore.create(permissionId, fileId, userId, level, customPermissions);
+
+        // If this is a folder, recursively grant permission to all children
+        if (file.type === 'folder') {
+            await this._grantPermissionRecursively(fileId, userId, level, customPermissions);
+        }
 
         return newPermission;
     }
@@ -206,6 +206,13 @@ class PermissionService {
         }
 
         const success = await permissionStore.delete(permissionId);
+
+        // If this is a folder, recursively remove inherited permissions
+        // but keep direct permissions that were granted before
+        if (file.type === 'folder') {
+            await this._removeInheritedPermissionsRecursively(permission.fileId, permission.userId, permissionId);
+        }
+
         return { success, message: "Permission removed successfully" };
     }
 
@@ -270,8 +277,17 @@ class PermissionService {
 
     // Check if user can access file
     async canUserAccessFile(userId, fileId) {
-        const permission = await permissionStore.getUserPermissionForFile(userId, fileId);
+        const permission = await this._getEffectivePermission(userId, fileId);
         return permission !== null;
+    }
+
+    // Get effective permission (strongest between direct and inherited)
+    async _getEffectivePermission(userId, fileId) {
+        const allPerms = await permissionStore.getAllPermissionsForUserFile(userId, fileId);
+        if (!allPerms || allPerms.length === 0) return null;
+        
+        // Select the strongest permission (direct or inherited)
+        return Permission.selectStrongest(allPerms);
     }
 
     // Check if user can share file
@@ -282,8 +298,8 @@ class PermissionService {
         // Owner can always share
         if (file.ownerId === userId) return true;
 
-        // Check for Share permission
-        const permission = await permissionStore.getUserPermissionForFile(userId, fileId);
+        // Check for Share permission (use effective permission)
+        const permission = await this._getEffectivePermission(userId, fileId);
         if (!permission) return false;
 
         return Permission.can(permission, 'Share');
@@ -291,7 +307,7 @@ class PermissionService {
 
     // Check if user can read file
     async canUserRead(userId, fileId) {
-        const permission = await permissionStore.getUserPermissionForFile(userId, fileId);
+        const permission = await this._getEffectivePermission(userId, fileId);
         if (!permission) return false;
 
         return Permission.can(permission, 'Read');
@@ -299,7 +315,7 @@ class PermissionService {
 
     // Check if user can write to file
     async canUserWrite(userId, fileId) {
-        const permission = await permissionStore.getUserPermissionForFile(userId, fileId);
+        const permission = await this._getEffectivePermission(userId, fileId);
         if (!permission) return false;
 
         return Permission.can(permission, 'Write');
@@ -307,7 +323,7 @@ class PermissionService {
 
     // Check if user can delete file
     async canUserDelete(userId, fileId) {
-        const permission = await permissionStore.getUserPermissionForFile(userId, fileId);
+        const permission = await this._getEffectivePermission(userId, fileId);
         if (!permission) return false;
 
         return Permission.can(permission, 'Delete');
@@ -341,6 +357,62 @@ class PermissionService {
         }
 
         return results;
+    }
+
+    // ===== RECURSIVE PERMISSION HELPERS =====
+
+    /**
+     * Recursively grant permission to all files/folders within a folder
+     * Used when granting permission on a folder
+     * 
+     * Logic: Always create inherited permission, even if direct permission exists
+     * In practice, user will get the strongest between direct and inherited
+     */
+    async _grantPermissionRecursively(folderId, userId, level, customPermissions) {
+        // Get all children of this folder
+        const children = await filesStore.getByParentId(folderId);
+        
+        for (const child of children) {
+            // Always create inherited permission
+            // If direct permission exists, store will delete previous inherited and create new one
+            const childPermId = generateId();
+            await permissionStore.create(
+                childPermId, 
+                child.id, 
+                userId, 
+                level, 
+                customPermissions,
+                true, // isInherited
+                folderId // inheritedFrom
+            );
+            
+            // If child is also a folder, recurse
+            if (child.type === 'folder') {
+                await this._grantPermissionRecursively(child.id, userId, level, customPermissions);
+            }
+        }
+    }
+
+    /**
+     * Recursively remove inherited permissions from folder children
+     * Keeps direct permissions that were granted directly to the file
+     * 
+     * Logic: Delete only inherited permissions that came from this folder
+     * If direct permission exists - it stays
+     */
+    async _removeInheritedPermissionsRecursively(folderId, userId, parentPermissionId) {
+        // Get all children of this folder
+        const children = await filesStore.getByParentId(folderId);
+        
+        for (const child of children) {
+            // Delete only inherited permissions from this folder
+            await permissionStore.deleteInheritedPermissions(userId, child.id, folderId);
+            
+            // If child is a folder, recurse
+            if (child.type === 'folder') {
+                await this._removeInheritedPermissionsRecursively(child.id, userId, parentPermissionId);
+            }
+        }
     }
 
 }

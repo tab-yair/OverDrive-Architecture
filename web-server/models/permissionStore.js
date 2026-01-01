@@ -19,7 +19,7 @@ const _removeFromMap = (map, key, pid) => {
 };
 
 const permissionStore = {
-    async create(pid, fileId, userId, level, customPermissions = null) {
+    async create(pid, fileId, userId, level, customPermissions = null, isInherited = false, inheritedFrom = null) {
         // Check if permission already exists for this user+file combination
         const existingKey = `${userId}:${fileId}`;
         const existingPerm = permissionsByUserFile.get(existingKey);
@@ -29,7 +29,7 @@ const permissionStore = {
             await permissionStore.delete(existingPerm.pid);
         }
         
-        const newPermission = new Permission(pid, fileId, userId, level, customPermissions);
+        const newPermission = new Permission(pid, fileId, userId, level, customPermissions, isInherited, inheritedFrom);
 
         // Save in indexes
         permissionsById.set(pid, newPermission);
@@ -125,6 +125,41 @@ const permissionStore = {
 
     async getAll() {
         return Array.from(permissionsById.values()).map(p => ({ ...p }));
+    },
+
+    // Get all permissions for user+file (both direct and inherited)
+    async getAllPermissionsForUserFile(userId, fileId) {
+        const permissions = [];
+        
+        // Get all permissions for this user
+        const userPerms = await permissionStore.getByUserId(userId);
+        
+        // Filter for this file
+        for (const perm of userPerms) {
+            if (perm.fileId === fileId) {
+                permissions.push(perm);
+            }
+        }
+        
+        return permissions;
+    },
+
+    // Delete only inherited permissions for user+file combination
+    async deleteInheritedPermissions(userId, fileId, inheritedFrom) {
+        const key = `${userId}:${fileId}`;
+        const perm = permissionsByUserFile.get(key);
+        
+        if (perm && perm.isInherited && perm.inheritedFrom === inheritedFrom) {
+            await permissionStore.delete(perm.pid);
+            return true;
+        }
+        return false;
+    },
+
+    // Get all inherited permissions from a specific folder
+    async getInheritedFromFolder(folderId) {
+        const allPerms = await permissionStore.getAll();
+        return allPerms.filter(p => p.isInherited && p.inheritedFrom === folderId);
     }
 };
 

@@ -150,6 +150,31 @@ const toggleStarFile = asyncHandler(async (req, res) => {
     res.status(200).json(result);
 });
 
+/**
+ * POST /api/files/:id/copy
+ * Copy a file or folder
+ */
+const copyFile = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { parentId, newName } = req.body;
+
+    const copiedFile = await fileService.copyFile(id, req.userId, { parentId, newName });
+
+    // Return 201 Created with Location header
+    res.status(201)
+       .location(`/api/files/${copiedFile.id}`)
+       .json(copiedFile);
+});
+
+/**
+ * GET /api/files/shared
+ * Get files shared with current user
+ */
+const getSharedFiles = asyncHandler(async (req, res) => {
+    const files = await fileService.getSharedFiles(req.userId);
+    res.status(200).json(files);
+});
+
 module.exports = {
     getAllFiles,
     createFile,
@@ -158,5 +183,7 @@ module.exports = {
     deleteFile,
     getStarredFiles,
     getRecentFiles,
-    toggleStarFile
+    toggleStarFile,
+    copyFile,
+    getSharedFiles
 };

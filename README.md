@@ -57,15 +57,149 @@ Authorization: Bearer <JWT_TOKEN>
 | `GET` | `/api/files` | ✅ | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
 | `GET` | `/api/files/starred` | ✅ | **Get Starred Files**: Retrieve all files starred by the current user with metadata (`isStarred`, `lastViewedAt`, `lastEditedAt`) |
 | `GET` | `/api/files/recent` | ✅ | **Get Recent Files**: Retrieve recently accessed files (viewed or edited), sorted by most recent interaction first. Includes `lastInteractionType` (VIEW/EDIT) |
+| `GET` | `/api/files/shared` | ✅ | **List Shared With Me**: Retrieve all files/folders where the user has VIEWER or EDITOR permissions, but is NOT the owner. Includes `sharedPermissionLevel` |
 | `GET` | `/api/files/:id` | ✅ | **Fetch**: Get full metadata and content of a specific file/folder. Automatically records VIEW interaction |
 | `PATCH` | `/api/files/:id` | ✅ | **Update**: Update file/folder name or content or location. Automatically records EDIT interaction |
 | `POST` | `/api/files/:id/star` | ✅ | **Toggle Star**: Star or unstar a file. Returns `{ fileId, isStarred }` |
+| `POST` | `/api/files/:id/copy` | ✅ | **Copy**: Create a duplicate of a file/folder. The requester becomes the OWNER of the new copy. Body (optional): `{ parentId, newName }`. Performs deep copy for folders |
 | `DELETE` | `/api/files/:id` | ✅ | **Delete**: Remove a file or folder (includes recursive deletion) |
 | `GET` | `/api/search/:query` | ✅ | **Search**: Global search by name or content |
 | `GET` | `/api/files/:id/permissions` | ✅ | **Get Permissions**: Retrieve all permissions for a specific file/folder |
 | `POST` | `/api/files/:id/permissions` | ✅ | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
 | `PATCH` | `/api/files/:id/permissions/:pId` | ✅ | **Update Permission**: Modify permission level. Body: `{ permissionLevel }`. Allowed levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
 | `DELETE` | `/api/files/:id/permissions/:pId` | ✅ | **Revoke Permission**: Remove a specific permission |
+
+---
+
+## Permission System: Recursive Permissions & Inheritance
+
+OverDrive implements a sophisticated **recursive permission system** for folders, allowing granular access control with automatic inheritance and smart deletion.
+
+### Key Concepts
+
+#### 1. **Permission Levels**
+- **VIEWER**: Can read files and list folder contents
+- **EDITOR**: Can modify files, create/delete within folders
+- **OWNER**: Full control including permission management and ownership transfer
+
+#### 2. **Permission Strength Hierarchy**
+When a user has multiple permissions on the same file (direct + inherited), the **strongest permission wins**:
+```
+OWNER (3) > EDITOR (2) > VIEWER (1)
+```
+
+**Example**: If a user has:
+- Inherited VIEWER from parent folder
+- Direct EDITOR on specific file
+→ **Effective permission: EDITOR** ✅
+
+### Recursive Permission Grant
+
+When granting permission on a **folder**, the permission automatically propagates to **all children** (files and subfolders):
+
+```
+MainFolder (User2: VIEWER)
+├── SubFolder (User2: VIEWER - inherited)
+│   └── file.txt (User2: VIEWER - inherited)
+└── doc.pdf (User2: VIEWER - inherited)
+```
+
+**Implementation Details:**
+- Each inherited permission is marked with `isInherited: true`
+- The `inheritedFrom` field stores the parent folder ID
+- Recursive propagation happens at grant time
+- Permissions are stored per-file for fast lookup
+
+### Direct vs Inherited Permissions
+
+Users can have **both** direct and inherited permissions on the same file. The system tracks them separately:
+
+```javascript
+// Example: User has two permissions on file.txt
+[
+  { level: "VIEWER", isInherited: true, inheritedFrom: "folder-123" },
+  { level: "EDITOR", isInherited: false }  // Direct permission
+]
+// Effective permission: EDITOR (strongest)
+```
+
+### Smart Permission Deletion
+
+When deleting a folder permission, the system uses **intelligent recursive deletion**:
+
+✅ **Removes**: All inherited permissions from that folder
+❌ **Preserves**: Direct permissions granted explicitly
+
+**Example Scenario:**
+```
+1. Grant VIEWER on MainFolder to User2
+   → User2 gets inherited VIEWER on all children
+
+2. Grant EDITOR directly on file.txt to User2
+   → User2 now has: inherited VIEWER + direct EDITOR = EDITOR
+
+3. Delete permission on MainFolder
+   → Inherited VIEWER removed from all children
+   → Direct EDITOR on file.txt PRESERVED ✅
+   
+Result: User2 still has EDITOR access to file.txt!
+```
+
+**Implementation:**
+```javascript
+// Only delete permissions with matching inheritedFrom
+DELETE WHERE isInherited = true AND inheritedFrom = deletedFolderId
+```
+
+### Ownership Transfer Rules
+
+#### POST Cannot Grant OWNER
+```bash
+# ❌ This will FAIL:
+POST /api/files/:id/permissions
+{ "targetUserId": "user-123", "permissionLevel": "OWNER" }
+
+# Error: "Cannot grant OWNER permission via POST. Use PATCH to transfer ownership"
+```
+
+#### PATCH Can Transfer Ownership
+```bash
+# ✅ This works (requester must be current owner):
+PATCH /api/files/:id/permissions/:pid
+{ "permissionLevel": "OWNER" }
+```
+
+#### Ownership Transfer is NON-Recursive
+When transferring folder ownership:
+- **Folder ownership**: Transferred ✅
+- **Children ownership**: NOT transferred ❌
+
+```
+Before:
+MainFolder (Owner: User1)
+├── file1.txt (Owner: User1)
+└── file2.txt (Owner: User1)
+
+After transferring MainFolder ownership to User2:
+MainFolder (Owner: User2) ✅
+├── file1.txt (Owner: User1) ← Still User1!
+└── file2.txt (Owner: User1) ← Still User1!
+```
+
+### Best Practices
+
+1. **Use folder permissions for teams**: Grant permission on parent folder instead of individual files
+2. **Use direct permissions for exceptions**: Override inherited permissions when needed
+3. **Check effective permissions**: Remember that direct permissions override inherited ones
+4. **Ownership transfer carefully**: Child files retain original owner - transfer individually if needed
+
+### Technical Implementation
+
+The permission system uses:
+- **Triple indexing**: By permission ID, by user ID, and by file ID for O(1) lookups
+- **Lazy evaluation**: Effective permission calculated at check time (not stored)
+- **Atomic operations**: Permission grant/delete are transactional
+- **Owner bypass**: File owners automatically have all permissions (no explicit permission record needed)
 
 ---
 
@@ -261,6 +395,42 @@ Each file includes metadata about when and how it was accessed:
 - PATCH `/api/files/:id` - Records an EDIT interaction
 
 **User Isolation**: Starred and recent file lists are per-user. Each user maintains their own separate list.
+
+### 5. File Operations: Copy & Shared
+
+5.1 Copy a File or Folder
+```Bash
+# Copy with default name "Copy of <original name>"
+curl -i -X POST http://localhost:3000/api/files/<FILE_ID>/copy \
+     -H "Authorization: Bearer <TOKEN>"
+
+# Copy with custom name and/or parent folder
+curl -i -X POST http://localhost:3000/api/files/<FILE_ID>/copy \
+     -H "Authorization: Bearer <TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d '{"newName":"My Copy.txt","parentId":"<TARGET_FOLDER_ID>"}'
+```
+Expected Response: 201 Created. Header Location contains the new file ID. Body contains the copied file metadata.
+
+**Copy Behavior**:
+- **Ownership**: The user performing the copy becomes the OWNER of the new file/folder
+- **Permissions**: The new file starts clean (no inherited permissions from source)
+- **Content**: For files, content is duplicated from storage server
+- **Deep Copy**: For folders, all accessible children are recursively copied
+- **Requirements**: User must have at least VIEWER permission on source file
+
+5.2 Get Shared Files
+```Bash
+curl -i -X GET http://localhost:3000/api/files/shared \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 200 OK. Returns all files/folders where:
+- The user has VIEWER or EDITOR permission
+- The user is NOT the owner
+
+Each file includes `sharedPermissionLevel` field showing the user's permission level.
+
+**Use Case**: This endpoint is perfect for a "Shared with me" view in a file manager UI.
 
 ---
 

@@ -7,10 +7,12 @@ const permissionController = require('../controllers/permissionController');
 // All file routes require authentication
 router.use(requireAuth);
 
-// File starred and recent (must be before /:id routes)
+// File starred, recent, and shared (must be before /:id routes)
 router.get('/starred', fileController.getStarredFiles);
 router.get('/recent', fileController.getRecentFiles);
+router.get('/shared', fileController.getSharedFiles);
 router.post('/:id/star', fileController.toggleStarFile);
+router.post('/:id/copy', fileController.copyFile);
 
 // File CRUD
 router.get('/', fileController.getAllFiles);

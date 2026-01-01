@@ -370,6 +370,12 @@ class FileService {
 
     // Check user permission on file
     async checkPermission(userId, fileId, action) {
+        // Check if user is the owner first
+        const file = await filesStore.getById(fileId);
+        if (file && file.ownerId === userId) {
+            return true; // Owner has all permissions
+        }
+        
         const permission = await permissionStore.getUserPermissionForFile(userId, fileId);
         if (!permission) {
             return false;
@@ -505,6 +511,113 @@ class FileService {
             fileId,
             isStarred: metadata.isStarred
         };
+    }
+
+    // Copy a file or folder (with deep copy for folders)
+    async copyFile(fileId, userId, options = {}) {
+        // Check source file exists
+        const sourceFile = await filesStore.getById(fileId);
+        if (!sourceFile) {
+            throw new Error("File not found");
+        }
+
+        // Check read permission on source
+        const hasPermission = await this.checkPermission(userId, fileId, 'Read');
+        if (!hasPermission) {
+            throw new Error("Permission denied");
+        }
+
+        // Determine parent and name for the copy
+        const parentId = options.parentId !== undefined ? options.parentId : sourceFile.parentId;
+        const newName = options.newName || `Copy of ${sourceFile.name}`;
+
+        // If parent specified, check write permission on target parent
+        if (parentId) {
+            const hasWritePermission = await this.checkPermission(userId, parentId, 'Write');
+            if (!hasWritePermission) {
+                throw new Error("Permission denied: Cannot copy to target folder");
+            }
+        }
+
+        // Recursive helper for deep copying folders
+        const copyRecursive = async (sourceId, targetParentId) => {
+            const source = await filesStore.getById(sourceId);
+            
+            // Create the copy with new owner
+            const copyName = sourceId === fileId ? newName : source.name;
+            const copyId = generateId();
+            const copy = await filesStore.create(
+                copyId,
+                copyName,
+                source.type,
+                userId, // User becomes owner of the copy
+                targetParentId,
+                source.size
+            );
+
+            // If it's a file, copy content from storage server
+            if (source.type === 'file') {
+                try {
+                    const sourceContent = await storageClient.get(sourceId);
+                    if (sourceContent.success && sourceContent.data) {
+                        await storageClient.post(copy.id, sourceContent.data);
+                    }
+                } catch (error) {
+                    // If content doesn't exist, continue without it
+                }
+            }
+
+            // If it's a folder, recursively copy children
+            if (source.type === 'folder') {
+                const children = await filesStore.getByParentId(sourceId);
+                for (const child of children) {
+                    // Only copy children the user has access to
+                    const hasChildPermission = await this.checkPermission(userId, child.id, 'Read');
+                    if (hasChildPermission) {
+                        await copyRecursive(child.id, copy.id);
+                    }
+                }
+            }
+
+            return copy;
+        };
+
+        // Perform the copy
+        const copiedFile = await copyRecursive(fileId, parentId);
+
+        return copiedFile;
+    }
+
+    // Get files shared with user (where user has permission but is not owner)
+    async getSharedFiles(userId) {
+        // Get all permissions for this user
+        const permissions = await permissionStore.getByUserId(userId);
+        
+        // Filter to only VIEWER and EDITOR (not OWNER)
+        const sharedPermissions = permissions.filter(p => 
+            p.level === 'VIEWER' || p.level === 'EDITOR'
+        );
+
+        // Fetch the actual files with metadata
+        const files = [];
+        for (const permission of sharedPermissions) {
+            const file = await filesStore.getById(permission.fileId);
+            if (file && file.ownerId !== userId) {
+                // Get user-specific metadata
+                const metadata = await userFileMetadataStore.get(userId, permission.fileId);
+                
+                // Add permission level and user metadata to file
+                files.push({
+                    ...file,
+                    sharedPermissionLevel: permission.level,
+                    isStarred: metadata?.isStarred || false,
+                    lastViewedAt: metadata?.lastViewedAt || null,
+                    lastEditedAt: metadata?.lastEditedAt || null
+                });
+            }
+        }
+
+        return files;
     }
 }
 
