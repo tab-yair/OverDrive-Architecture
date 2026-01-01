@@ -8,6 +8,7 @@ class User {
         this.firstName = firstName;
         this.lastName = lastName;
         this.profileImage = profileImage;
+        this.storageUsed = 0; // Storage used in bytes
         const now = new Date().toISOString();
         this.createdAt = now;
         this.modifiedAt = now;

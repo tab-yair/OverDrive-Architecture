@@ -40,16 +40,13 @@ const createFile = asyncHandler(async (req, res) => {
         throw new Error('Content is required for files');
     }
 
-    // Calculate size for files
-    const size = type === 'file' && content ? Buffer.byteLength(content) : 0;
-
-    // Create file metadata
+    // Create file metadata (size will be set by uploadFile)
     const file = await fileService.createFile({
         name,
         type,
         ownerId: req.userId,
         parentId,
-        size
+        size: 0  // Size will be updated by uploadFile
     });
 
     // If it's a file (not folder), upload to storage server

@@ -9,9 +9,9 @@ const { generateId } = require('../utils/idGenerator.js');
 class PermissionService {
     
     // Add new permission
-    async addPermission({ fileId, userId, level, customPermissions = null, requestingUserId }) {
+    async addPermission({ fileId, userId, level, requestingUserId }) {
         // Basic validation
-        const validationError = Permission.validate({ fileId, userId, level, customPermissions });
+        const validationError = Permission.validate({ fileId, userId, level });
         if (validationError) {
             throw new Error(validationError);
         }
@@ -44,11 +44,11 @@ class PermissionService {
         
         // Create permission (will auto-delete existing one if present)
         const permissionId = generateId();
-        const newPermission = await permissionStore.create(permissionId, fileId, userId, level, customPermissions);
+        const newPermission = await permissionStore.create(permissionId, fileId, userId, level);
 
         // If this is a folder, recursively grant permission to all children
         if (file.type === 'folder') {
-            await this._grantPermissionRecursively(fileId, userId, level, customPermissions);
+            await this._grantPermissionRecursively(fileId, userId, level);
         }
 
         return newPermission;
@@ -89,11 +89,11 @@ class PermissionService {
         // Downgrade old owner's permission from OWNER to EDITOR
         const oldOwnerPermission = await permissionStore.getUserPermissionForFile(requestingUserId, fileId);
         if (oldOwnerPermission && oldOwnerPermission.level === 'OWNER') {
-            await permissionStore.update(oldOwnerPermission.pid, { level: 'EDITOR', customPermissions: null });
+            await permissionStore.update(oldOwnerPermission.pid, { level: 'EDITOR' });
         } else if (!oldOwnerPermission) {
             // Create EDITOR permission for old owner if they don't have any permission yet
             const oldOwnerPermId = generateId();
-            await permissionStore.create(oldOwnerPermId, fileId, requestingUserId, 'EDITOR', null);
+            await permissionStore.create(oldOwnerPermId, fileId, requestingUserId, 'EDITOR');
         }
 
         // Remove new owner's existing permission (if exists) to replace it with OWNER
@@ -184,7 +184,7 @@ class PermissionService {
             throw new Error("Cannot change owner's permission level. Transfer ownership first.");
         }
 
-        const updatedPermission = await permissionStore.update(permissionId, { level: updates.level, customPermissions: null });
+        const updatedPermission = await permissionStore.update(permissionId, { level: updates.level });
         
         // If this is a folder, update all inherited permissions recursively
         if (file.type === 'folder') {
@@ -388,7 +388,7 @@ class PermissionService {
      * Logic: Always create inherited permission, even if direct permission exists
      * In practice, user will get the strongest between direct and inherited
      */
-    async _grantPermissionRecursively(folderId, userId, level, customPermissions) {
+    async _grantPermissionRecursively(folderId, userId, level) {
         // Get all children of this folder
         const children = await filesStore.getByParentId(folderId);
         
@@ -401,14 +401,13 @@ class PermissionService {
                 child.id, 
                 userId, 
                 level, 
-                customPermissions,
                 true, // isInherited
                 folderId // inheritedFrom
             );
             
             // If child is also a folder, recurse
             if (child.type === 'folder') {
-                await this._grantPermissionRecursively(child.id, userId, level, customPermissions);
+                await this._grantPermissionRecursively(child.id, userId, level);
             }
         }
     }
@@ -449,7 +448,7 @@ class PermissionService {
             const inheritedPerm = allPerms.find(p => p.isInherited && p.inheritedFrom === folderId);
             
             if (inheritedPerm) {
-                await permissionStore.update(inheritedPerm.pid, { level: newLevel, customPermissions: null });
+                await permissionStore.update(inheritedPerm.pid, { level: newLevel });
             }
             
             // If child is a folder, recurse

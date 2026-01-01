@@ -60,6 +60,20 @@ class FileService {
         }
 
         try {
+            // Calculate new content size
+            const newSize = Buffer.isBuffer(content) ? content.length : Buffer.byteLength(content);
+            
+            // Check storage limit before upload
+            const storageLimit = (process.env.STORAGE_LIMIT_MB || 100) * 1024 * 1024; // Convert MB to bytes
+            const currentStorageUsed = await usersStore.getStorageUsed(file.ownerId);
+            const oldSize = file.size || 0;
+            const storageChange = newSize - oldSize;
+            
+            if (currentStorageUsed + storageChange > storageLimit) {
+                const availableSpace = storageLimit - currentStorageUsed;
+                throw new Error(`Storage limit exceeded. Available: ${Math.floor(availableSpace / 1024)} KB, Required: ${Math.floor(storageChange / 1024)} KB`);
+            }
+
             // Send file to storage-server
             const response = await storageClient.post(fileId, content);
 
@@ -69,16 +83,14 @@ class FileService {
 
             // Update file metadata
             const updates = { 
-                modifiedAt: new Date().toISOString()
+                modifiedAt: new Date().toISOString(),
+                size: newSize
             };
             
-            // Update size if content is provided
-            if (content) {
-                const contentSize = Buffer.isBuffer(content) ? content.length : Buffer.byteLength(content);
-                updates.size = contentSize;
-            }
-            
             await filesStore.update(fileId, updates);
+
+            // Update owner's storage usage
+            await usersStore.updateStorageUsed(file.ownerId, storageChange);
 
             return response;
         } catch (error) {
@@ -92,6 +104,22 @@ class FileService {
             throw new Error("Cannot update content of a folder");
         }
 
+        // Calculate new content size
+        const newSize = Buffer.isBuffer(content) 
+            ? content.length 
+            : Buffer.byteLength(content);
+        
+        // Check storage limit before update
+        const storageLimit = (process.env.STORAGE_LIMIT_MB || 100) * 1024 * 1024; // Convert MB to bytes
+        const currentStorageUsed = await usersStore.getStorageUsed(file.ownerId);
+        const oldSize = file.size || 0;
+        const storageChange = newSize - oldSize;
+        
+        if (currentStorageUsed + storageChange > storageLimit) {
+            const availableSpace = storageLimit - currentStorageUsed;
+            throw new Error(`Storage limit exceeded. Available: ${Math.floor(availableSpace / 1024)} KB, Required: ${Math.floor(storageChange / 1024)} KB`);
+        }
+
         // Delete old content from storage-server
         await storageClient.delete(fileId).catch(err => {
             // Ignore if file doesn't exist on storage server
@@ -103,12 +131,10 @@ class FileService {
             throw new Error(response.error || "Failed to update file content");
         }
 
-        // Calculate and return new size
-        const contentSize = Buffer.isBuffer(content) 
-            ? content.length 
-            : Buffer.byteLength(content);
-        
-        return { size: contentSize };
+        // Update owner's storage usage
+        await usersStore.updateStorageUsed(file.ownerId, storageChange);
+
+        return { size: newSize };
     }
 
     // Helper: Validate circular references when moving folders
@@ -252,6 +278,18 @@ class FileService {
         }
 
         try {
+            // Collect all files to be deleted (for storage tracking)
+            const allFilesToDelete = await this._collectFilesRecursive(fileId);
+            
+            // Calculate storage to free per owner
+            const storageByOwner = new Map();
+            for (const f of allFilesToDelete) {
+                if (f.type === 'file') {
+                    const currentSize = storageByOwner.get(f.ownerId) || 0;
+                    storageByOwner.set(f.ownerId, currentSize + (f.size || 0));
+                }
+            }
+
             // filesStore.delete handles recursion, permission cleanup, and returns physicalFileIds
             const physicalFilesToDelete = await filesStore.delete(fileId);
 
@@ -264,10 +302,39 @@ class FileService {
             
             await Promise.all(deletePromises);
 
+            // Update storage usage for all owners
+            for (const [ownerId, sizeToFree] of storageByOwner.entries()) {
+                await usersStore.updateStorageUsed(ownerId, -sizeToFree);
+            }
+
             return { success: true, deletedFiles: physicalFilesToDelete };
         } catch (error) {
             throw new Error(`Delete failed: ${error.message}`);
         }
+    }
+
+    // Helper: Collect all files recursively (for storage tracking before deletion)
+    async _collectFilesRecursive(fileId) {
+        const files = [];
+        const stack = [fileId];
+
+        while (stack.length > 0) {
+            const currentId = stack.pop();
+            const current = await filesStore.getById(currentId);
+            
+            if (!current) continue;
+
+            files.push(current);
+
+            if (current.type === 'folder') {
+                const children = await filesStore.getByParentId(currentId);
+                for (const child of children) {
+                    stack.push(child.id);
+                }
+            }
+        }
+
+        return files;
     }
 
     // SEARCH - Search files by name (metadata) AND content (C++ storage server)
@@ -539,6 +606,18 @@ class FileService {
             }
         }
 
+        // Calculate total size needed for copy (only files user owns after copy)
+        const totalSizeNeeded = await this._calculateCopySize(fileId, userId);
+        
+        // Check storage limit
+        const storageLimit = (process.env.STORAGE_LIMIT_MB || 100) * 1024 * 1024;
+        const currentStorageUsed = await usersStore.getStorageUsed(userId);
+        
+        if (currentStorageUsed + totalSizeNeeded > storageLimit) {
+            const availableSpace = storageLimit - currentStorageUsed;
+            throw new Error(`Storage limit exceeded. Available: ${Math.floor(availableSpace / 1024)} KB, Required: ${Math.floor(totalSizeNeeded / 1024)} KB`);
+        }
+
         // Recursive helper for deep copying folders
         const copyRecursive = async (sourceId, targetParentId) => {
             const source = await filesStore.getById(sourceId);
@@ -561,6 +640,8 @@ class FileService {
                     const sourceContent = await storageClient.get(sourceId);
                     if (sourceContent.success && sourceContent.data) {
                         await storageClient.post(copy.id, sourceContent.data);
+                        // Update storage usage for new owner
+                        await usersStore.updateStorageUsed(userId, source.size || 0);
                     }
                 } catch (error) {
                     // If content doesn't exist, continue without it
@@ -586,6 +667,34 @@ class FileService {
         const copiedFile = await copyRecursive(fileId, parentId);
 
         return copiedFile;
+    }
+
+    // Helper: Calculate total size needed for copy operation
+    async _calculateCopySize(fileId, userId) {
+        let totalSize = 0;
+        const stack = [fileId];
+
+        while (stack.length > 0) {
+            const currentId = stack.pop();
+            const current = await filesStore.getById(currentId);
+            
+            if (!current) continue;
+
+            // Check if user has permission to copy this file
+            const hasPermission = await this.checkPermission(userId, currentId, 'Read');
+            if (!hasPermission) continue;
+
+            if (current.type === 'file') {
+                totalSize += (current.size || 0);
+            } else if (current.type === 'folder') {
+                const children = await filesStore.getByParentId(currentId);
+                for (const child of children) {
+                    stack.push(child.id);
+                }
+            }
+        }
+
+        return totalSize;
     }
 
     // Get files shared with user (where user has permission but is not owner)

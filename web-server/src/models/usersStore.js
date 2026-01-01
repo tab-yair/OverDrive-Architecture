@@ -58,6 +58,26 @@ const usersStore = {
         usersById.delete(id);
         usersByUsername.delete(user.username);
         return true;
+    },
+
+    async updateStorageUsed(userId, bytesChange) {
+        const user = usersById.get(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+        user.storageUsed = (user.storageUsed || 0) + bytesChange;
+        if (user.storageUsed < 0) {
+            user.storageUsed = 0; // Prevent negative storage
+        }
+        return user.storageUsed;
+    },
+
+    async getStorageUsed(userId) {
+        const user = usersById.get(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+        return user.storageUsed || 0;
     }
 };
 

@@ -9,6 +9,7 @@ const userRoutes = require('./routes/userRoutes');
 const tokenRoutes = require('./routes/tokenRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const searchRoutes = require('./routes/searchRoutes');
+const storageRoutes = require('./routes/storageRoutes');
 
 // size limit increased to handle large JSON payloads
 app.use(express.json({ limit: '50mb' }));
@@ -33,6 +34,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/storage', storageRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });

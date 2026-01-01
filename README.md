@@ -53,6 +53,7 @@ Authorization: Bearer <JWT_TOKEN>
 | `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
 | `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
 | `POST` | `/api/tokens` | ❌ | **Login**: Authenticate user and retrieve JWT token. Returns: `{ token: "<JWT>" }` |
+| `GET` | `/api/storage` | ✅ | **Get Storage Info**: Retrieve current storage usage and limit for authenticated user. Returns: `{ storageUsed, storageLimit, storageAvailable, storageUsedMB, storageLimitMB, storageAvailableMB, usagePercentage }` |
 | `POST` | `/api/files` | ✅ | **Create**: Upload a new file or create a folder |
 | `GET` | `/api/files` | ✅ | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
 | `GET` | `/api/files/starred` | ✅ | **Get Starred Files**: Retrieve all files starred by the current user with metadata (`isStarred`, `lastViewedAt`, `lastEditedAt`) |
@@ -68,6 +69,111 @@ Authorization: Bearer <JWT_TOKEN>
 | `POST` | `/api/files/:id/permissions` | ✅ | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
 | `PATCH` | `/api/files/:id/permissions/:pId` | ✅ | **Update Permission**: Modify permission level. Body: `{ permissionLevel }`. Allowed levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
 | `DELETE` | `/api/files/:id/permissions/:pId` | ✅ | **Revoke Permission**: Remove a specific permission |
+
+---
+
+## Storage Management: Owner-Based Quotas
+
+OverDrive implements a **file ownership-based storage quota system** similar to Google Drive, where storage consumption is attributed to file owners rather than folder containers.
+
+### Key Principles
+
+#### 1. **Ownership-Based Accounting**
+- Storage is tracked **per file owner**, not per folder
+- Only files **you own** count toward your storage quota
+- Folders themselves consume **zero storage**
+- Shared files from others **do not** consume your storage
+
+#### 2. **Storage Tracking Behavior**
+
+**File Creation:**
+- When you upload a file, its size is added to **your** storage usage
+- Initial creation sets `ownerId` and tracks the file size
+
+**File Updates:**
+- Updating file content adjusts the **file owner's** storage
+- If content grows from 10 bytes to 100 bytes, owner's storage increases by 90 bytes
+- If content shrinks, owner's storage decreases accordingly
+
+**File Deletion:**
+- Deleting a file **frees storage** for its owner
+- Recursive folder deletion correctly attributes freed space to each file's owner
+- Example: Folder with 3 files owned by different users frees storage for all 3 owners
+
+**File Copy:**
+- When you copy a file, **you become the owner** of the copy
+- The copy's size is added to **your** storage, not the original owner's
+- Original file still counts toward original owner's quota
+
+**Ownership Transfer:**
+- Transferring ownership of a file moves storage accounting to the new owner
+- Original owner's storage decreases, new owner's storage increases
+
+#### 3. **Storage Limits**
+
+**Default Limit:**
+- Configurable via environment variable `STORAGE_LIMIT_MB` (default: 100 MB)
+- Set in `docker-compose.yml` or `.env` file
+
+**Enforcement:**
+- Users **cannot exceed** their storage limit when:
+  - Creating new files
+  - Updating existing files with larger content
+  - Copying files
+- API returns `400 Bad Request` with detailed error message showing available vs required space
+
+**Example:**
+```bash
+# If user has 99 MB used and tries to upload 2 MB:
+{
+  "error": "Upload failed: Storage limit exceeded. Available: 1024 KB, Required: 2048 KB"
+}
+```
+
+#### 4. **Storage API Endpoint**
+
+**GET /api/storage** provides detailed storage information:
+```json
+{
+  "storageUsed": 10485760,           // Bytes
+  "storageLimit": 104857600,         // Bytes  
+  "storageAvailable": 94371840,      // Bytes
+  "storageUsedMB": 10.0,             // Megabytes
+  "storageLimitMB": 100,             // Megabytes
+  "storageAvailableMB": 90.0,        // Megabytes
+  "usagePercentage": 10.0            // Percent
+}
+```
+
+### Example Scenarios
+
+#### Scenario 1: Shared File Storage
+```
+User A uploads file.txt (1 MB) → User A: +1 MB
+User A shares file.txt with User B (VIEWER) → User B: +0 MB ✅
+User A shares file.txt with User C (EDITOR) → User C: +0 MB ✅
+```
+**Result:** Only User A (owner) uses 1 MB of storage
+
+#### Scenario 2: Folder Deletion
+```
+Folder "SharedProject" contains:
+  - doc1.txt (Owner: User A, 500 KB)
+  - doc2.txt (Owner: User B, 300 KB)  
+  - doc3.txt (Owner: User A, 200 KB)
+
+User A deletes "SharedProject" →
+  - User A storage: -700 KB (doc1 + doc3)
+  - User B storage: -300 KB (doc2)
+```
+
+#### Scenario 3: File Copy
+```
+User A owns large.txt (10 MB)
+User B copies large.txt →
+  - User A storage: 10 MB (unchanged)
+  - User B storage: +10 MB (becomes owner of copy)
+```
 
 ---
 
@@ -244,6 +350,25 @@ curl -i -X GET http://localhost:3000/api/users/<USER_ID> \
      -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 200 OK. Body: User object (ID, username, firstName, lastName, profileImage).
+
+1.4 Get Storage Information
+```Bash
+curl -i -X GET http://localhost:3000/api/storage \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 200 OK. Body: Storage usage details
+```json
+{
+  "storageUsed": 10485760,
+  "storageLimit": 104857600,
+  "storageAvailable": 94371840,
+  "storageUsedMB": 10.0,
+  "storageLimitMB": 100,
+  "storageAvailableMB": 90.0,
+  "usagePercentage": 10.0
+}
+```
+**Note**: Storage is tracked per file owner. Only files you own count toward your quota. The limit is configurable via `STORAGE_LIMIT_MB` environment variable (default: 100 MB).
 
 ### 2. File & Folder Management
 2.1 Create Folder

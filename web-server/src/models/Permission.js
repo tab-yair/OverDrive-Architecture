@@ -1,11 +1,10 @@
 // Permission for user on file
 class Permission {
-    constructor(pid, fileId, userId, level, customPermissions = null, isInherited = false, inheritedFrom = null) {
+    constructor(pid, fileId, userId, level, isInherited = false, inheritedFrom = null) {
         this.pid = pid;
         this.fileId = fileId;
         this.userId = userId;
         this.level = level;
-        this.customPermissions = customPermissions;
         this.isInherited = isInherited; // Whether permission was inherited from parent folder
         this.inheritedFrom = inheritedFrom; // Which folder this permission was inherited from (if isInherited=true)
         const now = new Date().toISOString();
@@ -48,7 +47,6 @@ class Permission {
     static can(permissionObj, action) {
         if (!permissionObj) return false;
         const actionKey = `can${action}`;
-        // CUSTOM level no longer supported
         return Permission.LEVELS[permissionObj.level]?.[actionKey] || false;
     }
 
