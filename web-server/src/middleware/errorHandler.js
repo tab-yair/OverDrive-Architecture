@@ -66,9 +66,10 @@ const errorHandler = (err, req, res, next) => {
     // Use explicit status if set on error, otherwise derive from message
     const status = err.status || getStatusFromError(err);
 
-    // Log error for debugging (only in development)
-    if (process.env.NODE_ENV !== 'production') {
-        console.error(`[${status}] ${err.message}`);
+    // Log error for debugging
+    console.error(`[${status}] ${err.message}`);
+    if (err.stack) {
+        console.error(err.stack);
     }
 
     // Don't expose internal error details in production
