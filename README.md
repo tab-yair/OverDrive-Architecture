@@ -5,10 +5,11 @@ A full-stack, distributed file storage system featuring a Node.js Web API layer 
 ## Overview
 
 OverDrive is a networked file storage system featuring:
-- **Web Server (Node.js)**: Handles user authentication (Gmail-only), permissions, and file metadata.
+- **Web Server (Node.js)**: Handles JWT-based authentication (Gmail-only), permissions, and file metadata.
 - **Storage Server (C++)**: A high-performance engine for file persistence, featuring custom RLE compression and multi-threaded searching.
-- **Security & Validation**: Strict email validation, password length checks, and owner-only file access.
+- **Security & Validation**: JWT token authentication, strict email validation, password length checks, and owner-only file access.
 - **RESTful API**: Clean HTTP interface for managing users and files.
+- **User Features**: Starred files and recently accessed file tracking with automatic interaction recording.
 - **Dockerized Microservices**: Seamlessly orchestrated using Docker Compose.
 
 ### System Architecture
@@ -39,21 +40,32 @@ docker-compose run --rm tests
 
 ## API Reference
 
-| Method | Endpoint | Required Headers | Description |
+### Authentication
+All protected endpoints require a JWT token in the `Authorization` header:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+### Endpoints
+
+| Method | Endpoint | Auth Required | Description |
 |:---:|:---|:---:|:---|
-| `POST` | `/api/users` | - | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
-| `GET` | `/api/users/:id` | `user-id` | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
-| `POST` | `/api/tokens` | - | **Login**: Authenticate user and retrieve user-id |
-| `POST` | `/api/files` | `user-id` | **Create**: Upload a new file or create a folder |
-| `GET` | `/api/files` | `user-id` | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
-| `GET` | `/api/files/:id` | `user-id` | **Fetch**: Get full metadata and content of a specific file/folder |
-| `PATCH` | `/api/files/:id` | `user-id` | **Update**: Update file/folder name or content or location |
-| `DELETE` | `/api/files/:id` | `user-id` | **Delete**: Remove a file or folder (includes recursive deletion) |
-| `GET` | `/api/search/:query` | `user-id` | **Search**: Global search by name or content |
-| `GET` | `/api/files/:id/permissions` | `user-id` | **Get Permissions**: Retrieve all permissions for a specific file/folder |
-| `POST` | `/api/files/:id/permissions` | `user-id` | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
-| `PATCH` | `/api/files/:id/permissions/:pId` | `user-id` | **Update Permission**: Modify permission level. Body: `{ permissionLevel }`. Allowed levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
-| `DELETE` | `/api/files/:id/permissions/:pId` | `user-id` | **Revoke Permission**: Remove a specific permission |
+| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
+| `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
+| `POST` | `/api/tokens` | ❌ | **Login**: Authenticate user and retrieve JWT token. Returns: `{ token: "<JWT>" }` |
+| `POST` | `/api/files` | ✅ | **Create**: Upload a new file or create a folder |
+| `GET` | `/api/files` | ✅ | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
+| `GET` | `/api/files/starred` | ✅ | **Get Starred Files**: Retrieve all files starred by the current user with metadata (`isStarred`, `lastViewedAt`, `lastEditedAt`) |
+| `GET` | `/api/files/recent` | ✅ | **Get Recent Files**: Retrieve recently accessed files (viewed or edited), sorted by most recent interaction first. Includes `lastInteractionType` (VIEW/EDIT) |
+| `GET` | `/api/files/:id` | ✅ | **Fetch**: Get full metadata and content of a specific file/folder. Automatically records VIEW interaction |
+| `PATCH` | `/api/files/:id` | ✅ | **Update**: Update file/folder name or content or location. Automatically records EDIT interaction |
+| `POST` | `/api/files/:id/star` | ✅ | **Toggle Star**: Star or unstar a file. Returns `{ fileId, isStarred }` |
+| `DELETE` | `/api/files/:id` | ✅ | **Delete**: Remove a file or folder (includes recursive deletion) |
+| `GET` | `/api/search/:query` | ✅ | **Search**: Global search by name or content |
+| `GET` | `/api/files/:id/permissions` | ✅ | **Get Permissions**: Retrieve all permissions for a specific file/folder |
+| `POST` | `/api/files/:id/permissions` | ✅ | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
+| `PATCH` | `/api/files/:id/permissions/:pId` | ✅ | **Update Permission**: Modify permission level. Body: `{ permissionLevel }`. Allowed levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
+| `DELETE` | `/api/files/:id/permissions/:pId` | ✅ | **Revoke Permission**: Remove a specific permission |
 
 ---
 
@@ -62,7 +74,7 @@ docker-compose run --rm tests
 - `201 Created` - Resource created successfully.
 - `204 No Content` - Success with no response body (update/delete operations).
 - `400 Bad Request` - Validation failed (e.g., invalid email, missing fields).
-- `401 Unauthorized` - Missing or invalid user-id.
+- `401 Unauthorized` - Missing or invalid JWT token.
 - `403 Forbidden` - User lacks permission to access the resource.
 - `404 Not Found` - Resource or User does not exist.
 - `409 Conflict` - Resource already exists (e.g., duplicate username).
@@ -88,12 +100,14 @@ curl -i -X POST http://localhost:3000/api/tokens \
      -H "Content-Type: application/json" \
      -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\"}"
 ```
-Expected Response: 200 OK. Body: {"user-id": "..."}.
+Expected Response: 200 OK. Body: `{"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}`. Save this token for subsequent requests.
+
+**Note**: The JWT token is valid for 24 hours and must be included in the `Authorization` header as `Bearer <TOKEN>` for all protected endpoints.
 
 1.3 Get User Profile
 ```Bash
 curl -i -X GET http://localhost:3000/api/users/<USER_ID> \
-     -H "user-id: <USER_ID>"
+     -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 200 OK. Body: User object (ID, username, firstName, lastName, profileImage).
 
@@ -101,7 +115,7 @@ Expected Response: 200 OK. Body: User object (ID, username, firstName, lastName,
 2.1 Create Folder
 ```Bash
 curl -i -X POST http://localhost:3000/api/files \
-     -H "user-id: <USER_ID>" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
      -d "{\"name\":\"Work_Project\",\"type\":\"folder\"}"
 ```
@@ -110,7 +124,7 @@ Expected Response: 201 Created. Header Location contains the FOLDER_ID.
 2.2 Upload File (with RLE Compression)
 ```Bash
 curl -i -X POST http://localhost:3000/api/files \
-     -H "user-id: <USER_ID>" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
      -d "{\"name\":\"notes.txt\",\"content\":\"AAAAABBBBB\",\"type\":\"file\",\"parentId\":\"<FOLDER_ID_OR_NULL>\"}"
 ```
@@ -119,44 +133,44 @@ Expected Response: 201 Created. Data is automatically compressed in the C++ back
 2.3 List All Files (Tree Root)
 ```Bash
 curl -i -X GET http://localhost:3000/api/files \
-     -H "user-id: <USER_ID>"
+     -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 200 OK. Returns an array of file/folder objects.
 
 2.4 Get File Metadata & Content
 ```Bash
 curl -i -X GET http://localhost:3000/api/files/<FILE_ID> \
-     -H "user-id: <USER_ID>"
+     -H "Authorization: Bearer <TOKEN>"
 ```
-Expected Response: 200 OK. Content is transparently decompressed and returned as plain text.
+Expected Response: 200 OK. Content is transparently decompressed and returned as plain text. Automatically records a VIEW interaction.
 
 2.5 Update File/Folder (Name, Content, or Location)
 ```Bash
 # Update name
 curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
-     -H "user-id: <USER_ID>" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
      -d "{\"name\":\"new_filename.txt\"}"
 
 # Update content (files only)
 curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
-     -H "user-id: <USER_ID>" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
      -d "{\"content\":\"Updated content\"}"
 
 # Move to different parent folder
 curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
-     -H "user-id: <USER_ID>" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
      -d "{\"parentId\":\"<NEW_FOLDER_ID>\"}"
 ```
-Expected Response: 204 No Content.
+Expected Response: 204 No Content. Automatically records an EDIT interaction.
 Note: You can update name, content, and/or parentId in any combination.
 
 2.6 Delete File/Folder
 ```Bash
 curl -i -X DELETE http://localhost:3000/api/files/<FILE_ID> \
-     -H "user-id: <USER_ID>"
+     -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 204 No Content.
 
@@ -164,21 +178,21 @@ Expected Response: 204 No Content.
 3.1 Smart Search (Name & Content)
 ```Bash
 curl -i -X GET http://localhost:3000/api/search/<TERM> \
-     -H "user-id: <USER_ID>"
+     -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 200 OK. Searches file names and performs deep-content search within compressed RLE data.
 
 3.2 Get File/Folder Permissions
 ```Bash
 curl -i -X GET http://localhost:3000/api/files/<FILE_ID>/permissions \
-     -H "user-id: <USER_ID>"
+     -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 200 OK. Returns array of all permissions for the file/folder.
 
 3.3 Grant Permission (RBAC)
 ```Bash
 curl -i -X POST http://localhost:3000/api/files/<FILE_ID>/permissions \
-     -H "user-id: <OWNER_ID>" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
      -d "{\"targetUserId\":\"<GUEST_ID>\",\"permissionLevel\":\"VIEWER\"}"
 ```
@@ -189,13 +203,13 @@ Supported levels: VIEWER, EDITOR, OWNER.
 ```Bash
 # Change permission level to EDITOR
 curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID>/permissions/<PERMISSION_ID> \
-     -H "user-id: <OWNER_ID>" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
      -d "{\"permissionLevel\":\"EDITOR\"}"
 
 # Transfer ownership to the user who has this permission
 curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID>/permissions/<PERMISSION_ID> \
-     -H "user-id: <OWNER_ID>" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
      -d "{\"permissionLevel\":\"OWNER\"}"
 ```
@@ -205,9 +219,48 @@ Note: Supported levels are VIEWER, EDITOR, or OWNER. When setting OWNER, ownersh
 3.5 Revoke Permission
 ```Bash
 curl -i -X DELETE http://localhost:3000/api/files/<FILE_ID>/permissions/<PERMISSION_ID> \
-     -H "user-id: <OWNER_ID>"
+     -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 204 No Content.
+
+### 4. User Activity Tracking: Starred & Recent Files
+
+4.1 Star a File
+```Bash
+curl -i -X POST http://localhost:3000/api/files/<FILE_ID>/star \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 200 OK. Body: `{"fileId": "...", "isStarred": true}`
+Note: Calling this endpoint again will toggle the star status (unstar the file).
+
+4.2 Get Starred Files
+```Bash
+curl -i -X GET http://localhost:3000/api/files/starred \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 200 OK. Returns array of starred files with additional metadata:
+- `isStarred`: Boolean (always true for this endpoint)
+- `lastViewedAt`: ISO timestamp of last view
+- `lastEditedAt`: ISO timestamp of last edit (or null)
+- `lastInteractionType`: "VIEW" or "EDIT"
+
+4.3 Get Recently Accessed Files
+```Bash
+curl -i -X GET http://localhost:3000/api/files/recent \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 200 OK. Returns up to 20 recently accessed files, sorted by most recent interaction first.
+Each file includes metadata about when and how it was accessed:
+- `lastViewedAt`: Timestamp of last GET request
+- `lastEditedAt`: Timestamp of last PATCH request
+- `lastInteractionType`: "VIEW" (from GET) or "EDIT" (from PATCH)
+- `isStarred`: Whether the file is currently starred
+
+**Automatic Tracking**: File interactions are automatically recorded when you:
+- GET `/api/files/:id` - Records a VIEW interaction
+- PATCH `/api/files/:id` - Records an EDIT interaction
+
+**User Isolation**: Starred and recent file lists are per-user. Each user maintains their own separate list.
 
 ---
 

@@ -3,6 +3,7 @@ const { Permission } = require('../models/Permission.js');
 const { filesStore } = require('../models/filesStore.js');
 const { usersStore } = require('../models/usersStore.js');
 const { permissionStore } = require('../models/permissionStore.js');
+const { userFileMetadataStore } = require('../models/userFileMetadataStore.js');
 const { storageClient } = require('./storageClient.js');
 const { generateId } = require('../utils/idGenerator.js');
 
@@ -204,6 +205,9 @@ class FileService {
             // 4. Update metadata in store with optimistic locking
             const updatedFile = await filesStore.update(fileId, metadataUpdates, expectedModifiedAt);
 
+            // Record edit interaction
+            await userFileMetadataStore.recordEdit(userId, fileId);
+
             return {
                 success: true,
                 file: updatedFile,
@@ -386,6 +390,9 @@ class FileService {
             throw new Error("Permission denied");
         }
 
+        // Record view interaction
+        await userFileMetadataStore.recordView(userId, fileId);
+
         // If it's a folder, return with children metadata (without their content)
         if (file.type === 'folder') {
             const childrenFiles = await filesStore.getByParentId(fileId);
@@ -422,6 +429,82 @@ class FileService {
 
         // Return file metadata without content if storage fetch failed
         return file;
+    }
+
+    // Get starred files for user
+    async getStarredFiles(userId) {
+        // Get all starred metadata
+        const starredMetadata = await userFileMetadataStore.getStarredByUser(userId);
+        
+        // Fetch actual file objects
+        const files = [];
+        for (const metadata of starredMetadata) {
+            const file = await filesStore.getById(metadata.fileId);
+            if (file) {
+                // Check permission
+                const hasPermission = await this.checkPermission(userId, file.id, 'Read');
+                if (hasPermission) {
+                    files.push({
+                        ...file,
+                        isStarred: metadata.isStarred,
+                        lastViewedAt: metadata.lastViewedAt,
+                        lastEditedAt: metadata.lastEditedAt
+                    });
+                }
+            }
+        }
+        
+        return files;
+    }
+
+    // Get recently accessed files for user
+    async getRecentFiles(userId, limit = 20) {
+        // Get recent metadata
+        const recentMetadata = await userFileMetadataStore.getRecentByUser(userId, limit);
+        
+        // Fetch actual file objects
+        const files = [];
+        for (const metadata of recentMetadata) {
+            const file = await filesStore.getById(metadata.fileId);
+            if (file) {
+                // Check permission
+                const hasPermission = await this.checkPermission(userId, file.id, 'Read');
+                if (hasPermission) {
+                    files.push({
+                        ...file,
+                        isStarred: metadata.isStarred,
+                        lastViewedAt: metadata.lastViewedAt,
+                        lastEditedAt: metadata.lastEditedAt,
+                        lastInteractionType: metadata.lastInteractionType
+                    });
+                }
+            }
+        }
+        
+        return files;
+    }
+
+    // Toggle star status for a file
+    async toggleStarFile(fileId, userId) {
+        // Check file exists
+        const file = await filesStore.getById(fileId);
+        if (!file) {
+            throw new Error("File not found");
+        }
+
+        // Check read permission
+        const hasPermission = await this.checkPermission(userId, fileId, 'Read');
+        if (!hasPermission) {
+            throw new Error("Permission denied");
+        }
+
+        // Toggle star
+        const metadata = await userFileMetadataStore.toggleStar(userId, fileId);
+        
+        return {
+            fileId,
+            isStarred: metadata.isStarred
+        };
     }
 }
 

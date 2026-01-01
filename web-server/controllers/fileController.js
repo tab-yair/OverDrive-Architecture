@@ -122,10 +122,41 @@ const deleteFile = asyncHandler(async (req, res) => {
     res.status(204).end();
 });
 
+/**
+ * GET /api/files/starred
+ * Get all starred files for current user
+ */
+const getStarredFiles = asyncHandler(async (req, res) => {
+    const files = await fileService.getStarredFiles(req.userId);
+    res.status(200).json(files);
+});
+
+/**
+ * GET /api/files/recent
+ * Get recently accessed files for current user
+ */
+const getRecentFiles = asyncHandler(async (req, res) => {
+    const files = await fileService.getRecentFiles(req.userId);
+    res.status(200).json(files);
+});
+
+/**
+ * POST /api/files/:id/star
+ * Toggle star status for a file
+ */
+const toggleStarFile = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const result = await fileService.toggleStarFile(id, req.userId);
+    res.status(200).json(result);
+});
+
 module.exports = {
     getAllFiles,
     createFile,
     getFileById,
     updateFile,
-    deleteFile
+    deleteFile,
+    getStarredFiles,
+    getRecentFiles,
+    toggleStarFile
 };
