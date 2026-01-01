@@ -52,6 +52,7 @@ Authorization: Bearer <JWT_TOKEN>
 |:---:|:---|:---:|:---|
 | `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
 | `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
+| `PATCH` | `/api/users/:id` | ✅ | **Update User Profile**: Update user details. Allowed fields: `password`, `firstName`, `lastName`, `profileImage`. Username cannot be changed. Set `lastName` or `profileImage` to `null` to remove them |
 | `POST` | `/api/tokens` | ❌ | **Login**: Authenticate user and retrieve JWT token. Returns: `{ token: "<JWT>" }` |
 | `GET` | `/api/storage` | ✅ | **Get Storage Info**: Retrieve current storage usage and limit for authenticated user. Returns: `{ storageUsed, storageLimit, storageAvailable, storageUsedMB, storageLimitMB, storageAvailableMB, usagePercentage }` |
 | `POST` | `/api/files` | ✅ | **Create**: Upload a new file or create a folder |
@@ -351,7 +352,36 @@ curl -i -X GET http://localhost:3000/api/users/<USER_ID> \
 ```
 Expected Response: 200 OK. Body: User object (ID, username, firstName, lastName, profileImage).
 
-1.4 Get Storage Information
+1.4 Update User Profile
+```Bash
+# Update password
+curl -i -X PATCH http://localhost:3000/api/users/<USER_ID> \
+     -H "Authorization: Bearer <TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d "{\"password\":\"<NEW_PASSWORD>\"}"
+
+# Update first name and last name
+curl -i -X PATCH http://localhost:3000/api/users/<USER_ID> \
+     -H "Authorization: Bearer <TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d "{\"firstName\":\"<NEW_FIRST_NAME>\",\"lastName\":\"<NEW_LAST_NAME>\"}"
+
+# Remove last name (set to null)
+curl -i -X PATCH http://localhost:3000/api/users/<USER_ID> \
+     -H "Authorization: Bearer <TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d "{\"lastName\":null}"
+
+# Remove profile image (set to null)
+curl -i -X PATCH http://localhost:3000/api/users/<USER_ID> \
+     -H "Authorization: Bearer <TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d "{\"profileImage\":null}"
+```
+Expected Response: 204 No Content.
+**Note**: Username cannot be changed. Users can only update their own profile.
+
+1.5 Get Storage Information
 ```Bash
 curl -i -X GET http://localhost:3000/api/storage \
      -H "Authorization: Bearer <TOKEN>"

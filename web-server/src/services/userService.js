@@ -1,6 +1,7 @@
 const { User } = require('../models/User.js');
 const { EmailValidator } = require('../models/EmailValidator.js');
 const { usersStore } = require('../models/usersStore.js');
+const { authStore } = require('../models/authStore.js');
 const { filesStore } = require('../models/filesStore.js');
 const { permissionStore } = require('../models/permissionStore.js');
 const { generateId } = require('../utils/idGenerator.js');
@@ -69,9 +70,8 @@ class UserService {
             throw error;
         }
 
-        // Return without password
-        const { password: _, ...userWithoutPassword } = user;
-        return userWithoutPassword;
+        // Return user with password
+        return user;
     }
 
     // Get user by ID
@@ -82,9 +82,8 @@ class UserService {
             throw new Error("User not found");
         }
 
-        // Return without password
-        const { password: _, ...userWithoutPassword } = user;
-        return userWithoutPassword;
+        // Return user with password
+        return user;
     }
 
     // Get user by username
@@ -95,17 +94,15 @@ class UserService {
             throw new Error("User not found");
         }
 
-        // Return without password
-        const { password: _, ...userWithoutPassword } = user;
-        return userWithoutPassword;
+        // Return user with password
+        return user;
     }
-
     // Get all users
     async getAllUsers() {
         const users = await usersStore.getAll();
         
-        // Return without passwords
-        return users.map(({ password, ...userWithoutPassword }) => userWithoutPassword);
+        // Return users with passwords
+        return users;
     }
 
     // Update user details
@@ -116,19 +113,26 @@ class UserService {
             throw new Error("User not found");
         }
 
-        // Validate updates
-        if (updates.username || updates.password || updates.firstName || updates.lastName !== undefined || updates.profileImage !== undefined) {
-            const validationData = {
-                username: updates.username || user.username,
-                password: updates.password || user.password,
-                firstName: updates.firstName || user.firstName,
-                lastName: updates.lastName !== undefined ? updates.lastName : user.lastName,
-                profileImage: updates.profileImage !== undefined ? updates.profileImage : user.profileImage
-            };
+        // Validate individual fields if provided
+        if (updates.password !== undefined && updates.password.length < 8) {
+            throw new Error("Password must be at least 8 characters");
+        }
+
+        if (updates.firstName !== undefined && !updates.firstName) {
+            throw new Error("First name cannot be empty");
+        }
+
+        // Validate profileImage if provided (null is allowed to remove it)
+        if (updates.profileImage !== undefined && updates.profileImage !== null) {
+            // Allow both data:image/ Base64 strings and https:// URLs
+            const isBase64 = updates.profileImage.startsWith('data:image/');
+            const isUrl = updates.profileImage.startsWith('https://') || updates.profileImage.startsWith('http://');
             
-            const validationError = User.validate(validationData);
-            if (validationError) {
-                throw new Error(validationError);
+            if (!isBase64 && !isUrl) {
+                throw new Error("Invalid image format. Must be Base64 image string or URL");
+            }
+            if (updates.profileImage.length > 2 * 1024 * 1024) {
+                throw new Error("Profile image exceeds size limit of 2MB");
             }
         }
 
@@ -142,9 +146,8 @@ class UserService {
         // Execute update
         const updatedUser = await usersStore.update(userId, updates);
 
-        // Return without password
-        const { password: _, ...userWithoutPassword } = updatedUser;
-        return userWithoutPassword;
+        // Return user with password
+        return updatedUser;
     }
 
     // Change password
@@ -161,8 +164,8 @@ class UserService {
         }
 
         // Validate new password
-        if (!newPassword || newPassword.length < 4) {
-            throw new Error("Password must be at least 4 characters");
+        if (!newPassword || newPassword.length < 8) {
+            throw new Error("Password must be at least 8 characters");
         }
 
         // Update password

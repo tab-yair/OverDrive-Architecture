@@ -17,7 +17,7 @@ RANDOM_ID=$(date +%s%N)
 TEST_USER="storagetest${RANDOM_ID}@gmail.com"
 CREATE_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/users \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"$TEST_USER\",\"password\":\"test1234\",\"firstName\":\"StorageTest\"}")
+    -d "{\"username\":\"$TEST_USER\",\"password\":\"test12345678\",\"firstName\":\"StorageTest\"}")
 USER_ID=$(extract_id "$CREATE_RESPONSE")
 echo "✓ User created: $USER_ID"
 
@@ -25,7 +25,7 @@ echo "✓ User created: $USER_ID"
 echo "2. Logging in..."
 TOKEN=$(curl -s -X POST $BASE_URL/api/tokens \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"$TEST_USER\",\"password\":\"test1234\"}" | jq -r '.token')
+    -d "{\"username\":\"$TEST_USER\",\"password\":\"test12345678\"}" | jq -r '.token')
 echo "✓ Token received"
 
 # Check initial storage (should be 0)
@@ -184,13 +184,13 @@ RANDOM_ID2=$(date +%s%N)
 TEST_USER2="storagetest${RANDOM_ID2}@gmail.com"
 CREATE_RESPONSE2=$(curl -s -i -X POST $BASE_URL/api/users \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"$TEST_USER2\",\"password\":\"test1234\",\"firstName\":\"StorageTest2\"}")
+    -d "{\"username\":\"$TEST_USER2\",\"password\":\"test12345678\",\"firstName\":\"StorageTest2\"}")
 USER2_ID=$(extract_id "$CREATE_RESPONSE2")
 echo "✓ Second user created: $USER2_ID"
 
 TOKEN2=$(curl -s -X POST $BASE_URL/api/tokens \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"$TEST_USER2\",\"password\":\"test1234\"}" | jq -r '.token')
+    -d "{\"username\":\"$TEST_USER2\",\"password\":\"test12345678\"}" | jq -r '.token')
 echo "✓ Second user token received"
 
 # Check second user's initial storage

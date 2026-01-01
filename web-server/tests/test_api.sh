@@ -6,14 +6,14 @@ echo ""
 
 # Create users
 echo "1. Creating users..."
-U1=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"username":"testowner1@gmail.com","password":"pass1234","firstName":"Owner"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
-U2=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"username":"testeditor@gmail.com","password":"pass1234","firstName":"Editor"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
-U3=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"username":"testviewer@gmail.com","password":"pass1234","firstName":"Viewer"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
+U1=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"username":"testowner1@gmail.com","password":"pass12345678","firstName":"Owner"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
+U2=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"username":"testeditor@gmail.com","password":"pass12345678","firstName":"Editor"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
+U3=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d '{"username":"testviewer@gmail.com","password":"pass12345678","firstName":"Viewer"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
 echo "✓ Users: $U1, $U2, $U3"
 
 # Login
 echo "2. Testing login..."
-TOKEN=$(curl -s -X POST http://localhost:3000/api/tokens -H "Content-Type: application/json" -d '{"username":"testowner1@gmail.com","password":"pass1234"}' | jq -r '.token')
+TOKEN=$(curl -s -X POST http://localhost:3000/api/tokens -H "Content-Type: application/json" -d '{"username":"testowner1@gmail.com","password":"pass12345678"}' | jq -r '.token')
 echo "✓ Login successful - Token received"
 
 # Get user

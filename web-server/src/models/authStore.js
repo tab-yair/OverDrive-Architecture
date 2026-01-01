@@ -5,11 +5,7 @@ const jwt = require('jsonwebtoken');
 const tokenBlacklist = new Set();
 
 const authStore = {
-    /**
-     * Generate JWT token for user
-     * @param {Object} payload - User data to encode in token
-     * @returns {string} JWT token
-     */
+    // Generate JWT token for user
     generateToken(payload) {
         const secret = process.env.JWT_SECRET;
         if (!secret) {
@@ -21,12 +17,7 @@ const authStore = {
         return jwt.sign(payload, secret, { expiresIn });
     },
 
-    /**
-     * Verify and decode JWT token
-     * @param {string} token - JWT token to verify
-     * @returns {Object} Decoded payload
-     * @throws {Error} If token is invalid or blacklisted
-     */
+    // Verify and decode JWT token
     verifyToken(token) {
         // Check if token is blacklisted
         if (tokenBlacklist.has(token)) {
@@ -51,27 +42,17 @@ const authStore = {
         }
     },
 
-    /**
-     * Revoke a token (add to blacklist)
-     * @param {string} token - Token to revoke
-     */
+    // Revoke a token (add to blacklist)
     revokeToken(token) {
         tokenBlacklist.add(token);
     },
 
-    /**
-     * Check if token is blacklisted
-     * @param {string} token - Token to check
-     * @returns {boolean}
-     */
+    // Check if token is blacklisted
     isRevoked(token) {
         return tokenBlacklist.has(token);
     },
 
-    /**
-     * Clear expired tokens from blacklist (cleanup utility)
-     * Note: This is a simple implementation. In production, use a more sophisticated approach
-     */
+    // Clear expired tokens from blacklist (cleanup utility)
     cleanupBlacklist() {
         // Simple size-based cleanup
         if (tokenBlacklist.size > 10000) {

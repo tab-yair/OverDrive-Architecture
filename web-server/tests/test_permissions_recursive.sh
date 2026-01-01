@@ -32,28 +32,28 @@ U3_EMAIL="viewer${TS}@gmail.com"
 
 curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"pass1234\",\"firstName\":\"Owner\"}" > /dev/null
+  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"pass12345678\",\"firstName\":\"Owner\"}" > /dev/null
 
 curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"pass1234\",\"firstName\":\"Editor\"}" > /dev/null
+  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"pass12345678\",\"firstName\":\"Editor\"}" > /dev/null
 
 curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U3_EMAIL\",\"password\":\"pass1234\",\"firstName\":\"Viewer\"}" > /dev/null
+  -d "{\"username\":\"$U3_EMAIL\",\"password\":\"pass12345678\",\"firstName\":\"Viewer\"}" > /dev/null
 
 # Login all users
 TOKEN1=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"pass1234\"}" | jq -r '.token')
+  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"pass12345678\"}" | jq -r '.token')
 
 TOKEN2=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"pass1234\"}" | jq -r '.token')
+  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"pass12345678\"}" | jq -r '.token')
 
 TOKEN3=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U3_EMAIL\",\"password\":\"pass1234\"}" | jq -r '.token')
+  -d "{\"username\":\"$U3_EMAIL\",\"password\":\"pass12345678\"}" | jq -r '.token')
 
 if [[ -n "$TOKEN1" && -n "$TOKEN2" && -n "$TOKEN3" ]]; then
     pass "All users created and logged in"
@@ -95,7 +95,7 @@ fi
 info "Granting VIEWER permission on ProjectFolder to User2"
 U2_ID=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"pass1234\"}" | jq -r '.userId' 2>/dev/null || echo "")
+  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"pass12345678\"}" | jq -r '.userId' 2>/dev/null || echo "")
 
 # Get U2 ID from token payload
 U2_ID=$(echo $TOKEN2 | cut -d. -f2 | base64 -d 2>/dev/null | jq -r '.userId')

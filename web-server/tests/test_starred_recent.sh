@@ -11,12 +11,12 @@ echo -e "${BLUE}=== Testing Starred and Recent Files Features ===${NC}\n"
 echo -e "${BLUE}1. Registering user...${NC}"
 curl -s -X POST "$API_URL/users" \
   -H "Content-Type: application/json" \
-  -d '{"username": "testuser@gmail.com", "password": "password123", "firstName": "Test"}'
+  -d '{"username": "testuser@gmail.com", "password": "password12345678", "firstName": "Test"}'
 
 echo -e "\n${BLUE}2. Logging in...${NC}"
 TOKEN_RESPONSE=$(curl -s -X POST "$API_URL/tokens" \
   -H "Content-Type: application/json" \
-  -d '{"username": "testuser@gmail.com", "password": "password123"}')
+  -d '{"username": "testuser@gmail.com", "password": "password12345678"}')
 TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.token')
 echo "Token: ${TOKEN:0:30}..."
 

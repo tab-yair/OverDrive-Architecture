@@ -44,17 +44,17 @@ VIEWER_EMAIL="viewer${TS}@gmail.com"
 
 OWNER_RESP=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$OWNER_EMAIL\",\"password\":\"password123\",\"firstName\":\"Owner\"}")
+  -d "{\"username\":\"$OWNER_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Owner\"}")
 OWNER_ID=$(extract_id "$OWNER_RESP")
 
 EDITOR_RESP=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$EDITOR_EMAIL\",\"password\":\"password123\",\"firstName\":\"Editor\"}")
+  -d "{\"username\":\"$EDITOR_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Editor\"}")
 EDITOR_ID=$(extract_id "$EDITOR_RESP")
 
 VIEWER_RESP=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$VIEWER_EMAIL\",\"password\":\"password123\",\"firstName\":\"Viewer\"}")
+  -d "{\"username\":\"$VIEWER_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Viewer\"}")
 VIEWER_ID=$(extract_id "$VIEWER_RESP")
 
 if [[ -n "$OWNER_ID" && -n "$EDITOR_ID" && -n "$VIEWER_ID" ]]; then
@@ -68,15 +68,15 @@ fi
 info "Logging in users..."
 OWNER_TOKEN=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$OWNER_EMAIL\",\"password\":\"password123\"}" | jq -r '.token')
+  -d "{\"username\":\"$OWNER_EMAIL\",\"password\":\"password12345678\"}" | jq -r '.token')
 
 EDITOR_TOKEN=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$EDITOR_EMAIL\",\"password\":\"password123\"}" | jq -r '.token')
+  -d "{\"username\":\"$EDITOR_EMAIL\",\"password\":\"password12345678\"}" | jq -r '.token')
 
 VIEWER_TOKEN=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$VIEWER_EMAIL\",\"password\":\"password123\"}" | jq -r '.token')
+  -d "{\"username\":\"$VIEWER_EMAIL\",\"password\":\"password12345678\"}" | jq -r '.token')
 
 if [[ -n "$OWNER_TOKEN" && -n "$EDITOR_TOKEN" && -n "$VIEWER_TOKEN" ]]; then
     pass "All users logged in successfully"
@@ -310,7 +310,7 @@ info "Creating target user for sharing test..."
 TARGET_EMAIL="target${TS}@gmail.com"
 TARGET_RESP=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$TARGET_EMAIL\",\"password\":\"password123\",\"firstName\":\"Target\"}")
+  -d "{\"username\":\"$TARGET_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Target\"}")
 TARGET_ID=$(extract_id "$TARGET_RESP")
 
 if [[ -n "$TARGET_ID" ]]; then

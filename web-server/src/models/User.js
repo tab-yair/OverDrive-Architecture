@@ -21,8 +21,8 @@ class User {
         if (!emailResult.valid) {
             return `Invalid email: ${emailResult.reason}`;
         }
-        if (!data.password || data.password.length < 4) {
-            return "Password must be at least 4 characters";
+        if (!data.password || data.password.length < 8) {
+            return "Password must be at least 8 characters";
         }
         if (!data.firstName) {
             return "First name is required";
