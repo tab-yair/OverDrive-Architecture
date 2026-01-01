@@ -33,10 +33,10 @@ class PermissionService {
             throw new Error("Cannot grant OWNER permission via POST. Use PATCH on existing permission to transfer ownership.");
         }
 
-        // Check requester is owner or has Share permission
+        // Check requester is owner or has Share permission (EDITOR or above)
         const canShare = await this.canUserShareFile(requestingUserId, fileId);
         if (!canShare) {
-            throw new Error("Permission denied: You cannot share this file");
+            throw new Error("Permission denied: Only editors and owners can share files");
         }
 
         // If permission already exists, it will be replaced (old one deleted automatically)
@@ -117,18 +117,7 @@ class PermissionService {
         };
     }
 
-    // Add custom permission
-    async addCustomPermission(fileId, userId, customPermissions, requestingUserId) {
-        // Validate custom permissions
-        const requiredKeys = ['canRead', 'canWrite', 'canDelete', 'canShare'];
-        const hasAllKeys = requiredKeys.every(key => typeof customPermissions[key] === 'boolean');
-        
-        if (!hasAllKeys) {
-            throw new Error("Custom permissions must include: canRead, canWrite, canDelete, canShare");
-        }
-
-        return await this.addPermission({ fileId, userId, level: 'CUSTOM', customPermissions, requestingUserId });
-    }
+   
 
     // Update existing permission level only
     async updatePermission(permissionId, updates, requestingUserId) {
@@ -149,13 +138,36 @@ class PermissionService {
             throw new Error("Permission denied: You cannot modify this permission");
         }
 
+        // Check if permission is inherited - cannot modify directly
+        if (permission.isInherited) {
+            // Check if user has permission to edit the source folder
+            const sourceFolder = await filesStore.getById(permission.inheritedFrom);
+            const canEditSource = await this.canUserWrite(requestingUserId, permission.inheritedFrom);
+            
+            const error = {
+                error: "Cannot modify inherited permission directly",
+                message: "This permission is inherited from a parent folder. To modify it, please change the permission on the parent folder.",
+                canEditSource: canEditSource,
+                sourceFolder: sourceFolder ? {
+                    id: sourceFolder.id,
+                    name: sourceFolder.name,
+                    path: sourceFolder.path
+                } : null
+            };
+            
+            // Return structured error as JSON for client to handle
+            const err = new Error(JSON.stringify(error));
+            err.isStructuredError = true;
+            throw err;
+        }
+
         // Only allow level changes (not userId changes)
         if (!updates.level) {
             throw new Error("Only permission level can be updated via PATCH");
         }
 
         // Validate level
-        const validLevels = ['VIEWER', 'EDITOR', 'CUSTOM', 'OWNER'];
+        const validLevels = ['VIEWER', 'EDITOR', 'OWNER'];
         if (!validLevels.includes(updates.level)) {
             throw new Error("Invalid permission level");
         }
@@ -167,16 +179,18 @@ class PermissionService {
             return await this.transferOwnership(permission.fileId, permission.userId, requestingUserId);
         }
 
-        if (updates.level === 'CUSTOM' && !updates.customPermissions) {
-            throw new Error("Custom permissions required for CUSTOM level");
-        }
-
         // Cannot change owner's permission level to something else
         if (permission.level === 'OWNER') {
             throw new Error("Cannot change owner's permission level. Transfer ownership first.");
         }
 
-        const updatedPermission = await permissionStore.update(permissionId, { level: updates.level, customPermissions: updates.customPermissions });
+        const updatedPermission = await permissionStore.update(permissionId, { level: updates.level, customPermissions: null });
+        
+        // If this is a folder, update all inherited permissions recursively
+        if (file.type === 'folder') {
+            await this._updateInheritedPermissionsRecursively(file.id, permission.userId, updates.level);
+        }
+        
         return updatedPermission;
     }
 
@@ -227,6 +241,12 @@ class PermissionService {
         const canView = await this.canUserAccessFile(requestingUserId, fileId);
         if (!canView) {
             throw new Error("Permission denied");
+        }
+
+        // Check if user has share permission (EDITOR or above)
+        const canShare = await this.canUserShareFile(requestingUserId, fileId);
+        if (!canShare) {
+            throw new Error("You don't have permission to view sharing details for this file");
         }
 
         const permissions = await permissionStore.getByFileId(fileId);
@@ -411,6 +431,30 @@ class PermissionService {
             // If child is a folder, recurse
             if (child.type === 'folder') {
                 await this._removeInheritedPermissionsRecursively(child.id, userId, parentPermissionId);
+            }
+        }
+    }
+
+    /**
+     * Recursively update inherited permissions when parent permission changes
+     * Updates level of all inherited permissions from this folder
+     */
+    async _updateInheritedPermissionsRecursively(folderId, userId, newLevel) {
+        // Get all children of this folder
+        const children = await filesStore.getByParentId(folderId);
+        
+        for (const child of children) {
+            // Update only inherited permissions from this folder
+            const allPerms = await permissionStore.getAllPermissionsForUserFile(userId, child.id);
+            const inheritedPerm = allPerms.find(p => p.isInherited && p.inheritedFrom === folderId);
+            
+            if (inheritedPerm) {
+                await permissionStore.update(inheritedPerm.pid, { level: newLevel, customPermissions: null });
+            }
+            
+            // If child is a folder, recurse
+            if (child.type === 'folder') {
+                await this._updateInheritedPermissionsRecursively(child.id, userId, newLevel);
             }
         }
     }

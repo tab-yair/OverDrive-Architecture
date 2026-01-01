@@ -20,4 +20,4 @@ EXPOSE 3000
 ENV NODE_ENV='production'
 
 # Start the Node.js server
-CMD ["node", "server.js"]
+CMD ["node", "src/server.js"]

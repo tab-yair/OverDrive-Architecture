@@ -27,7 +27,10 @@ const getStatusFromError = (error) => {
     }
 
     // 403 Forbidden
-    if (message.includes('permission denied') || message.includes('cannot remove owner')) {
+    if (message.includes('permission denied') || 
+        message.includes('cannot remove owner') ||
+        message.includes("don't have permission") ||
+        message.includes('only editors and owners')) {
         return 403;
     }
 
@@ -50,6 +53,16 @@ const getStatusFromError = (error) => {
  * Must be registered after all routes
  */
 const errorHandler = (err, req, res, next) => {
+    // Check if error is a structured error (JSON format)
+    if (err.isStructuredError) {
+        try {
+            const errorData = JSON.parse(err.message);
+            return res.status(403).json(errorData);
+        } catch (parseError) {
+            // If parsing fails, continue with normal error handling
+        }
+    }
+
     // Use explicit status if set on error, otherwise derive from message
     const status = err.status || getStatusFromError(err);
 

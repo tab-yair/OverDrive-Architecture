@@ -40,7 +40,12 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
+// Export app for testing
+module.exports = app;
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Web Server running on port ${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Web Server running on port ${PORT}`);
+    });
+}

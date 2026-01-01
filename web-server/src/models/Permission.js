@@ -20,6 +20,11 @@ class Permission {
         'OWNER':  { canRead: true, canWrite: true, canDelete: true,  canShare: true }
     };
 
+    // Check if user can edit based on permission level
+    static canEdit(level) {
+        return level === 'EDITOR' || level === 'OWNER';
+    }
+
     // Get permission strength (for comparing)
     static getStrength(level) {
         const strengths = { 'VIEWER': 1, 'EDITOR': 2, 'OWNER': 3 };
@@ -43,9 +48,7 @@ class Permission {
     static can(permissionObj, action) {
         if (!permissionObj) return false;
         const actionKey = `can${action}`;
-        if (permissionObj.level === 'CUSTOM') {
-            return permissionObj.customPermissions?.[actionKey] || false;
-        }
+        // CUSTOM level no longer supported
         return Permission.LEVELS[permissionObj.level]?.[actionKey] || false;
     }
 
@@ -54,12 +57,8 @@ class Permission {
         if (!data.fileId) return "File ID is required";
         if (!data.userId) return "User ID is required";
 
-        const validLevels = ['VIEWER', 'EDITOR', 'OWNER', 'CUSTOM'];
+        const validLevels = ['VIEWER', 'EDITOR', 'OWNER'];
         if (!validLevels.includes(data.level)) return "Invalid permission level";
-
-        if (data.level === 'CUSTOM' && !data.customPermissions) {
-            return "Custom permissions required for CUSTOM level";
-        }
 
         return null;
     }
