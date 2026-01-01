@@ -11,6 +11,7 @@ const { Permission } = require('./Permission.js');
 const { usersStore } = require('./usersStore.js');
 const { filesStore } = require('./filesStore.js');
 const { permissionStore } = require('./permissionStore.js');
+const { authStore } = require('./authStore.js');
 
 module.exports = {
     User,
@@ -18,5 +19,6 @@ module.exports = {
     Permission,
     usersStore,
     filesStore,
-    permissionStore
+    permissionStore,
+    authStore
 };

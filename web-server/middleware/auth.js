@@ -1,26 +1,32 @@
 /**
  * Authentication middleware
- * Validates user-id header for protected routes
+ * Validates JWT token for protected routes
  */
 
-const { usersStore } = require('../models/usersStore.js');
+const { authStore } = require('../models/authStore.js');
 
 const requireAuth = async (req, res, next) => {
-    const userId = req.headers['user-id'];
+    // Get token from Authorization header (Bearer token)
+    const authHeader = req.headers['authorization'];
 
-    if (!userId) {
-        return res.status(401).json({ error: 'User ID required in header' });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authentication required. Please provide a valid JWT token' });
     }
 
-    // Validate user exists in database
-    const user = await usersStore.getById(userId);
-    if (!user) {
-        return res.status(401).json({ error: 'Invalid user ID' });
-    }
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    // Attach userId to request for use in controllers
-    req.userId = userId;
-    next();
+    try {
+        // Verify and decode token
+        const decoded = authStore.verifyToken(token);
+
+        // Attach userId to request for use in controllers
+        req.userId = decoded.userId;
+        req.user = decoded; // Attach full decoded token data
+
+        next();
+    } catch (error) {
+        return res.status(401).json({ error: error.message || 'Invalid or expired token' });
+    }
 };
 
 module.exports = {

@@ -1,10 +1,11 @@
-const {userService} = require('../services/userService');
+const { userService } = require('../services/userService');
+const { authStore } = require('../models/authStore');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 /**
  * POST /api/tokens
  * Authenticate user (login)
- * Returns user-id if successful (will change to JWT in Exercise 4)
+ * Returns JWT token if successful
  */
 const login = asyncHandler(async (req, res) => {
     const { username, password, ...extraFields } = req.body;
@@ -30,8 +31,14 @@ const login = asyncHandler(async (req, res) => {
     // Call service to authenticate
     const user = await userService.authenticate(username, password);
 
-    // Return user-id (temporary - will be token in Exercise 4)
-    res.status(200).json({ 'user-id': user.id });
+    // Generate JWT token
+    const token = authStore.generateToken({
+        userId: user.id,
+        username: user.username
+    });
+
+    // Return JWT token
+    res.status(200).json({ token });
 });
 
 module.exports = {
