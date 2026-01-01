@@ -47,6 +47,7 @@ const usersStore = {
         }
 
         Object.assign(user, updates);
+        user.modifiedAt = new Date().toISOString();
         return User.toSafeObject(user);
     },
 

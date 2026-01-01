@@ -83,6 +83,7 @@ const permissionStore = {
         if (!perm) return null;
         
         Object.assign(perm, updates);
+        perm.modifiedAt = new Date().toISOString();
         return { ...perm };
     },
 

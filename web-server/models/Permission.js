@@ -6,7 +6,9 @@ class Permission {
         this.userId = userId;
         this.level = level;
         this.customPermissions = customPermissions;
-        this.createdAt = new Date();
+        const now = new Date().toISOString();
+        this.createdAt = now;
+        this.modifiedAt = now;
     }
 
     // Predefined permission levels

@@ -68,7 +68,7 @@ class FileService {
 
             // Update file metadata
             const updates = { 
-                updatedAt: new Date().toISOString()
+                modifiedAt: new Date().toISOString()
             };
             
             // Update size if content is provided
@@ -164,8 +164,8 @@ class FileService {
             throw new Error("File not found");
         }
 
-        // Save original updatedAt for optimistic locking
-        const expectedUpdatedAt = file.updatedAt;
+        // Save original modifiedAt for optimistic locking
+        const expectedModifiedAt = file.modifiedAt;
 
         // Check write permission
         const hasPermission = await this.checkPermission(userId, fileId, 'Write');
@@ -173,7 +173,7 @@ class FileService {
             throw new Error("Permission denied");
         }
 
-        const metadataUpdates = { updatedAt: new Date().toISOString() };
+        const metadataUpdates = { modifiedAt: new Date().toISOString() };
         let contentUpdated = false;
 
         try {
@@ -202,7 +202,7 @@ class FileService {
             }
 
             // 4. Update metadata in store with optimistic locking
-            const updatedFile = await filesStore.update(fileId, metadataUpdates, expectedUpdatedAt);
+            const updatedFile = await filesStore.update(fileId, metadataUpdates, expectedModifiedAt);
 
             return {
                 success: true,

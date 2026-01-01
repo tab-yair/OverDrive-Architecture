@@ -8,7 +8,9 @@ class User {
         this.firstName = firstName;
         this.lastName = lastName;
         this.profileImage = profileImage;
-        this.createdAt = new Date();
+        const now = new Date().toISOString();
+        this.createdAt = now;
+        this.modifiedAt = now;
     }
     
     // Basic user data validation
