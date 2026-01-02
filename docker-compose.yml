@@ -35,6 +35,7 @@ services:
       - PORT=3000
       - STORAGE_SERVER_HOST=storage-server
       - STORAGE_SERVER_PORT=5555
+      - STORAGE_LIMIT_MB=100
     networks:
       - overdrive_net
   tests:
