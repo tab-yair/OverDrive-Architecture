@@ -174,17 +174,8 @@ class StorageServerClient {
 
                 // Send command
                 try {
-                    // CRITICAL: Command must NOT contain \n except at the end
-                    // The C++ server's receive() uses \n as delimiter and will
-                    // stop reading when it encounters one, causing protocol errors.
-                    // Content with newlines is rejected - single-line content only.
-                    if (command.includes('\n')) {
-                        cleanup();
-                        connection.destroy();
-                        reject(new Error('Command contains illegal newline character'));
-                        return;
-                    }
-                    
+                    // PROTOCOL NOTE: Commands are line-based (\n delimited)
+                    // File content uses escaped newlines (\n → \\n) to remain searchable
                     connection.write(command + '\n');
                 } catch (err) {
                     cleanup();
@@ -206,21 +197,48 @@ class StorageServerClient {
     }
 
     // POST - Save file to server
+    // Newlines are escaped (\n → \\n) to support multi-line files
+    // while keeping content searchable and compatible with line-based C++ protocol
     async post(fileId, content) {
-        // Store content as plain text (newlines will be rejected by sendCommand)
+        // Convert to string if buffer
         const textContent = Buffer.isBuffer(content)
-            ? content.toString()
+            ? content.toString('utf-8')
             : content;
-
-        const command = `POST ${fileId} ${textContent}`;
+        
+        // Escape special characters to prevent protocol violations
+        // Order matters: escape backslashes first, then newlines
+        const escapedContent = textContent
+            .replace(/\\/g, '\\\\')  // Escape backslashes: \ → \\\\
+            .replace(/\n/g, '\\n')     // Escape newlines: \n → \\n
+            .replace(/\r/g, '\\r');    // Escape carriage returns: \r → \\r
+        
+        const command = `POST ${fileId} ${escapedContent}`;
 
         return await this.sendCommand(command);
     }
 
     // GET - Retrieve file from server
+    // Escaped newlines are restored (\\n → \n) to return original multi-line content
     async get(fileId) {
         const command = `GET ${fileId}`;
-        return await this.sendCommand(command);
+        const response = await this.sendCommand(command);
+        
+        // Unescape content if present
+        if (response.success && response.data) {
+            try {
+                // Restore escaped characters
+                // Order matters: unescape newlines/returns first, then backslashes
+                const unescaped = response.data
+                    .replace(/\\n/g, '\n')      // Unescape newlines: \\n → \n
+                    .replace(/\\r/g, '\r')      // Unescape carriage returns: \\r → \r
+                    .replace(/\\\\/g, '\\');   // Unescape backslashes: \\\\ → \ (must be last)
+                response.data = unescaped;
+            } catch (err) {
+                console.warn(`Failed to unescape content for ${fileId}: ${err.message}`);
+            }
+        }
+        
+        return response;
     }
 
     // DELETE - Remove file from server
