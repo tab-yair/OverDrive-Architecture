@@ -83,7 +83,7 @@ SUBFOLDER_ID=$(echo "$RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -
 RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN1" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"file.txt\",\"type\":\"file\",\"content\":\"Hello World\",\"parentId\":\"$SUBFOLDER_ID\"}")
+  -d "{\"name\":\"file.txt\",\"type\":\"docs\",\"content\":\"Hello World\",\"parentId\":\"$SUBFOLDER_ID\"}")
 FILE_ID=$(echo "$RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
 
 if [[ -n "$FOLDER_ID" && -n "$SUBFOLDER_ID" && -n "$FILE_ID" ]]; then
@@ -171,7 +171,7 @@ info "Creating a new file for User2 to test copy"
 RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN2" \
   -H "Content-Type: application/json" \
-  -d '{"name":"FileToCopy.txt","type":"file","content":"Copy test"}')
+  -d '{"name":"FileToCopy.txt","type":"docs","content":"Copy test"}')
 COPY_TEST_FILE=$(echo "$RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
 
 info "User2 copying own file to root"
@@ -211,20 +211,20 @@ FOLDER_A=$(echo "$RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\
 curl -s -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN1" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"file1.txt\",\"type\":\"file\",\"content\":\"File 1\",\"parentId\":\"$FOLDER_A\"}" > /dev/null
+  -d "{\"name\":\"file1.txt\",\"type\":\"docs\",\"content\":\"File 1\",\"parentId\":\"$FOLDER_A\"}" > /dev/null
 
 # Create SubfolderB in FolderA
 RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN1" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"SubfolderB\",\"type\":\"folder\",\"parentId\":\"$FOLDER_A\"}")
-SUBFOLDER_B=$(echo "$RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
+SUBFOLDER_B=$(echo "$RESP" | grep -i "Location:" | sed 's/.*\/files\///;s/\r//')
 
 # Create file2.txt in SubfolderB
 curl -s -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN1" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"file2.txt\",\"type\":\"file\",\"content\":\"File 2\",\"parentId\":\"$SUBFOLDER_B\"}" > /dev/null
+  -d "{\"name\":\"file2.txt\",\"type\":\"docs\",\"content\":\"File 2\",\"parentId\":\"$SUBFOLDER_B\"}" > /dev/null
 
 info "Copying entire FolderA"
 FOLDER_COPY=$(curl -s -X POST "$BASE_URL/api/files/$FOLDER_A/copy" \
@@ -246,13 +246,20 @@ fi
 
 section "TEST 6: Shared With Me"
 
-info "Granting EDITOR permission to User3 on FolderA"
-U3_ID=$(echo $TOKEN3 | cut -d. -f2 | base64 -d 2>/dev/null | jq -r '.userId')
-
-curl -s -X POST "$BASE_URL/api/files/$FOLDER_A/permissions" \
+info "Creating a specific file to share directly with User3"
+RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN1" \
   -H "Content-Type: application/json" \
-  -d "{\"targetUserId\":\"$U3_ID\",\"permissionLevel\":\"EDITOR\"}" > /dev/null
+  -d '{"name":"DirectlySharedFile.txt","type":"docs","content":"Direct share test"}')
+DIRECT_SHARED_FILE=$(echo "$RESP" | grep -i "Location:" | sed 's/.*\/files\///;s/\r//')
+
+info "Granting DIRECT VIEWER permission to User3 on the file"
+U3_ID=$(echo $TOKEN3 | cut -d. -f2 | base64 -d 2>/dev/null | jq -r '.userId')
+
+curl -s -X POST "$BASE_URL/api/files/$DIRECT_SHARED_FILE/permissions" \
+  -H "Authorization: Bearer $TOKEN1" \
+  -H "Content-Type: application/json" \
+  -d "{\"targetUserId\":\"$U3_ID\",\"permissionLevel\":\"VIEWER\"}" > /dev/null
 
 info "Getting 'Shared With Me' for User3"
 SHARED=$(curl -s -X GET "$BASE_URL/api/files/shared" \
@@ -261,8 +268,8 @@ SHARED=$(curl -s -X GET "$BASE_URL/api/files/shared" \
 SHARED_COUNT=$(echo "$SHARED" | jq '. | length')
 SHARED_NAME=$(echo "$SHARED" | jq -r '.[0].name' 2>/dev/null)
 
-if [[ "$SHARED_COUNT" -gt "0" && "$SHARED_NAME" == "FolderA" ]]; then
-    pass "Shared With Me works - User3 sees shared folder"
+if [[ "$SHARED_COUNT" -gt "0" && "$SHARED_NAME" == "DirectlySharedFile.txt" ]]; then
+    pass "Shared With Me works - User3 sees directly shared file"
 else
     fail "Shared With Me failed (count: $SHARED_COUNT, name: $SHARED_NAME)"
 fi
@@ -272,7 +279,7 @@ info "User3 should NOT see files they own in 'Shared With Me'"
 curl -s -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN3" \
   -H "Content-Type: application/json" \
-  -d '{"name":"MyOwnFile.txt","type":"file","content":"Mine"}' > /dev/null
+  -d '{"name":"MyOwnFile.txt","type":"docs","content":"Mine"}' > /dev/null
 
 SHARED_AFTER=$(curl -s -X GET "$BASE_URL/api/files/shared" \
   -H "Authorization: Bearer $TOKEN3")

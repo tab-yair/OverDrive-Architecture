@@ -24,8 +24,8 @@ echo "✓ Retrieved: $USER"
 # Create files
 echo "4. Creating files..."
 F1=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"name":"TestFolder","type":"folder"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
-F2=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"name":"zebra.txt","type":"file","content":"Zebra research data"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
-F3=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"name":"python.txt","type":"file","content":"Python code example"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
+F2=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"name":"zebra.txt","type":"docs","content":"Zebra research data"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
+F3=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"name":"python.txt","type":"docs","content":"Python code example"}' -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
 echo "✓ Files: $F1, $F2, $F3"
 
 # List files

@@ -83,7 +83,7 @@ info "Creating file with RLE content (Owner: User 1)..."
 FILE_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"project_report.txt","type":"file","content":"CONFIDENTIAL_DATA_123"}')
+  -d '{"name":"project_report.txt","type":"docs","content":"CONFIDENTIAL_DATA_123"}')
 
 FILE_ID=$(echo "$FILE_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
 
@@ -135,13 +135,13 @@ info "Creating additional files for starring tests..."
 FILE2_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"important.txt","type":"file","content":"Important document"}')
+  -d '{"name":"important.txt","type":"docs","content":"Important document"}')
 FILE2_ID=$(echo "$FILE2_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
 
 FILE3_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"notes.txt","type":"file","content":"Meeting notes"}')
+  -d '{"name":"notes.txt","type":"docs","content":"Meeting notes"}')
 FILE3_ID=$(echo "$FILE3_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
 
 if [[ -n "$FILE2_ID" && -n "$FILE3_ID" ]]; then
@@ -262,6 +262,26 @@ else
     fail "Recent files missing metadata fields"
 fi
 
+info "Creating and viewing a folder to verify folders don't appear in recent..."
+TEST_FOLDER_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"RecentTestFolder","type":"folder"}')
+TEST_FOLDER_ID=$(echo "$TEST_FOLDER_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
+
+sleep 1
+curl -s -X GET "$BASE_URL/api/files/$TEST_FOLDER_ID" -H "Authorization: Bearer $TOKEN" > /dev/null
+
+info "Verifying folder does NOT appear in recent files list..."
+RECENT_WITH_FOLDER=$(curl -s -X GET "$BASE_URL/api/files/recent" -H "Authorization: Bearer $TOKEN")
+FOLDER_IN_RECENT=$(echo "$RECENT_WITH_FOLDER" | jq --arg fid "$TEST_FOLDER_ID" '.[] | select(.id==$fid) | .id')
+
+if [[ -z "$FOLDER_IN_RECENT" ]]; then
+    pass "Folders correctly excluded from recent files list"
+else
+    fail "Folder incorrectly appears in recent files"
+fi
+
 section "SECTION 7: FILE COPY (DEEP COPY)"
 
 info "Testing file copy with default name..."
@@ -300,7 +320,7 @@ FOLDER_ID=$(echo "$FOLDER_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | 
 FILE_IN_FOLDER_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"nested.txt\",\"type\":\"file\",\"content\":\"Nested content\",\"parentId\":\"$FOLDER_ID\"}")
+  -d "{\"name\":\"nested.txt\",\"type\":\"docs\",\"content\":\"Nested content\",\"parentId\":\"$FOLDER_ID\"}") 
 FILE_IN_FOLDER_ID=$(echo "$FILE_IN_FOLDER_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
 
 info "Testing deep copy of folder..."
@@ -377,7 +397,7 @@ info "Creating file owned by User 2 and sharing with User 1..."
 U2_FILE_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN2" \
   -H "Content-Type: application/json" \
-  -d '{"name":"u2_file.txt","type":"file","content":"User 2 content"}')
+  -d '{"name":"u2_file.txt","type":"docs","content":"User 2 content"}')
 U2_FILE_ID=$(echo "$U2_FILE_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
 
 curl -s -X POST "$BASE_URL/api/files/$U2_FILE_ID/permissions" \
@@ -414,7 +434,7 @@ SUB_FOLDER=$(echo "$SUB_FOLDER_RESP" | grep -i "Location:" | sed 's/.*\/files\//
 DEEP_FILE_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"DeepFile.txt\",\"type\":\"file\",\"content\":\"Deep content\",\"parentId\":\"$SUB_FOLDER\"}")
+  -d "{\"name\":\"DeepFile.txt\",\"type\":\"docs\",\"content\":\"Deep content\",\"parentId\":\"$SUB_FOLDER\"}") 
 DEEP_FILE=$(echo "$DEEP_FILE_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
 
 if [[ -n "$MAIN_FOLDER" && -n "$SUB_FOLDER" && -n "$DEEP_FILE" ]]; then
@@ -496,18 +516,18 @@ COPY_SRC=$(echo "$COPY_SRC_RESP" | grep -i "Location:" | sed 's/.*\/files\///' |
 curl -s -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"file1.txt\",\"type\":\"file\",\"content\":\"File 1\",\"parentId\":\"$COPY_SRC\"}" > /dev/null
+  -d "{\"name\":\"file1.txt\",\"type\":\"docs\",\"content\":\"File 1\",\"parentId\":\"$COPY_SRC\"}" > /dev/null
 
 COPY_SUBFOLDER_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"SubDir\",\"type\":\"folder\",\"parentId\":\"$COPY_SRC\"}")
-COPY_SUBFOLDER=$(echo "$COPY_SUBFOLDER_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
+COPY_SUBFOLDER=$(echo "$COPY_SUBFOLDER_RESP" | grep -i "Location:" | sed 's/.*\/files\///;s/\r//')
 
 curl -s -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"file2.txt\",\"type\":\"file\",\"content\":\"File 2\",\"parentId\":\"$COPY_SUBFOLDER\"}" > /dev/null
+  -d "{\"name\":\"file2.txt\",\"type\":\"docs\",\"content\":\"File 2\",\"parentId\":\"$COPY_SUBFOLDER\"}" > /dev/null
 
 if [[ -n "$COPY_SRC" && -n "$COPY_SUBFOLDER" ]]; then
     pass "Source folder structure created"
@@ -589,7 +609,7 @@ else
     fail "Copy ownership transfer failed"
 fi
 
-section "SECTION 11: RECURSIVE DELETION"
+section "SECTION 11: RECURSIVE DELETION (TRASH + PERMANENT DELETE)"
 
 info "Creating folder with nested structure for deletion test..."
 DEL_FOLDER_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
@@ -601,7 +621,7 @@ DEL_FOLDER=$(echo "$DEL_FOLDER_RESP" | grep -i "Location:" | sed 's/.*\/files\//
 DEL_FILE_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"child.txt\",\"type\":\"file\",\"content\":\"Will be deleted\",\"parentId\":\"$DEL_FOLDER\"}")
+  -d "{\"name\":\"child.txt\",\"type\":\"docs\",\"content\":\"Will be deleted\",\"parentId\":\"$DEL_FOLDER\"}") 
 DEL_FILE=$(echo "$DEL_FILE_RESP" | grep -i "Location:" | sed 's/.*\/files\///' | tr -d '\r\n ')
 
 if [[ -n "$DEL_FOLDER" && -n "$DEL_FILE" ]]; then
@@ -610,14 +630,34 @@ else
     fail "Failed to create deletion test structure"
 fi
 
-info "Deleting parent folder (should cascade to children)..."
+info "Moving parent folder to trash (should cascade to children)..."
 DEL_STATUS=$(curl -s -w "%{http_code}" -o /dev/null -X DELETE "$BASE_URL/api/files/$DEL_FOLDER" \
   -H "Authorization: Bearer $TOKEN")
 
 if [[ "$DEL_STATUS" == "204" ]]; then
-    pass "Folder deleted successfully"
+    pass "Folder moved to trash successfully"
 else
-    fail "Folder deletion failed (HTTP $DEL_STATUS)"
+    fail "Folder move to trash failed (HTTP $DEL_STATUS)"
+fi
+
+info "Verifying folder is in trash (owner can still access)..."
+FOLDER_IN_TRASH=$(curl -s -X GET "$BASE_URL/api/files/$DEL_FOLDER" \
+  -H "Authorization: Bearer $TOKEN" | jq -r '.isTrashed')
+
+if [[ "$FOLDER_IN_TRASH" == "true" ]]; then
+    pass "Folder correctly marked as trashed"
+else
+    fail "Folder not in trash (isTrashed=$FOLDER_IN_TRASH)"
+fi
+
+info "Permanently deleting folder from trash (should cascade to children)..."
+PERM_DEL_STATUS=$(curl -s -w "%{http_code}" -o /dev/null -X DELETE "$BASE_URL/api/files/trash/$DEL_FOLDER" \
+  -H "Authorization: Bearer $TOKEN")
+
+if [[ "$PERM_DEL_STATUS" == "204" ]]; then
+    pass "Folder permanently deleted successfully"
+else
+    fail "Permanent deletion failed (HTTP $PERM_DEL_STATUS)"
 fi
 
 info "Verifying child file was also deleted (should get 404)..."
@@ -731,6 +771,139 @@ if [[ "$COPY_IN_RECENT_FINAL" == "$NEW_COPY" ]]; then
     pass "Copied file appears in recent after interaction"
 else
     fail "Copied file missing from recent after interaction"
+fi
+
+section "SECTION 14: PDF AND IMAGE FILE TYPES (READ-ONLY CONTENT)"
+
+info "Creating PDF file..."
+PDF_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"document.pdf","type":"pdf","content":"PDF_BINARY_DATA_HERE"}')
+PDF_ID=$(echo "$PDF_RESP" | grep -i "Location:" | sed 's/.*\/files\///;s/\r//')
+
+if [[ -n "$PDF_ID" ]]; then
+    pass "PDF file created successfully (ID: $PDF_ID)"
+else
+    fail "PDF file creation failed"
+fi
+
+info "Creating image file..."
+IMAGE_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"photo.jpg","type":"image","content":"IMAGE_BINARY_DATA_HERE"}')
+IMAGE_ID=$(echo "$IMAGE_RESP" | grep -i "Location:" | sed 's/.*\/files\///;s/\r//')
+
+if [[ -n "$IMAGE_ID" ]]; then
+    pass "Image file created successfully (ID: $IMAGE_ID)"
+else
+    fail "Image file creation failed"
+fi
+
+info "Attempting to PATCH content of PDF file (should fail)..."
+PDF_EDIT_RESP=$(curl -s -X PATCH "$BASE_URL/api/files/$PDF_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Modified PDF content"}')
+
+PDF_ERROR=$(echo "$PDF_EDIT_RESP" | jq -r '.error')
+if [[ "$PDF_ERROR" == "Cannot modify content of pdf files - they are read-only" ]]; then
+    pass "PDF content modification correctly blocked with proper error message"
+else
+    fail "PDF content modification error incorrect: $PDF_ERROR"
+fi
+
+info "Attempting to PATCH content of image file (should fail)..."
+IMAGE_EDIT_RESP=$(curl -s -X PATCH "$BASE_URL/api/files/$IMAGE_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Modified image content"}')
+
+IMAGE_ERROR=$(echo "$IMAGE_EDIT_RESP" | jq -r '.error')
+if [[ "$IMAGE_ERROR" == "Cannot modify content of image files - they are read-only" ]]; then
+    pass "Image content modification correctly blocked with proper error message"
+else
+    fail "Image content modification error incorrect: $IMAGE_ERROR"
+fi
+
+info "Testing PATCH can update name of PDF file..."
+PDF_RENAME=$(curl -s -w "\n%{http_code}" -X PATCH "$BASE_URL/api/files/$PDF_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"renamed_document.pdf"}')
+
+PDF_RENAME_CODE=$(echo "$PDF_RENAME" | tail -n1)
+if [[ "$PDF_RENAME_CODE" == "204" ]]; then
+    VERIFY_NAME=$(curl -s -X GET "$BASE_URL/api/files/$PDF_ID" -H "Authorization: Bearer $TOKEN" | jq -r '.name')
+    if [[ "$VERIFY_NAME" == "renamed_document.pdf" ]]; then
+        pass "PDF file name can be updated successfully"
+    else
+        fail "PDF file name update failed (got: $VERIFY_NAME)"
+    fi
+else
+    fail "PDF rename failed (HTTP $PDF_RENAME_CODE)"
+fi
+
+info "Testing PATCH can update name of image file..."
+IMAGE_RENAME=$(curl -s -w "\n%{http_code}" -X PATCH "$BASE_URL/api/files/$IMAGE_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"renamed_photo.jpg"}')
+
+IMAGE_RENAME_CODE=$(echo "$IMAGE_RENAME" | tail -n1)
+if [[ "$IMAGE_RENAME_CODE" == "204" ]]; then
+    VERIFY_IMAGE_NAME=$(curl -s -X GET "$BASE_URL/api/files/$IMAGE_ID" -H "Authorization: Bearer $TOKEN" | jq -r '.name')
+    if [[ "$VERIFY_IMAGE_NAME" == "renamed_photo.jpg" ]]; then
+        pass "Image file name can be updated successfully"
+    else
+        fail "Image file name update failed (got: $VERIFY_IMAGE_NAME)"
+    fi
+else
+    fail "Image rename failed (HTTP $IMAGE_RENAME_CODE)"
+fi
+
+info "Creating folder for testing parentId updates..."
+TEST_FOLDER_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"MediaFolder","type":"folder"}')
+TEST_FOLDER_ID=$(echo "$TEST_FOLDER_RESP" | grep -i "Location:" | sed 's/.*\/files\///;s/\r//')
+
+info "Testing PATCH can update parentId of PDF file..."
+PDF_MOVE=$(curl -s -w "\n%{http_code}" -X PATCH "$BASE_URL/api/files/$PDF_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"parentId\":\"$TEST_FOLDER_ID\"}")
+
+PDF_MOVE_CODE=$(echo "$PDF_MOVE" | tail -n1)
+if [[ "$PDF_MOVE_CODE" == "204" ]]; then
+    VERIFY_PARENT=$(curl -s -X GET "$BASE_URL/api/files/$PDF_ID" -H "Authorization: Bearer $TOKEN" | jq -r '.parentId')
+    if [[ "$VERIFY_PARENT" == "$TEST_FOLDER_ID" ]]; then
+        pass "PDF file parentId can be updated successfully"
+    else
+        fail "PDF file parentId update failed (got: $VERIFY_PARENT)"
+    fi
+else
+    fail "PDF move failed (HTTP $PDF_MOVE_CODE)"
+fi
+
+info "Testing PATCH can update parentId of image file..."
+IMAGE_MOVE=$(curl -s -w "\n%{http_code}" -X PATCH "$BASE_URL/api/files/$IMAGE_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"parentId\":\"$TEST_FOLDER_ID\"}")
+
+IMAGE_MOVE_CODE=$(echo "$IMAGE_MOVE" | tail -n1)
+if [[ "$IMAGE_MOVE_CODE" == "204" ]]; then
+    VERIFY_IMAGE_PARENT=$(curl -s -X GET "$BASE_URL/api/files/$IMAGE_ID" -H "Authorization: Bearer $TOKEN" | jq -r '.parentId')
+    if [[ "$VERIFY_IMAGE_PARENT" == "$TEST_FOLDER_ID" ]]; then
+        pass "Image file parentId can be updated successfully"
+    else
+        fail "Image file parentId update failed (got: $VERIFY_IMAGE_PARENT)"
+    fi
+else
+    fail "Image move failed (HTTP $IMAGE_MOVE_CODE)"
 fi
 
 section "FINAL SUMMARY"

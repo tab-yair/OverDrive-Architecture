@@ -24,17 +24,17 @@ echo -e "\n${BLUE}3. Creating 3 test files...${NC}"
 curl -s -X POST "$API_URL/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name": "file1.txt", "type": "file", "content": "Content 1"}'
+  -d '{"name": "file1.txt", "type": "docs", "content": "Content 1"}'
 
 curl -s -X POST "$API_URL/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name": "file2.txt", "type": "file", "content": "Content 2"}'
+  -d '{"name": "file2.txt", "type": "docs", "content": "Content 2"}'
 
 curl -s -X POST "$API_URL/files" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name": "file3.txt", "type": "file", "content": "Content 3"}'
+  -d '{"name": "file3.txt", "type": "docs", "content": "Content 3"}'
 
 echo -e "${GREEN}✓ Files created${NC}"
 

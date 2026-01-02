@@ -2,47 +2,80 @@
 
 BASE_URL="http://localhost:3000"
 
+# Generate unique usernames
+RANDOM_ID=$(date +%s%N)
+USER1="user1test${RANDOM_ID}@gmail.com"
+USER2="user2test${RANDOM_ID}@gmail.com"
+
 # Create users
 echo "Creating User 1..."
-REGISTER1=$(curl -s -X POST "$BASE_URL/api/auth/register" \
+curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d '{"email":"u1@test.com","password":"pass123","name":"User1"}')
+  -d "{\"username\":\"$USER1\",\"password\":\"pass1234\",\"firstName\":\"User1\"}" > /dev/null
 
-TOKEN1=$(echo "$REGISTER1" | jq -r '.token')
+TOKEN1=$(curl -s -X POST "$BASE_URL/api/tokens" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"$USER1\",\"password\":\"pass1234\"}" | jq -r '.token')
 echo "User 1 token: $TOKEN1"
 
 sleep 0.5
 
 echo "Creating User 2..."
-REGISTER2=$(curl -s -X POST "$BASE_URL/api/auth/register" \
+curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d '{"email":"u2@test.com","password":"pass123","name":"User2"}')
+  -d "{\"username\":\"$USER2\",\"password\":\"pass1234\",\"firstName\":\"User2\"}" > /dev/null
 
-TOKEN2=$(echo "$REGISTER2" | jq -r '.token')
+TOKEN2=$(curl -s -X POST "$BASE_URL/api/tokens" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"$USER2\",\"password\":\"pass1234\"}" | jq -r '.token')
 echo "User 2 token: $TOKEN2"
+
+sleep 0.5
+
+# Get User IDs
+echo "Getting User IDs..."
+DUMMY1=$(curl -s -i -X POST "$BASE_URL/api/files" \
+  -H "Authorization: Bearer $TOKEN1" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"dummy1.txt","type":"docs","content":"x"}' | grep -i "^location:" | sed 's/.*\///;s/\r//')
+USER1_ID=$(curl -s -X GET "$BASE_URL/api/files/$DUMMY1" -H "Authorization: Bearer $TOKEN1" | jq -r '.ownerId')
+curl -s -X DELETE "$BASE_URL/api/files/$DUMMY1" -H "Authorization: Bearer $TOKEN1" > /dev/null
+curl -s -X DELETE "$BASE_URL/api/files/trash/$DUMMY1" -H "Authorization: Bearer $TOKEN1" > /dev/null
+
+DUMMY2=$(curl -s -i -X POST "$BASE_URL/api/files" \
+  -H "Authorization: Bearer $TOKEN2" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"dummy2.txt","type":"docs","content":"x"}' | grep -i "^location:" | sed 's/.*\///;s/\r//')
+USER2_ID=$(curl -s -X GET "$BASE_URL/api/files/$DUMMY2" -H "Authorization: Bearer $TOKEN2" | jq -r '.ownerId')
+curl -s -X DELETE "$BASE_URL/api/files/$DUMMY2" -H "Authorization: Bearer $TOKEN2" > /dev/null
+curl -s -X DELETE "$BASE_URL/api/files/trash/$DUMMY2" -H "Authorization: Bearer $TOKEN2" > /dev/null
+
+echo "User 1 ID: $USER1_ID"
+echo "User 2 ID: $USER2_ID"
 
 sleep 0.5
 
 # User 1 creates file
 echo "Creating file..."
-FILE_RESPONSE=$(curl -s -X POST "$BASE_URL/api/files" \
+FILE_RESPONSE=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $TOKEN1" \
   -H "Content-Type: application/json" \
-  -d '{"name":"shared-test.txt","type":"file","contentUrl":"http://test.com/file"}')
+  -d '{"name":"shared-test.txt","type":"docs","content":"Shared content"}')
 
-FILE_ID=$(echo "$FILE_RESPONSE" | jq -r '.id')
+FILE_ID=$(echo "$FILE_RESPONSE" | grep -i "^location:" | sed 's/.*\///;s/\r//')
 echo "Created file: $FILE_ID"
 
 sleep 0.5
 
 # Grant VIEWER to User 2
 echo "Granting permission..."
-PERM_RESPONSE=$(curl -s -X POST "$BASE_URL/api/permissions" \
+PERM_RESPONSE=$(curl -s -i -X POST "$BASE_URL/api/files/$FILE_ID/permissions" \
   -H "Authorization: Bearer $TOKEN1" \
   -H "Content-Type: application/json" \
-  -d "{\"fileId\":\"$FILE_ID\",\"userId\":\"u2@test.com\",\"level\":\"VIEWER\"}")
+  -d "{\"targetUserId\":\"$USER2_ID\",\"permissionLevel\":\"VIEWER\"}")
 
-echo "Permission granted: $PERM_RESPONSE"
+PERM_ID=$(echo "$PERM_RESPONSE" | grep -i "^location:" | sed 's/.*\///;s/\r//')
+echo "Permission granted: $PERM_ID"
 
 sleep 0.5
 

@@ -32,12 +32,20 @@ const createFile = asyncHandler(async (req, res) => {
     }
 
     if (!type) {
-        throw new Error('Type is required (file or folder)');
+        throw new Error('Type is required (folder, docs, pdf, or image)');
     }
 
-    // If it's a file (not folder), content might be required
-    if (type === 'file' && content === undefined) {
-        throw new Error('Content is required for files');
+    // If it's not a folder, content is required
+    if (type !== 'folder' && content === undefined) {
+        throw new Error('Content is required for docs, pdf, and image files');
+    }
+
+    // If creating in a folder (parentId provided), check write permission
+    if (parentId) {
+        const canWrite = await fileService.checkPermission(req.userId, parentId, 'Write');
+        if (!canWrite) {
+            throw new Error('Permission denied: cannot create files in this folder');
+        }
     }
 
     // Create file metadata (size will be set by uploadFile)
@@ -49,8 +57,8 @@ const createFile = asyncHandler(async (req, res) => {
         size: 0  // Size will be updated by uploadFile
     });
 
-    // If it's a file (not folder), upload to storage server
-    if (type === 'file') {
+    // If it's not a folder, upload to storage server
+    if (type !== 'folder') {
         await fileService.uploadFile(file.id, content);
     }
 
@@ -94,6 +102,14 @@ const updateFile = asyncHandler(async (req, res) => {
         throw new Error('At least one field (name, content, parentId) must be provided');
     }
 
+    // If content update is requested, check if file type allows it
+    if (content !== undefined) {
+        const fileInfo = await fileService.getFileInfo(id, req.userId);
+        if (fileInfo.type === 'pdf' || fileInfo.type === 'image') {
+            throw new Error(`Cannot modify content of ${fileInfo.type} files - they are read-only`);
+        }
+    }
+
     // Build updates object with only provided fields
     const updates = {};
     if (name !== undefined) updates.name = name;
@@ -108,12 +124,12 @@ const updateFile = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/files/:id
- * Delete file or folder (recursive)
+ * Remove file or folder (move to trash or hide for non-owners)
  */
 const deleteFile = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    await fileService.deleteFile(id, req.userId);
+    await fileService.removeFile(id, req.userId);
 
     // Return 204 No Content
     res.status(204).end();
@@ -172,6 +188,53 @@ const getSharedFiles = asyncHandler(async (req, res) => {
     res.status(200).json(files);
 });
 
+/**
+ * GET /api/files/trash
+ * Get all items in trash (top-level only)
+ */
+const getTrashItems = asyncHandler(async (req, res) => {
+    const trashItems = await fileService.getTrashItems(req.userId);
+    res.status(200).json(trashItems);
+});
+
+/**
+ * DELETE /api/files/trash/:id
+ * Permanently delete a file from trash
+ */
+const permanentDeleteFile = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    await fileService.permanentDeleteFile(id, req.userId);
+    res.status(204).end();
+});
+
+/**
+ * POST /api/files/trash/:id/restore
+ * Restore a file from trash
+ */
+const restoreFile = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    await fileService.restoreFile(id, req.userId);
+    res.status(204).end();
+});
+
+/**
+ * DELETE /api/files/trash
+ * Empty trash (permanently delete all trashed items)
+ */
+const emptyTrash = asyncHandler(async (req, res) => {
+    const result = await fileService.emptyTrash(req.userId);
+    res.status(200).json(result);
+});
+
+/**
+ * POST /api/files/trash/restore
+ * Restore all items from trash
+ */
+const restoreAllTrash = asyncHandler(async (req, res) => {
+    const result = await fileService.restoreAllTrash(req.userId);
+    res.status(200).json(result);
+});
+
 module.exports = {
     getAllFiles,
     createFile,
@@ -182,5 +245,10 @@ module.exports = {
     getRecentFiles,
     toggleStarFile,
     copyFile,
-    getSharedFiles
+    getSharedFiles,
+    getTrashItems,
+    permanentDeleteFile,
+    restoreFile,
+    emptyTrash,
+    restoreAllTrash
 };

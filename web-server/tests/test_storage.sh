@@ -48,7 +48,7 @@ echo "4. Creating small file..."
 FILE1_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/files \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{"name":"small.txt","type":"file","content":"AAAA"}')
+    -d '{"name":"small.txt","type":"docs","content":"AAAA"}')
 FILE1_ID=$(extract_id "$FILE1_RESPONSE")
 echo "✓ File created: $FILE1_ID"
 
@@ -84,7 +84,7 @@ echo "7. Creating another file..."
 FILE2_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/files \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{"name":"medium.txt","type":"file","content":"BBBBBBBBBB"}')
+    -d '{"name":"medium.txt","type":"docs","content":"BBBBBBBBBB"}')
 FILE2_ID=$(extract_id "$FILE2_RESPONSE")
 echo "✓ File created: $FILE2_ID"
 
@@ -92,22 +92,36 @@ STORAGE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN")
 USED_BEFORE_DELETE=$(echo "$STORAGE" | jq -r '.storageUsed')
 echo "✓ Storage before deletion: $USED_BEFORE_DELETE bytes"
 
-# Delete first file
-echo "8. Deleting first file..."
+# Delete first file (moves to trash - doesn't free storage yet)
+echo "8. Deleting first file (moves to trash)..."
 curl -s -X DELETE $BASE_URL/api/files/$FILE1_ID \
     -H "Authorization: Bearer $TOKEN"
 
 STORAGE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN")
+USED_AFTER_TRASH=$(echo "$STORAGE" | jq -r '.storageUsed')
+echo "✓ Storage after moving to trash: $USED_AFTER_TRASH bytes"
+
+if [[ "$USED_AFTER_TRASH" != "$USED_BEFORE_DELETE" ]]; then
+    echo "✗ ERROR: Storage should NOT change when moving to trash (actual deletion happens on permanent delete)"
+    exit 1
+fi
+
+# Permanently delete from trash (this should free storage)
+echo "9. Permanently deleting from trash..."
+curl -s -X DELETE $BASE_URL/api/files/trash/$FILE1_ID \
+    -H "Authorization: Bearer $TOKEN"
+
+STORAGE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN")
 USED_AFTER_DELETE=$(echo "$STORAGE" | jq -r '.storageUsed')
-echo "✓ Storage after deletion: $USED_AFTER_DELETE bytes"
+echo "✓ Storage after permanent deletion: $USED_AFTER_DELETE bytes"
 
 if [[ "$USED_AFTER_DELETE" -ge "$USED_BEFORE_DELETE" ]]; then
-    echo "✗ ERROR: Storage should have decreased after deletion"
+    echo "✗ ERROR: Storage should have decreased after permanent deletion"
     exit 1
 fi
 
 # Test storage limit
-echo "9. Testing storage limit enforcement..."
+echo "10. Testing storage limit enforcement..."
 # Note: Testing with a truly massive file (100MB+) is impractical in bash
 # Instead, we verify that the storage endpoint correctly reports limits
 STORAGE_INFO=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN")
@@ -120,7 +134,7 @@ else
 fi
 
 # Test copy and storage tracking
-echo "10. Testing copy with storage tracking..."
+echo "11. Testing copy with storage tracking..."
 COPY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/api/files/$FILE2_ID/copy \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
@@ -147,7 +161,7 @@ else
 fi
 
 # Test folder storage (folders shouldn't consume storage)
-echo "11. Testing folder creation (should not consume storage)..."
+echo "12. Testing folder creation (should not consume storage)..."
 STORAGE_BEFORE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN" | jq -r '.storageUsed')
 
 FOLDER_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/files \
@@ -203,7 +217,7 @@ echo "14. Testing EDITOR permissions - storage should track owner only..."
 FILE3_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/files \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{"name":"shared.txt","type":"file","content":"ORIGINALCONTENT"}')
+    -d '{"name":"shared.txt","type":"docs","content":"ORIGINALCONTENT"}')
 FILE3_ID=$(extract_id "$FILE3_RESPONSE")
 echo "✓ File created by User 1: $FILE3_ID"
 
@@ -258,7 +272,7 @@ echo "✓ Parent folder created by User 1: $PARENT_FOLDER_ID"
 FILE_IN_FOLDER1_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/files \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"name\":\"file1.txt\",\"type\":\"file\",\"content\":\"USER1DATA\",\"parentId\":\"$PARENT_FOLDER_ID\"}")
+    -d "{\"name\":\"file1.txt\",\"type\":\"docs\",\"content\":\"USER1DATA\",\"parentId\":\"$PARENT_FOLDER_ID\"}")
 FILE_IN_FOLDER1_ID=$(extract_id "$FILE_IN_FOLDER1_RESPONSE")
 echo "✓ File1 created by User 1 in folder"
 
@@ -272,36 +286,76 @@ curl -s -X POST $BASE_URL/api/files/$PARENT_FOLDER_ID/permissions \
 FILE_IN_FOLDER2_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/files \
     -H "Authorization: Bearer $TOKEN2" \
     -H "Content-Type: application/json" \
-    -d "{\"name\":\"file2.txt\",\"type\":\"file\",\"content\":\"USER2DATA\",\"parentId\":\"$PARENT_FOLDER_ID\"}")
+    -d "{\"name\":\"file2.txt\",\"type\":\"docs\",\"content\":\"USER2DATA\",\"parentId\":\"$PARENT_FOLDER_ID\"}")
 FILE_IN_FOLDER2_ID=$(extract_id "$FILE_IN_FOLDER2_RESPONSE")
 echo "✓ File2 created by User 2 in folder"
 
 USER1_BEFORE_DELETE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN" | jq -r '.storageUsed')
 USER2_BEFORE_DELETE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN2" | jq -r '.storageUsed')
 
-# User 1 deletes the entire parent folder
+# User 1 deletes the entire parent folder (moves to trash first)
 curl -s -X DELETE $BASE_URL/api/files/$PARENT_FOLDER_ID \
+    -H "Authorization: Bearer $TOKEN"
+
+USER1_AFTER_TRASH=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN" | jq -r '.storageUsed')
+USER2_AFTER_TRASH=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN2" | jq -r '.storageUsed')
+
+echo "✓ User 1 storage before delete: $USER1_BEFORE_DELETE bytes"
+echo "✓ User 1 storage after trash: $USER1_AFTER_TRASH bytes"
+echo "✓ User 2 storage before delete: $USER2_BEFORE_DELETE bytes"
+echo "✓ User 2 storage after trash: $USER2_AFTER_TRASH bytes"
+
+# Storage should NOT change when moving to trash
+if [[ "$USER1_AFTER_TRASH" != "$USER1_BEFORE_DELETE" ]]; then
+    echo "✗ ERROR: User 1 storage should not change when moving to trash"
+    exit 1
+fi
+
+if [[ "$USER2_AFTER_TRASH" != "$USER2_BEFORE_DELETE" ]]; then
+    echo "✗ ERROR: User 2 storage should not change when moving to trash"
+    exit 1
+fi
+
+# Now permanently delete from trash
+curl -s -X DELETE $BASE_URL/api/files/trash/$PARENT_FOLDER_ID \
     -H "Authorization: Bearer $TOKEN"
 
 USER1_AFTER_DELETE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN" | jq -r '.storageUsed')
 USER2_AFTER_DELETE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN2" | jq -r '.storageUsed')
 
-echo "✓ User 1 storage before delete: $USER1_BEFORE_DELETE bytes"
-echo "✓ User 1 storage after delete: $USER1_AFTER_DELETE bytes"
-echo "✓ User 2 storage before delete: $USER2_BEFORE_DELETE bytes"
-echo "✓ User 2 storage after delete: $USER2_AFTER_DELETE bytes"
+echo "✓ User 1 storage after permanent delete: $USER1_AFTER_DELETE bytes"
+echo "✓ User 2 storage after permanent delete: $USER2_AFTER_DELETE bytes"
 
+# User 1's files should be deleted (folder + file1)
 if [[ "$USER1_AFTER_DELETE" -ge "$USER1_BEFORE_DELETE" ]]; then
     echo "✗ ERROR: User 1 storage should decrease after deleting their files"
     exit 1
 fi
 
-if [[ "$USER2_AFTER_DELETE" -ge "$USER2_BEFORE_DELETE" ]]; then
-    echo "✗ ERROR: User 2 storage should decrease after their files are deleted"
+# User 2's file should NOT be deleted - it becomes an orphan (parentId=null)
+# This is the orphan handling behavior tested in test_trash.sh Test 11
+if [[ "$USER2_AFTER_DELETE" != "$USER2_BEFORE_DELETE" ]]; then
+    echo "✗ ERROR: User 2 storage should NOT change (their file becomes orphan, not deleted)"
     exit 1
 fi
 
-echo "✓ Nested folder deletion correctly freed storage for each owner"
+# Verify User 2's file still exists and is now orphaned
+FILE2_CHECK=$(curl -s $BASE_URL/api/files/$FILE_IN_FOLDER2_ID -H "Authorization: Bearer $TOKEN2")
+FILE2_PARENT=$(echo "$FILE2_CHECK" | jq -r '.parentId')
+FILE2_OWNER=$(echo "$FILE2_CHECK" | jq -r '.ownerId')
+
+if [[ "$FILE2_PARENT" != "null" ]]; then
+    echo "✗ ERROR: User 2's file should be orphaned (parentId should be null)"
+    exit 1
+fi
+
+if [[ "$FILE2_OWNER" != "$USER2_ID" ]]; then
+    echo "✗ ERROR: User 2 should still own their file"
+    exit 1
+fi
+
+echo "✓ User 1's files deleted, User 2's file orphaned (storage preserved)"
+echo "✓ Orphan handling verified: User 2's file accessible with parentId=null"
 
 # Test: Rename and move should NOT affect storage
 echo ""
@@ -310,7 +364,7 @@ echo "16. Testing rename/move operations (should not affect storage)..."
 FILE4_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/files \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{"name":"renameme.txt","type":"file","content":"STATICCONTENT"}')
+    -d '{"name":"renameme.txt","type":"docs","content":"STATICCONTENT"}')
 FILE4_ID=$(extract_id "$FILE4_RESPONSE")
 echo "✓ File created: $FILE4_ID"
 
@@ -363,7 +417,7 @@ echo "17. Testing content update affects owner's storage..."
 FILE5_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/files \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{"name":"updatetest.txt","type":"file","content":"SMALL"}')
+    -d '{"name":"updatetest.txt","type":"docs","content":"SMALL"}')
 FILE5_ID=$(extract_id "$FILE5_RESPONSE")
 echo "✓ File created with small content"
 

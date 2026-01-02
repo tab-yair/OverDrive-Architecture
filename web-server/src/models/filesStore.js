@@ -15,8 +15,8 @@ const filesStore = {
         _permissionStore = store;
     },
     
-    async create(id, name, type, ownerId, parentId = null, size = 0) {
-        const newItem = new FileItem(id, name, type, ownerId, parentId, size);
+    async create(id, name, type, ownerId, parentId = null, size = 0, isTrashed = false) {
+        const newItem = new FileItem(id, name, type, ownerId, parentId, size, isTrashed);
         
         filesById.set(id, newItem);
 

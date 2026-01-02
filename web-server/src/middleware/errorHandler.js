@@ -22,7 +22,12 @@ const getStatusFromError = (error) => {
     }
 
     // 400 Bad Request
-    if (message.includes('required') || message.includes('invalid') || message.includes('must be')) {
+    if (message.includes('required') || 
+        message.includes('invalid') || 
+        message.includes('must be') ||
+        message.includes('is not in trash') ||
+        message.includes('cannot modify content') ||
+        message.includes('before permanent deletion')) {
         return 400;
     }
 
@@ -30,7 +35,8 @@ const getStatusFromError = (error) => {
     if (message.includes('permission denied') || 
         message.includes('cannot remove owner') ||
         message.includes("don't have permission") ||
-        message.includes('only editors and owners')) {
+        message.includes('only editors and owners') ||
+        message.includes('only the owner can')) {
         return 403;
     }
 

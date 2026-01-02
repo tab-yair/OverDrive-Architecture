@@ -102,7 +102,7 @@ SUB_ID=$(extract_id "$SUB_RESP")
 FILE_RESP=$(curl -s -i -X POST "$BASE_URL/api/files" \
   -H "Authorization: Bearer $OWNER_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"TestFile.txt\",\"type\":\"file\",\"parentId\":\"$SUB_ID\",\"content\":\"Test content\"}")
+  -d "{\"name\":\"TestFile.txt\",\"type\":\"docs\",\"parentId\":\"$SUB_ID\",\"content\":\"Test content\"}")
 FILE_ID=$(extract_id "$FILE_RESP")
 
 if [[ -n "$PARENT_ID" && -n "$SUB_ID" && -n "$FILE_ID" ]]; then

@@ -19,7 +19,7 @@ const _removeFromMap = (map, key, pid) => {
 };
 
 const permissionStore = {
-    async create(pid, fileId, userId, level, isInherited = false, inheritedFrom = null) {
+    async create(pid, fileId, userId, level, isInherited = false, inheritedFrom = null, isHiddenForUser = false) {
         // Check if permission already exists for this user+file combination
         const existingKey = `${userId}:${fileId}`;
         const existingPerm = permissionsByUserFile.get(existingKey);
@@ -29,7 +29,7 @@ const permissionStore = {
             await permissionStore.delete(existingPerm.pid);
         }
         
-        const newPermission = new Permission(pid, fileId, userId, level, isInherited, inheritedFrom);
+        const newPermission = new Permission(pid, fileId, userId, level, isInherited, inheritedFrom, isHiddenForUser);
 
         // Save in indexes
         permissionsById.set(pid, newPermission);

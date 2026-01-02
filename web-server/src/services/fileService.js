@@ -55,7 +55,7 @@ class FileService {
             throw new Error("File not found");
         }
 
-        if (file.type !== 'file') {
+        if (file.type === 'folder') {
             throw new Error("Cannot upload content to a folder");
         }
 
@@ -100,7 +100,7 @@ class FileService {
 
     // Helper: Validate and update file content
     async _validateAndUpdateContent(fileId, file, content) {
-        if (file.type !== 'file') {
+        if (file.type === 'folder') {
             throw new Error("Cannot update content of a folder");
         }
 
@@ -263,54 +263,10 @@ class FileService {
         return await this.updateFile(fileId, { name: newName }, userId);
     }
 
-    // DELETE - Remove file or folder (recursive)
+    // DELETE - Remove file or folder (now delegates to removeFile for trash logic)
     async deleteFile(fileId, userId) {
-        // Check file exists
-        const file = await filesStore.getById(fileId);
-        if (!file) {
-            throw new Error("File not found");
-        }
-
-        // Check delete permission
-        const hasPermission = await this.checkPermission(userId, fileId, 'Delete');
-        if (!hasPermission) {
-            throw new Error("Permission denied");
-        }
-
-        try {
-            // Collect all files to be deleted (for storage tracking)
-            const allFilesToDelete = await this._collectFilesRecursive(fileId);
-            
-            // Calculate storage to free per owner
-            const storageByOwner = new Map();
-            for (const f of allFilesToDelete) {
-                if (f.type === 'file') {
-                    const currentSize = storageByOwner.get(f.ownerId) || 0;
-                    storageByOwner.set(f.ownerId, currentSize + (f.size || 0));
-                }
-            }
-
-            // filesStore.delete handles recursion, permission cleanup, and returns physicalFileIds
-            const physicalFilesToDelete = await filesStore.delete(fileId);
-
-            // Delete from storage-server
-            const deletePromises = physicalFilesToDelete.map(fid => 
-                storageClient.delete(fid).catch(err => {
-                    // Silently ignore storage deletion failures
-                })
-            );
-            
-            await Promise.all(deletePromises);
-
-            // Update storage usage for all owners
-            for (const [ownerId, sizeToFree] of storageByOwner.entries()) {
-                await usersStore.updateStorageUsed(ownerId, -sizeToFree);
-            }
-
-            return { success: true, deletedFiles: physicalFilesToDelete };
-        } catch (error) {
-            throw new Error(`Delete failed: ${error.message}`);
-        }
+        // Use the new removeFile which handles trash/hide logic
+        return await this.removeFile(fileId, userId);
     }
 
     // Helper: Collect all files recursively (for storage tracking before deletion)
@@ -423,9 +379,15 @@ class FileService {
         // If parentId is null, returns top-level files
         const files = await filesStore.getByParentId(parentId);
         
-        // Filter by permissions
+        // Filter by permissions and exclude trashed files
         const accessibleFiles = [];
         for (const file of files) {
+            // Skip files in trash (they should only appear in trash endpoint)
+            const inTrash = await this._isInTrash(file.id);
+            if (inTrash) {
+                continue;
+            }
+            
             const hasPermission = await this.checkPermission(userId, file.id, 'Read');
             if (hasPermission) {
                 accessibleFiles.push(file);
@@ -439,12 +401,36 @@ class FileService {
     async checkPermission(userId, fileId, action) {
         // Check if user is the owner first
         const file = await filesStore.getById(fileId);
-        if (file && file.ownerId === userId) {
+        if (!file) {
+            return false;
+        }
+        
+        const isOwner = file.ownerId === userId;
+        
+        // Check if file or any parent is in trash
+        const inTrash = await this._isInTrash(fileId);
+        
+        if (inTrash) {
+            // Only owner can access files in trash
+            if (!isOwner) {
+                return false;
+            }
+            // Owner can access their trashed files
+            return true;
+        }
+        
+        // Not in trash - normal permission check
+        if (isOwner) {
             return true; // Owner has all permissions
         }
         
         const permission = await permissionStore.getUserPermissionForFile(userId, fileId);
         if (!permission) {
+            return false;
+        }
+        
+        // Check if permission is hidden for this user
+        if (permission.isHiddenForUser) {
             return false;
         }
         
@@ -470,9 +456,15 @@ class FileService {
         if (file.type === 'folder') {
             const childrenFiles = await filesStore.getByParentId(fileId);
             
-            // Filter children by permissions and return only metadata
+            // Filter children by permissions and exclude trashed files
             const accessibleChildren = [];
             for (const child of childrenFiles) {
+                // Skip files in trash (they should only appear in trash endpoint)
+                const inTrash = await this._isInTrash(child.id);
+                if (inTrash) {
+                    continue;
+                }
+                
                 const hasChildPermission = await this.checkPermission(userId, child.id, 'Read');
                 if (hasChildPermission) {
                     // Return only metadata - no content for files, no children for folders
@@ -514,6 +506,12 @@ class FileService {
         for (const metadata of starredMetadata) {
             const file = await filesStore.getById(metadata.fileId);
             if (file) {
+                // Skip files in trash
+                const inTrash = await this._isInTrash(file.id);
+                if (inTrash) {
+                    continue;
+                }
+                
                 // Check permission
                 const hasPermission = await this.checkPermission(userId, file.id, 'Read');
                 if (hasPermission) {
@@ -540,6 +538,17 @@ class FileService {
         for (const metadata of recentMetadata) {
             const file = await filesStore.getById(metadata.fileId);
             if (file) {
+                // Skip files in trash
+                const inTrash = await this._isInTrash(file.id);
+                if (inTrash) {
+                    continue;
+                }
+                
+                // Skip folders - only return docs, pdf, image
+                if (file.type === 'folder') {
+                    continue;
+                }
+                
                 // Check permission
                 const hasPermission = await this.checkPermission(userId, file.id, 'Read');
                 if (hasPermission) {
@@ -634,8 +643,8 @@ class FileService {
                 source.size
             );
 
-            // If it's a file, copy content from storage server
-            if (source.type === 'file') {
+            // If it's a file (not folder), copy content from storage server
+            if (source.type !== 'folder') {
                 try {
                     const sourceContent = await storageClient.get(sourceId);
                     if (sourceContent.success && sourceContent.data) {
@@ -684,7 +693,7 @@ class FileService {
             const hasPermission = await this.checkPermission(userId, currentId, 'Read');
             if (!hasPermission) continue;
 
-            if (current.type === 'file') {
+            if (current.type !== 'folder') {
                 totalSize += (current.size || 0);
             } else if (current.type === 'folder') {
                 const children = await filesStore.getByParentId(currentId);
@@ -702,9 +711,9 @@ class FileService {
         // Get all permissions for this user
         const permissions = await permissionStore.getByUserId(userId);
         
-        // Filter to only VIEWER and EDITOR (not OWNER)
+        // Filter to only VIEWER and EDITOR (not OWNER), and only DIRECT permissions (not inherited)
         const sharedPermissions = permissions.filter(p => 
-            p.level === 'VIEWER' || p.level === 'EDITOR'
+            (p.level === 'VIEWER' || p.level === 'EDITOR') && !p.isInherited
         );
 
         // Fetch the actual files with metadata
@@ -727,6 +736,358 @@ class FileService {
         }
 
         return files;
+    }
+
+    // ========== TRASH MANAGEMENT ==========
+
+    /**
+     * Helper: Check if file is in trash (either directly or via parent chain)
+     * Recursively checks parent hierarchy for trashed items
+     */
+    async _isInTrash(fileId) {
+        let current = await filesStore.getById(fileId);
+        
+        while (current) {
+            if (current.isTrashed) {
+                return true;
+            }
+            
+            if (current.parentId === null) {
+                break;
+            }
+            
+            current = await filesStore.getById(current.parentId);
+        }
+        
+        return false;
+    }
+
+    /**
+     * Helper: Check if user can see a file
+     * Considers trash status and hidden status
+     */
+    async _canSeeFile(userId, fileId) {
+        const file = await filesStore.getById(fileId);
+        if (!file) return false;
+
+        // Check if in trash (only owner can see trashed items in trash view)
+        const inTrash = await this._isInTrash(fileId);
+        
+        // If file is trashed and user is not owner, they can't see it
+        if (inTrash && file.ownerId !== userId) {
+            return false;
+        }
+
+        // Check if hidden for this user (Editor/Viewer local hide)
+        const permission = await permissionStore.getUserPermissionForFile(userId, fileId);
+        if (permission && permission.isHiddenForUser) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * REMOVE operation (Move to trash for owner, hide for Editor/Viewer)
+     * DELETE /api/files/:id
+     */
+    async removeFile(fileId, userId) {
+        const file = await filesStore.getById(fileId);
+        if (!file) {
+            throw new Error("File not found");
+        }
+
+        // Check if user has any permission on this file
+        const permission = await permissionStore.getUserPermissionForFile(userId, fileId);
+        const isOwner = file.ownerId === userId;
+        
+        if (!isOwner && !permission) {
+            throw new Error("Permission denied");
+        }
+
+        if (isOwner) {
+            // OWNER: Move to trash (global flag, preserve parentId)
+            await filesStore.update(fileId, { 
+                isTrashed: true,
+                modifiedAt: new Date().toISOString()
+            });
+
+            return { 
+                success: true, 
+                action: 'trashed',
+                message: 'File moved to trash. All users lost access.'
+            };
+        } else {
+            // EDITOR/VIEWER: Local hide (set isHiddenForUser flag)
+            await permissionStore.update(permission.pid, { 
+                isHiddenForUser: true 
+            });
+
+            return { 
+                success: true, 
+                action: 'hidden',
+                message: 'File removed from your view'
+            };
+        }
+    }
+
+    /**
+     * Get trash items (only top-level trashed items owned by user)
+     * GET /api/files/trash
+     */
+    async getTrashItems(userId) {
+        // Get all files owned by this user
+        const allOwnedFiles = await filesStore.getByOwnerId(userId);
+        
+        // Filter to only top-level trashed items
+        // Top-level = directly trashed (not trashed via parent)
+        const trashItems = [];
+        
+        for (const file of allOwnedFiles) {
+            if (file.isTrashed) {
+                // Check if parent is also trashed
+                let isTopLevel = true;
+                
+                if (file.parentId !== null) {
+                    const parent = await filesStore.getById(file.parentId);
+                    if (parent && parent.isTrashed) {
+                        isTopLevel = false;
+                    }
+                }
+                
+                if (isTopLevel) {
+                    trashItems.push(file);
+                }
+            }
+        }
+        
+        return trashItems;
+    }
+
+    /**
+     * Permanent delete (only owner, only from trash)
+     * DELETE /api/files/trash/:id
+     */
+    async permanentDeleteFile(fileId, userId) {
+        const file = await filesStore.getById(fileId);
+        if (!file) {
+            throw new Error("File not found");
+        }
+
+        // Only owner can permanently delete
+        if (file.ownerId !== userId) {
+            throw new Error("Only the owner can permanently delete files");
+        }
+
+        // File must be in trash
+        if (!file.isTrashed) {
+            throw new Error("File must be in trash before permanent deletion");
+        }
+
+        // Collect all files to be deleted
+        const allFilesToDelete = await this._collectFilesForPermanentDelete(fileId, userId);
+        
+        // Calculate storage to free per owner
+        const storageByOwner = new Map();
+        for (const f of allFilesToDelete) {
+            if (f.type !== 'folder') {
+                const currentSize = storageByOwner.get(f.ownerId) || 0;
+                storageByOwner.set(f.ownerId, currentSize + (f.size || 0));
+            }
+        }
+
+        // Delete the file and all owned children recursively
+        const physicalFilesToDelete = await this._permanentDeleteRecursive(fileId, userId);
+
+        // Delete from storage-server
+        const deletePromises = physicalFilesToDelete.map(fid => 
+            storageClient.delete(fid).catch(err => {
+                // Silently ignore storage deletion failures
+            })
+        );
+        
+        await Promise.all(deletePromises);
+
+        // Update storage usage
+        for (const [ownerId, sizeToFree] of storageByOwner.entries()) {
+            await usersStore.updateStorageUsed(ownerId, -sizeToFree);
+        }
+
+        return { 
+            success: true, 
+            deletedCount: physicalFilesToDelete.length 
+        };
+    }
+
+    /**
+     * Helper: Recursively delete file and owned children
+     * Orphan children owned by others (set parentId = null)
+     */
+    async _permanentDeleteRecursive(fileId, ownerId) {
+        const file = await filesStore.getById(fileId);
+        if (!file) return [];
+
+        const physicalFilesToDelete = [];
+        
+        // Get all children
+        const children = await filesStore.getByParentId(fileId);
+        
+        for (const child of children) {
+            if (child.ownerId === ownerId) {
+                // Recursively delete owned children
+                const childPhysicalIds = await this._permanentDeleteRecursive(child.id, ownerId);
+                physicalFilesToDelete.push(...childPhysicalIds);
+            } else {
+                // Orphan children owned by others (set parentId = null)
+                await filesStore.update(child.id, { parentId: null });
+            }
+        }
+
+        // Delete this file
+        if (file.type !== 'folder') {
+            physicalFilesToDelete.push(file.id);
+        }
+
+        // Delete permissions
+        await permissionStore.deleteAllForFile(fileId);
+        
+        // Remove from indices
+        const parentMap = await filesStore.getByParentId(file.parentId);
+        await filesStore.delete(fileId);
+
+        return physicalFilesToDelete;
+    }
+
+    /**
+     * Helper: Collect all files for permanent delete (for storage calculation)
+     */
+    async _collectFilesForPermanentDelete(fileId, ownerId) {
+        const files = [];
+        const stack = [fileId];
+
+        while (stack.length > 0) {
+            const currentId = stack.pop();
+            const current = await filesStore.getById(currentId);
+            
+            if (!current) continue;
+
+            if (current.ownerId === ownerId) {
+                files.push(current);
+
+                if (current.type === 'folder') {
+                    const children = await filesStore.getByParentId(currentId);
+                    for (const child of children) {
+                        if (child.ownerId === ownerId) {
+                            stack.push(child.id);
+                        }
+                    }
+                }
+            }
+        }
+
+        return files;
+    }
+
+    /**
+     * Restore file from trash (only owner)
+     * POST /api/files/trash/:id/restore
+     */
+    async restoreFile(fileId, userId) {
+        const file = await filesStore.getById(fileId);
+        if (!file) {
+            throw new Error("File not found");
+        }
+
+        // Only owner can restore
+        if (file.ownerId !== userId) {
+            throw new Error("Only the owner can restore files");
+        }
+
+        // File must be in trash
+        if (!file.isTrashed) {
+            throw new Error("File is not in trash");
+        }
+
+        // Restore the file (set isTrashed = false)
+        // ParentID was preserved, so it returns to original location
+        await filesStore.update(fileId, { 
+            isTrashed: false,
+            modifiedAt: new Date().toISOString()
+        });
+
+        // Recursively restore all children owned by this user
+        await this._restoreChildrenRecursive(fileId, userId);
+
+        return { 
+            success: true, 
+            message: 'File restored to original location'
+        };
+    }
+
+    /**
+     * Helper: Recursively restore children
+     */
+    async _restoreChildrenRecursive(fileId, ownerId) {
+        const children = await filesStore.getByParentId(fileId);
+        
+        for (const child of children) {
+            if (child.ownerId === ownerId && child.isTrashed) {
+                await filesStore.update(child.id, { 
+                    isTrashed: false,
+                    modifiedAt: new Date().toISOString()
+                });
+                
+                if (child.type === 'folder') {
+                    await this._restoreChildrenRecursive(child.id, ownerId);
+                }
+            }
+        }
+    }
+
+    /**
+     * Empty trash (bulk permanent delete)
+     * DELETE /api/files/trash
+     */
+    async emptyTrash(userId) {
+        // Get all top-level trash items
+        const trashItems = await this.getTrashItems(userId);
+        
+        let totalDeleted = 0;
+        
+        // Permanently delete each top-level item (which handles recursion)
+        for (const item of trashItems) {
+            const result = await this.permanentDeleteFile(item.id, userId);
+            totalDeleted += result.deletedCount;
+        }
+
+        return { 
+            success: true, 
+            deletedCount: totalDeleted,
+            message: `Permanently deleted ${totalDeleted} file(s) from trash`
+        };
+    }
+
+    /**
+     * Restore all trash items (bulk restore)
+     * POST /api/files/trash/restore
+     */
+    async restoreAllTrash(userId) {
+        // Get all top-level trash items
+        const trashItems = await this.getTrashItems(userId);
+        
+        let totalRestored = 0;
+        
+        // Restore each top-level item (which handles recursion)
+        for (const item of trashItems) {
+            await this.restoreFile(item.id, userId);
+            totalRestored++;
+        }
+
+        return { 
+            success: true, 
+            restoredCount: totalRestored,
+            message: `Restored ${totalRestored} item(s) from trash`
+        };
     }
 }
 

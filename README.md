@@ -58,18 +58,45 @@ Authorization: Bearer <JWT_TOKEN>
 | `POST` | `/api/files` | ✅ | **Create**: Upload a new file or create a folder |
 | `GET` | `/api/files` | ✅ | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
 | `GET` | `/api/files/starred` | ✅ | **Get Starred Files**: Retrieve all files starred by the current user with metadata (`isStarred`, `lastViewedAt`, `lastEditedAt`) |
-| `GET` | `/api/files/recent` | ✅ | **Get Recent Files**: Retrieve recently accessed files (viewed or edited), sorted by most recent interaction first. Includes `lastInteractionType` (VIEW/EDIT) |
-| `GET` | `/api/files/shared` | ✅ | **List Shared With Me**: Retrieve all files/folders where the user has VIEWER or EDITOR permissions, but is NOT the owner. Includes `sharedPermissionLevel` |
+| `GET` | `/api/files/recent` | ✅ | **Get Recent Files**: Retrieve recently accessed files (docs, pdf, image only - folders excluded), sorted by most recent interaction first. Includes `lastInteractionType` (VIEW/EDIT) |
+| `GET` | `/api/files/shared` | ✅ | **List Shared With Me**: Retrieve all files/folders where the user has **direct** VIEWER or EDITOR permissions (not inherited), and is NOT the owner. Includes `sharedPermissionLevel` |
 | `GET` | `/api/files/:id` | ✅ | **Fetch**: Get full metadata and content of a specific file/folder. Automatically records VIEW interaction |
 | `PATCH` | `/api/files/:id` | ✅ | **Update**: Update file/folder name or content or location. Automatically records EDIT interaction |
 | `POST` | `/api/files/:id/star` | ✅ | **Toggle Star**: Star or unstar a file. Returns `{ fileId, isStarred }` |
 | `POST` | `/api/files/:id/copy` | ✅ | **Copy**: Create a duplicate of a file/folder. The requester becomes the OWNER of the new copy. Body (optional): `{ parentId, newName }`. Performs deep copy for folders |
-| `DELETE` | `/api/files/:id` | ✅ | **Delete**: Remove a file or folder (includes recursive deletion) |
+| `DELETE` | `/api/files/:id` | ✅ | **Remove**: Move file/folder to trash (Owner) or hide from view (Editor/Viewer). For Owners: Sets global trash flag while preserving hierarchy. For Editors/Viewers: Local hide (non-recursive) |
+| `GET` | `/api/files/trash` | ✅ | **Get Trash**: Retrieve top-level items in trash (Owner only). Returns only directly trashed items, not their children |
+| `DELETE` | `/api/files/trash/:id` | ✅ | **Permanent Delete**: Permanently destroy file from trash (Owner only). Recursive deletion for folders. Orphans children owned by others (sets parentId=null) |
+| `POST` | `/api/files/trash/:id/restore` | ✅ | **Restore**: Bring file back from trash to original location (Owner only). Restores entire hierarchy recursively |
+| `DELETE` | `/api/files/trash` | ✅ | **Empty Trash**: Permanently delete all trashed items (Owner only). Bulk deletion starting from top-level items |
+| `POST` | `/api/files/trash/restore` | ✅ | **Restore All**: Restore all items from trash (Owner only). Bulk restore of entire trash hierarchy |
 | `GET` | `/api/search/:query` | ✅ | **Search**: Global search by name or content |
 | `GET` | `/api/files/:id/permissions` | ✅ | **Get Permissions**: Retrieve all permissions for a specific file/folder |
 | `POST` | `/api/files/:id/permissions` | ✅ | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
 | `PATCH` | `/api/files/:id/permissions/:pId` | ✅ | **Update Permission**: Modify permission level. Body: `{ permissionLevel }`. Allowed levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
 | `DELETE` | `/api/files/:id/permissions/:pId` | ✅ | **Revoke Permission**: Remove a specific permission |
+
+---
+
+## File Types
+
+OverDrive supports four file types with different content modification behaviors:
+
+| Type | Content Allowed | Content Editable (PATCH) | Description |
+|:---:|:---:|:---:|:---|
+| `folder` | ❌ | N/A | Container for organizing files. No content field. Zero storage consumption |
+| `docs` | ✅ | ✅ | Editable document files. Content can be created and updated via PATCH |
+| `pdf` | ✅ | ❌ | PDF documents. Content required on creation but **read-only** after. Only `name` and `parentId` can be updated |
+| `image` | ✅ | ❌ | Image files. Content required on creation but **read-only** after. Only `name` and `parentId` can be updated |
+
+**Content Modification Restrictions:**
+- Attempting to PATCH the `content` field of `pdf` or `image` files returns:
+  ```json
+  {
+    "error": "Cannot modify content of pdf files - they are read-only"
+  }
+  ```
+- You can still rename or move `pdf`/`image` files using PATCH with `name` or `parentId` fields
 
 ---
 
@@ -310,6 +337,227 @@ The permission system uses:
 
 ---
 
+## Trash Management: Remove, Delete, and Restore
+
+OverDrive implements a sophisticated trash system that differentiates between **temporary removal** (trash) and **permanent deletion**, with role-based behavior for Owners vs Editors/Viewers.
+
+### Core Constraint
+Every file/folder has **exactly one parent**. Root items have `parentId = null`. This hierarchy is **preserved** during trash operations.
+
+### Key Concepts
+
+#### 1. **Remove Operation** (DELETE /api/files/:id)
+Behavior depends on user role:
+
+**For Owner:**
+- Sets global flag `isTrashed = true`
+- **Crucial:** `parentId` is **NOT changed** - preserves original location
+- File becomes globally invisible to all users (Editors and Viewers)
+- Editors/Viewers see "File is in Owner's Trash" error if accessed via direct link
+- **Recursive impact**: All children owned by this Owner are implicitly trashed (visibility check traverses parent chain)
+
+**For Editor/Viewer:**
+- This is a **Local Remove** (Unlink)
+- Sets `isHiddenForUser = true` in the permission record
+- File disappears **only** from this user's view (e.g., "Shared with me")
+- **Non-recursive**: Only affects the specific item, not its children
+- No impact on Owner or other collaborators
+
+```javascript
+// Example: Owner removes folder
+DELETE /api/files/folder-123
+→ { isTrashed: true, parentId: "parent-folder" }  // parentId preserved!
+
+// Example: Editor removes folder
+DELETE /api/files/folder-123  
+→ Permission updated: { isHiddenForUser: true }  // Only local hide
+```
+
+#### 2. **Trash Listing** (GET /api/files/trash)
+Returns **only top-level trashed items** for clean hierarchical view:
+
+```
+Trashed Items (returned):
+├── MainFolder (trashed)
+│   ├── SubFolder (implicitly trashed - NOT returned)
+│   └── file.txt (implicitly trashed - NOT returned)
+└── StandaloneFile.txt (trashed)
+
+API returns: [MainFolder, StandaloneFile.txt]
+```
+
+**Implementation:**
+- Filters to items with `isTrashed = true`
+- Excludes items whose parent is also trashed
+- Only owner can see their trash
+
+#### 3. **Permanent Delete** (DELETE /api/files/trash/:id)
+**Authorization**: Owner only. File must be in trash.
+
+**Actions:**
+1. **Physical deletion** from database and storage server
+2. **Recursive deletion** for all children owned by this Owner
+3. **Orphan handling**: Children owned by different users get `parentId = null`
+4. **Storage quota**: Frees storage for the Owner
+
+```javascript
+// Example: Permanent delete with orphan handling
+Before:
+SharedProject (Owner: User1, isTrashed: true)
+├── myDoc.txt (Owner: User1)
+└── theirDoc.txt (Owner: User2)
+
+After permanent delete:
+→ SharedProject: DELETED ✅
+→ myDoc.txt: DELETED ✅
+→ theirDoc.txt: ORPHANED (parentId = null, still exists for User2) ✅
+```
+
+**Storage Impact:**
+```bash
+User1's folder (10 MB) deleted:
+- User1-owned files (8 MB): -8 MB from User1's quota
+- User2-owned files (2 MB): -2 MB from User2's quota
+```
+
+#### 4. **Restore** (POST /api/files/trash/:id/restore)
+**Authorization**: Owner only.
+
+**Actions:**
+- Sets `isTrashed = false`
+- **ParentID Management**: Since `parentId` was never changed during Remove, the item automatically returns to its **original location**
+- **Access restored**: All Editors and Viewers regain access globally
+- **Recursive**: Restores all children owned by this Owner
+
+```javascript
+// Example: Restore to original location
+Original: Reports (parentId: "work-folder")
+After Remove: Reports (parentId: "work-folder", isTrashed: true)
+After Restore: Reports (parentId: "work-folder", isTrashed: false)
+→ File reappears in "work-folder" automatically! ✅
+```
+
+#### 5. **Empty Trash** (DELETE /api/files/trash)
+Bulk permanent deletion:
+- Gets all top-level trash items
+- Permanently deletes each (with recursion)
+- Returns total count of deleted files
+
+#### 6. **Restore All** (POST /api/files/trash/restore)
+Bulk restore:
+- Gets all top-level trash items
+- Restores each to original location (with recursion)
+- Returns total count of restored items
+
+### Hierarchical Visibility Rules
+
+File visibility is determined by traversing the **parent chain**:
+
+```javascript
+// Check if file is trashed (recursive check)
+function isInTrash(fileId) {
+  let current = getFile(fileId);
+  while (current) {
+    if (current.isTrashed) return true;
+    if (current.parentId === null) break;
+    current = getFile(current.parentId);
+  }
+  return false;
+}
+```
+
+**Example:**
+```
+MainFolder (isTrashed: false)
+└── SubFolder (isTrashed: true)
+    └── file.txt (isTrashed: false)
+
+isInTrash("file.txt") → true ✅  // Parent is trashed
+```
+
+#### Trashed Files Exclusion from Listings
+
+Files in trash are **excluded from all regular listings** to prevent confusion:
+
+- **GET /api/files** - Root folder listing
+- **GET /api/files/:id** - Folder children (when getting folder metadata)
+- **GET /api/files/starred** - Starred files
+- **GET /api/files/recent** - Recently accessed files
+- **GET /api/files/shared** - Shared with me
+
+**However**, Owners **can** access trashed files directly via:
+- **GET /api/files/:id** - Direct access by file ID (returns `isTrashed: true`)
+- **GET /api/files/trash** - Dedicated trash listing endpoint
+
+**Non-owners** attempting to access a trashed file will receive:
+- **403 Forbidden** - "Permission denied"
+
+This ensures trashed content is isolated and only accessible through the trash interface.
+
+### API Examples
+
+#### Owner Workflow
+```bash
+# 1. Move to trash
+curl -X DELETE http://localhost:3000/api/files/folder-123 \
+  -H "Authorization: Bearer <TOKEN>"
+→ Folder moved to trash, all users lose access
+
+# 2. View trash
+curl -X GET http://localhost:3000/api/files/trash \
+  -H "Authorization: Bearer <TOKEN>"
+→ Returns: [{ id: "folder-123", name: "MyFolder", isTrashed: true, ... }]
+
+# 3. Restore
+curl -X POST http://localhost:3000/api/files/trash/folder-123/restore \
+  -H "Authorization: Bearer <TOKEN>"
+→ Folder restored to original location, access restored
+
+# 4. Permanent delete
+curl -X DELETE http://localhost:3000/api/files/trash/folder-123 \
+  -H "Authorization: Bearer <TOKEN>"
+→ Folder permanently destroyed, storage freed
+
+# 5. Empty entire trash
+curl -X DELETE http://localhost:3000/api/files/trash \
+  -H "Authorization: Bearer <TOKEN>"
+→ All trashed items permanently deleted
+```
+
+#### Editor/Viewer Workflow
+```bash
+# Remove from my view (local hide)
+curl -X DELETE http://localhost:3000/api/files/shared-file-456 \
+  -H "Authorization: Bearer <TOKEN>"
+→ File removed from "Shared with me", but still exists for Owner
+```
+
+### Error Scenarios
+
+```bash
+# Non-owner tries to restore
+POST /api/files/trash/:id/restore
+→ 403 Forbidden: "Only the owner can restore files"
+
+# Try to permanently delete non-trashed file
+DELETE /api/files/trash/:id
+→ 400 Bad Request: "File must be in trash before permanent deletion"
+
+# Editor tries to access trashed file
+GET /api/files/:id (file is trashed by Owner)
+→ 403 Forbidden: "File is in Owner's Trash"
+```
+
+### Best Practices
+
+1. **Two-step deletion safety**: Files go to trash first, preventing accidental data loss
+2. **Preserve hierarchy**: `parentId` is never modified during trash, ensuring files return to correct location
+3. **Role-based removal**: Owners trash globally, Editors/Viewers hide locally
+4. **Orphan management**: Shared files from others become root-level items when parent is deleted
+5. **Storage tracking**: Permanent deletion correctly frees quota for all file owners
+
+---
+
 ### Status Codes
 - `200 OK` - Success.
 - `201 Created` - Resource created successfully.
@@ -412,12 +660,31 @@ Expected Response: 201 Created. Header Location contains the FOLDER_ID.
 
 2.2 Upload File (with RLE Compression)
 ```Bash
+# Upload docs file (editable)
 curl -i -X POST http://localhost:3000/api/files \
      -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
-     -d "{\"name\":\"notes.txt\",\"content\":\"AAAAABBBBB\",\"type\":\"file\",\"parentId\":\"<FOLDER_ID_OR_NULL>\"}"
+     -d "{\"name\":\"notes.txt\",\"content\":\"AAAAABBBBB\",\"type\":\"docs\",\"parentId\":\"<FOLDER_ID_OR_NULL>\"}"
+
+# Upload PDF (read-only content)
+curl -i -X POST http://localhost:3000/api/files \
+     -H "Authorization: Bearer <TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d "{\"name\":\"document.pdf\",\"content\":\"PDF_BINARY_DATA\",\"type\":\"pdf\",\"parentId\":\"<FOLDER_ID_OR_NULL>\"}"
+
+# Upload Image (read-only content)
+curl -i -X POST http://localhost:3000/api/files \
+     -H "Authorization: Bearer <TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d "{\"name\":\"photo.jpg\",\"content\":\"IMAGE_BINARY_DATA\",\"type\":\"image\",\"parentId\":\"<FOLDER_ID_OR_NULL>\"}"
 ```
 Expected Response: 201 Created. Data is automatically compressed in the C++ backend.
+
+**Supported File Types:**
+- `folder`: Container for organizing files (no content)
+- `docs`: Editable document files (text content can be updated via PATCH)
+- `pdf`: PDF documents (read-only content, only name/parentId can be updated)
+- `image`: Image files (read-only content, only name/parentId can be updated)
 
 2.3 List All Files (Tree Root)
 ```Bash
@@ -441,11 +708,14 @@ curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
      -H "Content-Type: application/json" \
      -d "{\"name\":\"new_filename.txt\"}"
 
-# Update content (files only)
+# Update content (docs only - pdf/image are read-only)
 curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
      -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
      -d "{\"content\":\"Updated content\"}"
+
+# Note: Attempting to update content of pdf or image files returns:
+# 400 Bad Request: "Cannot modify content of pdf/image files - they are read-only"
 
 # Move to different parent folder
 curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
@@ -456,12 +726,63 @@ curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
 Expected Response: 204 No Content. Automatically records an EDIT interaction.
 Note: You can update name, content, and/or parentId in any combination.
 
-2.6 Delete File/Folder
+2.6 Remove File/Folder (Move to Trash or Hide)
 ```Bash
 curl -i -X DELETE http://localhost:3000/api/files/<FILE_ID> \
      -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 204 No Content.
+**Owner**: File moved to trash (global), preserves hierarchy. All users lose access.
+**Editor/Viewer**: File hidden from your view only (local). No impact on others.
+
+2.7 View Trash Items
+```Bash
+curl -i -X GET http://localhost:3000/api/files/trash \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 200 OK. Returns array of top-level trashed items (owner only).
+
+2.8 Restore File from Trash
+```Bash
+curl -i -X POST http://localhost:3000/api/files/trash/<FILE_ID>/restore \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 204 No Content. File restored to original location. Access restored for all users.
+
+2.9 Permanently Delete File
+```Bash
+curl -i -X DELETE http://localhost:3000/api/files/trash/<FILE_ID> \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 204 No Content. File permanently destroyed. Cannot be undone. Frees storage quota.
+
+2.10 Empty Trash (Delete All)
+```Bash
+curl -i -X DELETE http://localhost:3000/api/files/trash \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 200 OK. All trashed items permanently deleted.
+```json
+{
+  "success": true,
+  "deletedCount": 5,
+  "message": "Permanently deleted 5 file(s) from trash"
+}
+```
+
+2.11 Restore All Trash Items
+```Bash
+curl -i -X POST http://localhost:3000/api/files/trash/restore \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 200 OK. All trashed items restored to original locations.
+```json
+{
+  "success": true,
+  "restoredCount": 5,
+  "message": "Restored 5 item(s) from trash"
+}
+```
 
 ### 3. Advanced Features
 3.1 Smart Search (Name & Content)
@@ -545,9 +866,11 @@ Each file includes metadata about when and how it was accessed:
 - `lastInteractionType`: "VIEW" (from GET) or "EDIT" (from PATCH)
 - `isStarred`: Whether the file is currently starred
 
+**Important**: Only **files** (docs, pdf, image) appear in the recent list. **Folders** are excluded even if viewed or modified, keeping the list focused on actual document activity.
+
 **Automatic Tracking**: File interactions are automatically recorded when you:
-- GET `/api/files/:id` - Records a VIEW interaction
-- PATCH `/api/files/:id` - Records an EDIT interaction
+- GET `/api/files/:id` - Records a VIEW interaction (files only)
+- PATCH `/api/files/:id` - Records an EDIT interaction (files only)
 
 **User Isolation**: Starred and recent file lists are per-user. Each user maintains their own separate list.
 
@@ -580,10 +903,17 @@ curl -i -X GET http://localhost:3000/api/files/shared \
      -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 200 OK. Returns all files/folders where:
-- The user has VIEWER or EDITOR permission
+- The user has **DIRECT** VIEWER or EDITOR permission (not inherited from parent folders)
 - The user is NOT the owner
 
 Each file includes `sharedPermissionLevel` field showing the user's permission level.
+
+**Important**: Only directly shared files/folders appear in this list. Files accessible through inherited permissions (e.g., child files in a shared folder) are NOT included. This keeps the "Shared with me" view clean and focused on explicitly shared items.
+
+**Example**: 
+- User A shares Folder X with User B → Folder X appears in User B's "Shared with me"
+- Folder X contains File Y (owned by User A) → File Y does NOT appear in User B's "Shared with me" (inherited access only)
+- User A directly shares File Y with User B → Now File Y appears in "Shared with me"
 
 **Use Case**: This endpoint is perfect for a "Shared with me" view in a file manager UI.
 
