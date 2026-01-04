@@ -1089,6 +1089,137 @@ class FileService {
             message: `Restored ${totalRestored} item(s) from trash`
         };
     }
+
+    // Download file or export folder (flattened recursive)
+    async downloadFile({ fileId, userId }) {
+        const file = await filesStore.getById(fileId);
+        if (!file) {
+            throw new Error("File not found");
+        }
+
+        // Check minimum VIEWER permission
+        const hasPermission = await this.checkPermission({ userId, fileId, action: 'Read' });
+        if (!hasPermission) {
+            throw new Error("Permission denied");
+        }
+
+        // Case A: Single file download
+        if (file.type !== 'folder') {
+            return await this._downloadSingleFile(file);
+        }
+
+        // Case B: Folder export (flattened recursive)
+        return await this._exportFolderFlattened(file, userId);
+    }
+
+    // Helper: Download single file with proper decoding
+    async _downloadSingleFile(file) {
+        // Fetch content from storage server (uncompressed)
+        const response = await storageClient.get(file.id);
+        if (!response.success) {
+            throw new Error(response.error || "Failed to retrieve file from storage");
+        }
+
+        const content = response.data || '';
+
+        // Decode based on file type
+        let buffer;
+        let contentType;
+        
+        if (file.type === 'image') {
+            // Images: Base64 → Binary
+            buffer = Buffer.from(content, 'base64');
+            contentType = 'image/jpeg'; // Default, could be enhanced to detect image type
+        } else if (file.type === 'pdf') {
+            // PDFs: Base64 → Binary
+            buffer = Buffer.from(content, 'base64');
+            contentType = 'application/pdf';
+        } else if (file.type === 'docs') {
+            // Docs: Plain text → UTF8
+            buffer = Buffer.from(content, 'utf8');
+            contentType = 'text/plain';
+        } else {
+            // Fallback for unknown types
+            buffer = Buffer.from(content, 'utf8');
+            contentType = 'application/octet-stream';
+        }
+
+        return {
+            type: 'file',
+            fileName: file.name,
+            contentType,
+            buffer,
+            size: buffer.length
+        };
+    }
+
+    // Helper: Export folder as flattened array
+    async _exportFolderFlattened(folder, userId) {
+        const allFiles = [];
+        
+        // DFS traversal to collect all files
+        await this._collectFilesRecursive(folder.id, userId, '', allFiles);
+
+        // Fetch content for each file
+        const filesWithContent = [];
+        for (const fileEntry of allFiles) {
+            const response = await storageClient.get(fileEntry.id);
+            const content = response.success ? (response.data || '') : '';
+
+            filesWithContent.push({
+                id: fileEntry.id,
+                name: fileEntry.name,
+                type: fileEntry.type,
+                path: fileEntry.path,
+                size: fileEntry.size,
+                content: content, // Uncompressed content
+                modifiedAt: fileEntry.modifiedAt,
+                createdAt: fileEntry.createdAt
+            });
+        }
+
+        return {
+            type: 'folder',
+            folderName: folder.name,
+            files: filesWithContent
+        };
+    }
+
+    // Helper: Recursive DFS to collect all files with relative paths
+    async _collectFilesRecursive(folderId, userId, currentPath, result) {
+        const children = await filesStore.getByParentId(folderId);
+
+        for (const child of children) {
+            // Check read permission for each child
+            const hasPermission = await this.checkPermission({ userId, fileId: child.id, action: 'Read' });
+            if (!hasPermission) {
+                continue; // Skip files user doesn't have access to
+            }
+
+            // Skip trashed items
+            if (child.isTrashed) {
+                continue;
+            }
+
+            const childPath = currentPath ? `${currentPath}/${child.name}` : child.name;
+
+            if (child.type === 'folder') {
+                // Recurse into subfolder
+                await this._collectFilesRecursive(child.id, userId, childPath, result);
+            } else {
+                // Add file to result (exclude folders from final list)
+                result.push({
+                    id: child.id,
+                    name: child.name,
+                    type: child.type,
+                    path: childPath,
+                    size: child.size,
+                    modifiedAt: child.modifiedAt,
+                    createdAt: child.createdAt
+                });
+            }
+        }
+    }
 }
 
 // Create singleton instance

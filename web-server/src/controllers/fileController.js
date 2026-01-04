@@ -253,6 +253,29 @@ const restoreAllTrash = asyncHandler(async (req, res) => {
     res.status(200).json(result);
 });
 
+/**
+ * GET /api/files/:id/download
+ * Download file or export folder (flattened recursive)
+ */
+const downloadFile = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const result = await fileService.downloadFile({ fileId: id, userId: req.userId });
+
+    if (result.type === 'file') {
+        // Single file download: stream binary with proper headers
+        res.setHeader('Content-Type', result.contentType);
+        res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+        res.setHeader('Content-Length', result.size);
+        res.status(200).send(result.buffer);
+    } else if (result.type === 'folder') {
+        // Folder export: return flattened JSON array
+        res.status(200).json(result.files);
+    } else {
+        throw new Error('Invalid download type');
+    }
+});
+
 module.exports = {
     getAllFiles,
     createFile,
@@ -268,5 +291,6 @@ module.exports = {
     permanentDeleteFile,
     restoreFile,
     emptyTrash,
-    restoreAllTrash
+    restoreAllTrash,
+    downloadFile
 };

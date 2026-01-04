@@ -30,6 +30,7 @@ router.delete('/:id', fileController.deleteFile);
 // File actions (after :id routes because they have more specific paths)
 router.post('/:id/star', fileController.toggleStarFile);
 router.post('/:id/copy', fileController.copyFile);
+router.get('/:id/download', fileController.downloadFile);
 
 // Permissions (nested resource)
 router.get('/:id/permissions', permissionController.getPermissions);
