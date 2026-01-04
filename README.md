@@ -61,6 +61,7 @@ Authorization: Bearer <JWT_TOKEN>
 | `GET` | `/api/files/recent` | ✅ | **Get Recent Files**: Retrieve recently accessed files (docs, pdf, image only - folders excluded), sorted by most recent interaction first. Includes `lastInteractionType` (VIEW/EDIT) |
 | `GET` | `/api/files/shared` | ✅ | **List Shared With Me**: Retrieve all files/folders where the user has **direct** VIEWER or EDITOR permissions (not inherited), and is NOT the owner. Includes `sharedPermissionLevel` |
 | `GET` | `/api/files/:id` | ✅ | **Fetch**: Get full metadata and content of a specific file/folder. Automatically records VIEW interaction |
+| `GET` | `/api/files/:id/download` | ✅ | **Download**: Polymorphic download endpoint. For single files (docs, pdf, image): returns decoded binary with proper Content-Type headers. For folders: returns flattened JSON array of all files recursively with uncompressed content and relative paths |
 | `PATCH` | `/api/files/:id` | ✅ | **Update**: Update file/folder name or content or location. Automatically records EDIT interaction |
 | `POST` | `/api/files/:id/star` | ✅ | **Toggle Star**: Star or unstar a file. Returns `{ fileId, isStarred }` |
 | `POST` | `/api/files/:id/copy` | ✅ | **Copy**: Create a duplicate of a file/folder. The requester becomes the OWNER of the new copy. Body (optional): `{ parentId, newName }`. Performs deep copy for folders |
@@ -558,6 +559,221 @@ GET /api/files/:id (file is trashed by Owner)
 
 ---
 
+## Download & Export: Polymorphic File Retrieval
+
+The `/api/files/:id/download` endpoint provides a unified interface for retrieving resources in their final user format, bridging the gap between Base64/RLE-encoded storage and browser-ready files.
+
+### Feature Overview
+
+**Endpoint**: `GET /api/files/:id/download`
+**Authentication**: Required (JWT)
+**Authorization**: Minimum VIEWER permission required
+
+### Use Cases
+
+#### Case A: Single File Download (docs, pdf, image)
+
+Downloads a **real file** that browsers and OS applications can open natively.
+
+**Process Flow:**
+1. Retrieve content from Storage Server via `GET <fileId>`
+2. Content is automatically uncompressed (RLE bypassed by C++ logic)
+3. Binary decoding based on file type:
+   - **Images & PDFs**: Base64 → Binary Buffer
+   - **Docs**: UTF-8 text → Buffer
+4. HTTP response with appropriate headers:
+   - `Content-Type`: Set based on file type (`image/jpeg`, `application/pdf`, `text/plain`)
+   - `Content-Disposition`: `attachment; filename="original_name.ext"`
+   - `Content-Length`: File size in bytes
+
+**Example Request:**
+```bash
+# Download a PDF file
+curl -X GET http://localhost:3000/api/files/file-123/download \
+  -H "Authorization: Bearer <TOKEN>" \
+  --output document.pdf
+
+# Download an image
+curl -X GET http://localhost:3000/api/files/img-456/download \
+  -H "Authorization: Bearer <TOKEN>" \
+  --output photo.jpg
+
+# Download a text document
+curl -X GET http://localhost:3000/api/files/doc-789/download \
+  -H "Authorization: Bearer <TOKEN>" \
+  --output notes.txt
+```
+
+**Response:**
+- Status: `200 OK`
+- Headers:
+  ```
+  Content-Type: application/pdf
+  Content-Disposition: attachment; filename="document.pdf"
+  Content-Length: 524288
+  ```
+- Body: Raw binary file data (streamed)
+
+#### Case B: Folder Export (Flattened Recursive JSON)
+
+Exports all files within a folder as a unified JSON array, bypassing the need for ZIP archives.
+
+**Process Flow:**
+1. Perform **Depth-First Search (DFS)** starting from target folder
+2. Traverse recursively through all subfolders
+3. Collect all files into a **flat array** (folders excluded from final list)
+4. For each file:
+   - Calculate **relative path** from parent folder (e.g., `ParentFolder/SubFolder/document.pdf`)
+   - Fetch **uncompressed content** from Storage Server
+   - Include full metadata
+5. Return JSON array
+
+**Example Request:**
+```bash
+# Export entire folder structure
+curl -X GET http://localhost:3000/api/files/folder-123/download \
+  -H "Authorization: Bearer <TOKEN>" \
+  > folder_export.json
+```
+
+**Response:**
+- Status: `200 OK`
+- Headers:
+  ```
+  Content-Type: application/json
+  ```
+- Body:
+```json
+[
+  {
+    "id": "file-001",
+    "name": "document.pdf",
+    "type": "pdf",
+    "path": "document.pdf",
+    "size": 524288,
+    "content": "JVBERi0xLjQKJeLjz9MK...",
+    "modifiedAt": "2026-01-04T10:30:00.000Z",
+    "createdAt": "2026-01-01T08:00:00.000Z"
+  },
+  {
+    "id": "file-002",
+    "name": "readme.txt",
+    "type": "docs",
+    "path": "Docs/readme.txt",
+    "size": 1024,
+    "content": "Welcome to OverDrive...",
+    "modifiedAt": "2026-01-03T14:20:00.000Z",
+    "createdAt": "2026-01-02T09:15:00.000Z"
+  },
+  {
+    "id": "file-003",
+    "name": "photo.jpg",
+    "type": "image",
+    "path": "Images/Vacation/photo.jpg",
+    "size": 2097152,
+    "content": "/9j/4AAQSkZJRgABAQEA...",
+    "modifiedAt": "2026-01-04T11:45:00.000Z",
+    "createdAt": "2026-01-03T16:30:00.000Z"
+  }
+]
+```
+
+### Key Features
+
+**1. Permission-Aware Export**
+- Only includes files where user has **Read** permission
+- Silently skips files without access (no error thrown)
+- Respects permission hierarchy
+
+**2. Flattened Structure**
+- No nested JSON objects
+- Single-level array for easy processing
+- Relative paths preserve logical hierarchy
+
+**3. Uncompressed Content**
+- All content is decompressed (RLE removed)
+- Ready for immediate use or re-upload
+- Base64 encoding preserved for binary files
+
+**4. Selective File Inclusion**
+- Folders are traversed but **not included** in final array
+- Only actual files (docs, pdf, image) are exported
+- Trashed items are automatically excluded
+
+**5. Path Generation**
+- Paths are relative to the exported folder
+- Format: `SubFolder1/SubFolder2/filename.ext`
+- Root-level files have simple `filename.ext` path
+
+### Use Cases
+
+**Content Migration:**
+```bash
+# Export project folder for archival
+curl -X GET http://localhost:3000/api/files/project-folder/download \
+  -H "Authorization: Bearer <TOKEN>" \
+  > project_backup.json
+```
+
+**Bulk Processing:**
+```javascript
+// Download folder export and process all files
+const response = await fetch('/api/files/folder-123/download', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+const files = await response.json();
+
+// Process each file
+files.forEach(file => {
+  if (file.type === 'docs') {
+    // Process text content
+    console.log(`${file.path}: ${file.content}`);
+  } else if (file.type === 'image') {
+    // Decode Base64 image
+    const img = Buffer.from(file.content, 'base64');
+  }
+});
+```
+
+**Folder Analysis:**
+```bash
+# Get complete folder inventory
+curl -X GET http://localhost:3000/api/files/reports/download \
+  -H "Authorization: Bearer <TOKEN>" \
+  | jq 'length'  # Count total files
+
+# Calculate total folder size
+curl -X GET http://localhost:3000/api/files/reports/download \
+  -H "Authorization: Bearer <TOKEN>" \
+  | jq '[.[].size] | add'  # Sum all file sizes
+```
+
+### Error Handling
+
+```bash
+# File not found
+GET /api/files/invalid-id/download
+→ 404 Not Found: "File not found"
+
+# Permission denied
+GET /api/files/restricted-file/download
+→ 403 Forbidden: "Permission denied"
+
+# Storage server unreachable
+GET /api/files/file-123/download
+→ 500 Internal Server Error: "Failed to retrieve file from storage"
+```
+
+### Best Practices
+
+1. **Single Files**: Use download for browser-ready files (PDFs, images, documents)
+2. **Folder Exports**: Use for bulk processing, archival, or content migration
+3. **Permission Checks**: Endpoint respects all permission rules (inherited + direct)
+4. **Large Folders**: Consider implementing pagination for very large folder exports
+5. **Content Decoding**: Images/PDFs are Base64-encoded in JSON, decode before use
+
+---
+
 ### Status Codes
 - `200 OK` - Success.
 - `201 Created` - Resource created successfully.
@@ -725,6 +941,60 @@ curl -i -X PATCH http://localhost:3000/api/files/<FILE_ID> \
 ```
 Expected Response: 204 No Content. Automatically records an EDIT interaction.
 Note: You can update name, content, and/or parentId in any combination.
+
+2.5.1 Download File or Export Folder
+```Bash
+# Download single file (docs, pdf, image)
+# Returns decoded binary with proper Content-Type headers
+curl -X GET http://localhost:3000/api/files/<FILE_ID>/download \
+     -H "Authorization: Bearer <TOKEN>" \
+     --output downloaded_file.pdf
+
+# Export folder as flattened JSON array
+# Returns all files recursively with uncompressed content and relative paths
+curl -X GET http://localhost:3000/api/files/<FOLDER_ID>/download \
+     -H "Authorization: Bearer <TOKEN>" \
+     > folder_export.json
+```
+Expected Response for Single File: 200 OK, binary stream with headers:
+```
+Content-Type: application/pdf  (or image/jpeg, text/plain)
+Content-Disposition: attachment; filename="document.pdf"
+Content-Length: 524288
+```
+
+Expected Response for Folder: 200 OK, JSON array:
+```json
+[
+  {
+    "id": "file-001",
+    "name": "document.pdf",
+    "type": "pdf",
+    "path": "document.pdf",
+    "size": 524288,
+    "content": "JVBERi0xLjQK...",
+    "modifiedAt": "2026-01-04T10:30:00.000Z",
+    "createdAt": "2026-01-01T08:00:00.000Z"
+  },
+  {
+    "id": "file-002",
+    "name": "notes.txt",
+    "type": "docs",
+    "path": "Subfolder/notes.txt",
+    "size": 1024,
+    "content": "Uncompressed text content...",
+    "modifiedAt": "2026-01-03T14:20:00.000Z",
+    "createdAt": "2026-01-02T09:15:00.000Z"
+  }
+]
+```
+
+**Key Features:**
+- Single files: Decoded binary (Base64→Binary for images/PDFs, UTF8 for docs)
+- Folders: Flattened DFS traversal, no nested structure
+- Uncompressed content: RLE decompression handled automatically
+- Permission-aware: Only includes files with Read access
+- Relative paths: Calculated from parent folder (e.g., `SubFolder/file.txt`)
 
 2.6 Remove File/Folder (Move to Trash or Hide)
 ```Bash

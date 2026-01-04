@@ -34,7 +34,7 @@ class PermissionService {
         }
 
         // Check requester is owner or has Share permission (EDITOR or above)
-        const canShare = await this.canUserShareFile(requestingUserId, fileId);
+        const canShare = await this.canUserShareFile({ userId: requestingUserId, fileId });
         if (!canShare) {
             throw new Error("Permission denied: Only editors and owners can share files");
         }
@@ -55,17 +55,17 @@ class PermissionService {
     }
 
     // Add VIEWER permission
-    async addViewer(fileId, userId, requestingUserId) {
+    async addViewer({ fileId, userId, requestingUserId }) {
         return await this.addPermission({ fileId, userId, level: 'VIEWER', requestingUserId });
     }
 
     // Add EDITOR permission
-    async addEditor(fileId, userId, requestingUserId) {
+    async addEditor({ fileId, userId, requestingUserId }) {
         return await this.addPermission({ fileId, userId, level: 'EDITOR', requestingUserId });
     }
 
     // Transfer ownership to a new user
-    async transferOwnership(fileId, newOwnerId, requestingUserId) {
+    async transferOwnership({ fileId, newOwnerId, requestingUserId }) {
         // Only current owner can transfer ownership
         const file = await filesStore.getById(fileId);
         if (!file) {
@@ -120,7 +120,7 @@ class PermissionService {
    
 
     // Update existing permission level only
-    async updatePermission(permissionId, updates, requestingUserId) {
+    async updatePermission({ permissionId, updates, requestingUserId }) {
         const permission = await permissionStore.getById(permissionId);
 
         if (!permission) {
@@ -133,7 +133,7 @@ class PermissionService {
         }
 
         // Check requester has permission to modify this permission
-        const canShare = await this.canUserShareFile(requestingUserId, permission.fileId);
+        const canShare = await this.canUserShareFile({ userId: requestingUserId, fileId: permission.fileId });
         if (!canShare) {
             throw new Error("Permission denied: You cannot modify this permission");
         }
@@ -142,7 +142,7 @@ class PermissionService {
         if (permission.isInherited) {
             // Check if user has permission to edit the source folder
             const sourceFolder = await filesStore.getById(permission.inheritedFrom);
-            const canEditSource = await this.canUserWrite(requestingUserId, permission.inheritedFrom);
+            const canEditSource = await this.canUserWrite({ userId: requestingUserId, fileId: permission.inheritedFrom });
             
             const error = {
                 error: "Cannot modify inherited permission directly",
@@ -176,7 +176,7 @@ class PermissionService {
         if (updates.level === 'OWNER') {
             // Transfer ownership to the user who has this permission
             // transferOwnership will validate that requester is the current owner
-            return await this.transferOwnership(permission.fileId, permission.userId, requestingUserId);
+            return await this.transferOwnership({ fileId: permission.fileId, newOwnerId: permission.userId, requestingUserId });
         }
 
         // Cannot change owner's permission level to something else
@@ -195,7 +195,7 @@ class PermissionService {
     }
 
     // Remove permission
-    async removePermission(permissionId, requestingUserId) {
+    async removePermission({ permissionId, requestingUserId }) {
         const permission = await permissionStore.getById(permissionId);
         
         if (!permission) {
@@ -209,7 +209,7 @@ class PermissionService {
         }
 
         // Only owner or user with Share permission can delete permissions
-        const canShare = await this.canUserShareFile(requestingUserId, permission.fileId);
+        const canShare = await this.canUserShareFile({ userId: requestingUserId, fileId: permission.fileId });
         if (!canShare && permission.userId !== requestingUserId) {
             throw new Error("Permission denied: You cannot remove this permission");
         }
@@ -231,20 +231,20 @@ class PermissionService {
     }
 
     // Get all permissions for a file
-    async getFilePermissions(fileId, requestingUserId) {
+    async getFilePermissions({ fileId, requestingUserId }) {
         const file = await filesStore.getById(fileId);
         if (!file) {
             throw new Error("File not found");
         }
 
         // Check requester can view permissions
-        const canView = await this.canUserAccessFile(requestingUserId, fileId);
+        const canView = await this.canUserAccessFile({ userId: requestingUserId, fileId });
         if (!canView) {
             throw new Error("Permission denied");
         }
 
         // Check if user has share permission (EDITOR or above)
-        const canShare = await this.canUserShareFile(requestingUserId, fileId);
+        const canShare = await this.canUserShareFile({ userId: requestingUserId, fileId });
         if (!canShare) {
             throw new Error("You don't have permission to view sharing details for this file");
         }
@@ -271,7 +271,7 @@ class PermissionService {
     }
 
     // Get all files user can access
-    async getUserAccessibleFiles(userId) {
+    async getUserAccessibleFiles({ userId }) {
         const user = await usersStore.getById(userId);
         if (!user) {
             throw new Error("User not found");
@@ -296,7 +296,7 @@ class PermissionService {
     }
 
     // Check if user can access file
-    async canUserAccessFile(userId, fileId) {
+    async canUserAccessFile({ userId, fileId }) {
         const permission = await this._getEffectivePermission(userId, fileId);
         return permission !== null;
     }
@@ -311,7 +311,7 @@ class PermissionService {
     }
 
     // Check if user can share file
-    async canUserShareFile(userId, fileId) {
+    async canUserShareFile({ userId, fileId }) {
         const file = await filesStore.getById(fileId);
         if (!file) return false;
 
@@ -326,7 +326,7 @@ class PermissionService {
     }
 
     // Check if user can read file
-    async canUserRead(userId, fileId) {
+    async canUserRead({ userId, fileId }) {
         const permission = await this._getEffectivePermission(userId, fileId);
         if (!permission) return false;
 
@@ -334,7 +334,7 @@ class PermissionService {
     }
 
     // Check if user can write to file
-    async canUserWrite(userId, fileId) {
+    async canUserWrite({ userId, fileId }) {
         const permission = await this._getEffectivePermission(userId, fileId);
         if (!permission) return false;
 
@@ -342,7 +342,7 @@ class PermissionService {
     }
 
     // Check if user can delete file
-    async canUserDelete(userId, fileId) {
+    async canUserDelete({ userId, fileId }) {
         const permission = await this._getEffectivePermission(userId, fileId);
         if (!permission) return false;
 
@@ -350,14 +350,14 @@ class PermissionService {
     }
 
     // Share file with multiple users at once
-    async shareWithMultipleUsers(fileId, userIds, level, requestingUserId) {
+    async shareWithMultipleUsers({ fileId, userIds, level, requestingUserId }) {
         const file = await filesStore.getById(fileId);
         if (!file) {
             throw new Error("File not found");
         }
 
         // Check requester can share
-        const canShare = await this.canUserShareFile(requestingUserId, fileId);
+        const canShare = await this.canUserShareFile({ userId: requestingUserId, fileId });
         if (!canShare) {
             throw new Error("Permission denied: You cannot share this file");
         }

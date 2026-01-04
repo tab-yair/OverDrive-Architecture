@@ -26,8 +26,18 @@ const createUser = asyncHandler(async (req, res) => {
         throw error;
     }
 
-    // Call service to create user (lastName and profileImage default to null if not provided)
-    const user = await userService.createUser({ username, password, firstName, lastName, profileImage });
+    // Normalize optional fields: set to null if not provided
+    const normalizedLastName = lastName !== undefined ? lastName : null;
+    const normalizedProfileImage = profileImage !== undefined ? profileImage : null;
+
+    // Call service to create user
+    const user = await userService.createUser({ 
+        username, 
+        password, 
+        firstName, 
+        lastName: normalizedLastName, 
+        profileImage: normalizedProfileImage 
+    });
 
     // Return 201 Created with user (including password)
     res.status(201)
@@ -51,7 +61,7 @@ const getUserById = asyncHandler(async (req, res) => {
     }
 
     // Call service to get user
-    const user = await userService.getUserById(id);
+    const user = await userService.getUserById({ userId: id });
 
     res.status(200).json(user);
 });
@@ -99,7 +109,7 @@ const updateUser = asyncHandler(async (req, res) => {
     if (profileImage !== undefined) updates.profileImage = profileImage;
 
     // Call service to update user
-    await userService.updateUser(id, updates);
+    await userService.updateUser({ userId: id, updates });
 
     // Return 204 No Content
     res.status(204).end();
