@@ -8,7 +8,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const getPermissions = asyncHandler(async (req, res) => {
     const { id: fileId } = req.params;
 
-    const permissions = await permissionService.getFilePermissions(fileId, req.userId);
+    const permissions = await permissionService.getFilePermissions({ fileId, requestingUserId: req.userId });
 
     res.status(200).json(permissions);
 });
@@ -95,11 +95,11 @@ const updatePermission = asyncHandler(async (req, res) => {
     updates.level = normalizedLevel;
 
     // Update permission (service will handle OWNER as ownership transfer)
-    await permissionService.updatePermission(
+    await permissionService.updatePermission({
         permissionId,
         updates,
-        req.userId
-    );
+        requestingUserId: req.userId
+    });
 
     // Return 204 No Content
     res.status(204).end();
@@ -112,7 +112,7 @@ const updatePermission = asyncHandler(async (req, res) => {
 const removePermission = asyncHandler(async (req, res) => {
     const { pId: permissionId } = req.params;
 
-    await permissionService.removePermission(permissionId, req.userId);
+    await permissionService.removePermission({ permissionId, requestingUserId: req.userId });
 
     // Return 204 No Content
     res.status(204).end();

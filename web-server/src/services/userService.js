@@ -42,7 +42,7 @@ class UserService {
     }
 
     // Authenticate user (login)
-    async authenticate(username, password) {
+    async authenticate({ username, password }) {
         // Normalize email for lookup
         const emailResult = EmailValidator.validate(username);
         if (!emailResult.valid) {
@@ -75,7 +75,7 @@ class UserService {
     }
 
     // Get user by ID
-    async getUserById(userId) {
+    async getUserById({ userId }) {
         const user = await usersStore.getById(userId);
         
         if (!user) {
@@ -87,7 +87,7 @@ class UserService {
     }
 
     // Get user by username
-    async getUserByUsername(username) {
+    async getUserByUsername({ username }) {
         const user = await usersStore.getByUsername(username);
         
         if (!user) {
@@ -106,7 +106,7 @@ class UserService {
     }
 
     // Update user details
-    async updateUser(userId, updates) {
+    async updateUser({ userId, updates }) {
         const user = await usersStore.getById(userId);
         
         if (!user) {
@@ -151,7 +151,7 @@ class UserService {
     }
 
     // Change password
-    async changePassword(userId, oldPassword, newPassword) {
+    async changePassword({ userId, oldPassword, newPassword }) {
         const user = await usersStore.getById(userId);
         
         if (!user) {
@@ -175,7 +175,7 @@ class UserService {
     }
 
     // Delete user - including all files and permissions
-    async deleteUser(userId, requestingUserId) {
+    async deleteUser({ userId, requestingUserId }) {
         const user = await usersStore.getById(userId);
         
         if (!user) {
@@ -208,7 +208,7 @@ class UserService {
     }
 
     // Check if user exists
-    async userExists(username) {
+    async userExists({ username }) {
         return await usersStore.exists(username);
     }
 }

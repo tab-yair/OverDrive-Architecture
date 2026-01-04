@@ -48,7 +48,7 @@ class FileService {
     }
 
     // POST - Upload file to storage server
-    async uploadFile(fileId, content, metadata = {}) {
+    async uploadFile({ fileId, content, metadata = {} }) {
         // Check file exists in metadata
         const file = await filesStore.getById(fileId);
         if (!file) {
@@ -174,7 +174,7 @@ class FileService {
             }
 
             // Check write permission on destination folder
-            const hasDestPermission = await this.checkPermission(userId, newParentId, 'Write');
+            const hasDestPermission = await this.checkPermission({ userId, fileId: newParentId, action: 'Write' });
             if (!hasDestPermission) {
                 throw new Error("Permission denied for destination folder");
             }
@@ -184,7 +184,7 @@ class FileService {
     }
 
     // PATCH - Update file/folder (name, parent, content, or any combination)
-    async updateFile(fileId, updates, userId) {
+    async updateFile({ fileId, updates, userId }) {
         // Check file exists
         const file = await filesStore.getById(fileId);
         if (!file) {
@@ -195,7 +195,7 @@ class FileService {
         const expectedModifiedAt = file.modifiedAt;
 
         // Check write permission
-        const hasPermission = await this.checkPermission(userId, fileId, 'Write');
+        const hasPermission = await this.checkPermission({ userId, fileId, action: 'Write' });
         if (!hasPermission) {
             throw new Error("Permission denied");
         }
@@ -249,24 +249,24 @@ class FileService {
     }
 
     // Deprecated: Use updateFile instead
-    async updateFileContent(fileId, content, userId) {
-        return await this.updateFile(fileId, { content }, userId);
+    async updateFileContent({ fileId, content, userId }) {
+        return await this.updateFile({ fileId, updates: { content }, userId });
     }
 
     // Deprecated: Use updateFile instead  
-    async moveFile(fileId, newParentId, userId) {
-        return await this.updateFile(fileId, { parentId: newParentId }, userId);
+    async moveFile({ fileId, newParentId, userId }) {
+        return await this.updateFile({ fileId, updates: { parentId: newParentId }, userId });
     }
 
     // Deprecated: Use updateFile instead
-    async renameFile(fileId, newName, userId) {
-        return await this.updateFile(fileId, { name: newName }, userId);
+    async renameFile({ fileId, newName, userId }) {
+        return await this.updateFile({ fileId, updates: { name: newName }, userId });
     }
 
     // DELETE - Remove file or folder (now delegates to removeFile for trash logic)
-    async deleteFile(fileId, userId) {
+    async deleteFile({ fileId, userId }) {
         // Use the new removeFile which handles trash/hide logic
-        return await this.removeFile(fileId, userId);
+        return await this.removeFile({ fileId, userId });
     }
 
     // Helper: Collect all files recursively (for storage tracking before deletion)
@@ -375,7 +375,7 @@ class FileService {
     }
 
     // Get files in folder
-    async getFilesInFolder(parentId, userId) {
+    async getFilesInFolder({ parentId, userId }) {
         // If parentId is null, returns top-level files
         const files = await filesStore.getByParentId(parentId);
         
@@ -388,7 +388,7 @@ class FileService {
                 continue;
             }
             
-            const hasPermission = await this.checkPermission(userId, file.id, 'Read');
+            const hasPermission = await this.checkPermission({ userId, fileId: file.id, action: 'Read' });
             if (hasPermission) {
                 accessibleFiles.push(file);
             }
@@ -398,7 +398,7 @@ class FileService {
     }
 
     // Check user permission on file
-    async checkPermission(userId, fileId, action) {
+    async checkPermission({ userId, fileId, action }) {
         // Check if user is the owner first
         const file = await filesStore.getById(fileId);
         if (!file) {
@@ -438,13 +438,13 @@ class FileService {
     }
 
     // Get file information with content from storage-server
-    async getFileInfo(fileId, userId) {
+    async getFileInfo({ fileId, userId }) {
         const file = await filesStore.getById(fileId);
         if (!file) {
             throw new Error("File not found");
         }
 
-        const hasPermission = await this.checkPermission(userId, fileId, 'Read');
+        const hasPermission = await this.checkPermission({ userId, fileId, action: 'Read' });
         if (!hasPermission) {
             throw new Error("Permission denied");
         }
@@ -465,7 +465,7 @@ class FileService {
                     continue;
                 }
                 
-                const hasChildPermission = await this.checkPermission(userId, child.id, 'Read');
+                const hasChildPermission = await this.checkPermission({ userId, fileId: child.id, action: 'Read' });
                 if (hasChildPermission) {
                     // Return only metadata - no content for files, no children for folders
                     accessibleChildren.push(child);
@@ -497,7 +497,7 @@ class FileService {
     }
 
     // Get starred files for user
-    async getStarredFiles(userId) {
+    async getStarredFiles({ userId }) {
         // Get all starred metadata
         const starredMetadata = await userFileMetadataStore.getStarredByUser(userId);
         
@@ -513,7 +513,7 @@ class FileService {
                 }
                 
                 // Check permission
-                const hasPermission = await this.checkPermission(userId, file.id, 'Read');
+                const hasPermission = await this.checkPermission({ userId, fileId: file.id, action: 'Read' });
                 if (hasPermission) {
                     files.push({
                         ...file,
@@ -529,7 +529,7 @@ class FileService {
     }
 
     // Get recently accessed files for user
-    async getRecentFiles(userId, limit = 20) {
+    async getRecentFiles({ userId, limit = 20 }) {
         // Get recent metadata
         const recentMetadata = await userFileMetadataStore.getRecentByUser(userId, limit);
         
@@ -550,7 +550,7 @@ class FileService {
                 }
                 
                 // Check permission
-                const hasPermission = await this.checkPermission(userId, file.id, 'Read');
+                const hasPermission = await this.checkPermission({ userId, fileId: file.id, action: 'Read' });
                 if (hasPermission) {
                     files.push({
                         ...file,
@@ -567,7 +567,7 @@ class FileService {
     }
 
     // Toggle star status for a file
-    async toggleStarFile(fileId, userId) {
+    async toggleStarFile({ fileId, userId }) {
         // Check file exists
         const file = await filesStore.getById(fileId);
         if (!file) {
@@ -575,7 +575,7 @@ class FileService {
         }
 
         // Check read permission
-        const hasPermission = await this.checkPermission(userId, fileId, 'Read');
+        const hasPermission = await this.checkPermission({ userId, fileId, action: 'Read' });
         if (!hasPermission) {
             throw new Error("Permission denied");
         }
@@ -590,7 +590,7 @@ class FileService {
     }
 
     // Copy a file or folder (with deep copy for folders)
-    async copyFile(fileId, userId, options = {}) {
+    async copyFile({ fileId, userId, options = {} }) {
         // Check source file exists
         const sourceFile = await filesStore.getById(fileId);
         if (!sourceFile) {
@@ -598,7 +598,7 @@ class FileService {
         }
 
         // Check read permission on source
-        const hasPermission = await this.checkPermission(userId, fileId, 'Read');
+        const hasPermission = await this.checkPermission({ userId, fileId, action: 'Read' });
         if (!hasPermission) {
             throw new Error("Permission denied");
         }
@@ -609,7 +609,7 @@ class FileService {
 
         // If parent specified, check write permission on target parent
         if (parentId) {
-            const hasWritePermission = await this.checkPermission(userId, parentId, 'Write');
+            const hasWritePermission = await this.checkPermission({ userId, fileId: parentId, action: 'Write' });
             if (!hasWritePermission) {
                 throw new Error("Permission denied: Cannot copy to target folder");
             }
@@ -662,7 +662,7 @@ class FileService {
                 const children = await filesStore.getByParentId(sourceId);
                 for (const child of children) {
                     // Only copy children the user has access to
-                    const hasChildPermission = await this.checkPermission(userId, child.id, 'Read');
+                    const hasChildPermission = await this.checkPermission({ userId, fileId: child.id, action: 'Read' });
                     if (hasChildPermission) {
                         await copyRecursive(child.id, copy.id);
                     }
@@ -690,7 +690,7 @@ class FileService {
             if (!current) continue;
 
             // Check if user has permission to copy this file
-            const hasPermission = await this.checkPermission(userId, currentId, 'Read');
+            const hasPermission = await this.checkPermission({ userId, fileId: currentId, action: 'Read' });
             if (!hasPermission) continue;
 
             if (current.type !== 'folder') {
@@ -707,7 +707,7 @@ class FileService {
     }
 
     // Get files shared with user (where user has permission but is not owner)
-    async getSharedFiles(userId) {
+    async getSharedFiles({ userId }) {
         // Get all permissions for this user
         const permissions = await permissionStore.getByUserId(userId);
         
@@ -791,7 +791,7 @@ class FileService {
      * REMOVE operation (Move to trash for owner, hide for Editor/Viewer)
      * DELETE /api/files/:id
      */
-    async removeFile(fileId, userId) {
+    async removeFile({ fileId, userId }) {
         const file = await filesStore.getById(fileId);
         if (!file) {
             throw new Error("File not found");
@@ -835,7 +835,7 @@ class FileService {
      * Get trash items (only top-level trashed items owned by user)
      * GET /api/files/trash
      */
-    async getTrashItems(userId) {
+    async getTrashItems({ userId }) {
         // Get all files owned by this user
         const allOwnedFiles = await filesStore.getByOwnerId(userId);
         
@@ -868,7 +868,7 @@ class FileService {
      * Permanent delete (only owner, only from trash)
      * DELETE /api/files/trash/:id
      */
-    async permanentDeleteFile(fileId, userId) {
+    async permanentDeleteFile({ fileId, userId }) {
         const file = await filesStore.getById(fileId);
         if (!file) {
             throw new Error("File not found");
@@ -992,7 +992,7 @@ class FileService {
      * Restore file from trash (only owner)
      * POST /api/files/trash/:id/restore
      */
-    async restoreFile(fileId, userId) {
+    async restoreFile({ fileId, userId }) {
         const file = await filesStore.getById(fileId);
         if (!file) {
             throw new Error("File not found");
@@ -1048,15 +1048,15 @@ class FileService {
      * Empty trash (bulk permanent delete)
      * DELETE /api/files/trash
      */
-    async emptyTrash(userId) {
+    async emptyTrash({ userId }) {
         // Get all top-level trash items
-        const trashItems = await this.getTrashItems(userId);
+        const trashItems = await this.getTrashItems({ userId });
         
         let totalDeleted = 0;
         
         // Permanently delete each top-level item (which handles recursion)
         for (const item of trashItems) {
-            const result = await this.permanentDeleteFile(item.id, userId);
+            const result = await this.permanentDeleteFile({ fileId: item.id, userId });
             totalDeleted += result.deletedCount;
         }
 
@@ -1071,15 +1071,15 @@ class FileService {
      * Restore all trash items (bulk restore)
      * POST /api/files/trash/restore
      */
-    async restoreAllTrash(userId) {
+    async restoreAllTrash({ userId }) {
         // Get all top-level trash items
-        const trashItems = await this.getTrashItems(userId);
+        const trashItems = await this.getTrashItems({ userId });
         
         let totalRestored = 0;
         
         // Restore each top-level item (which handles recursion)
         for (const item of trashItems) {
-            await this.restoreFile(item.id, userId);
+            await this.restoreFile({ fileId: item.id, userId });
             totalRestored++;
         }
 

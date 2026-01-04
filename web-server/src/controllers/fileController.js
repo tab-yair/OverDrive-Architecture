@@ -6,7 +6,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * Get all files in root folder (parentId = null)
  */
 const getAllFiles = asyncHandler(async (req, res) => {
-    const files = await fileService.getFilesInFolder(null, req.userId);
+    const files = await fileService.getFilesInFolder({ parentId: null, userId: req.userId });
     res.status(200).json(files);
 });
 
@@ -40,9 +40,12 @@ const createFile = asyncHandler(async (req, res) => {
         throw new Error('Content is required for docs, pdf, and image files');
     }
 
+    // Normalize parentId: explicitly set to null if not provided
+    const normalizedParentId = parentId !== undefined ? parentId : null;
+
     // If creating in a folder (parentId provided), check write permission
-    if (parentId) {
-        const canWrite = await fileService.checkPermission(req.userId, parentId, 'Write');
+    if (normalizedParentId !== null) {
+        const canWrite = await fileService.checkPermission({ userId: req.userId, fileId: normalizedParentId, action: 'Write' });
         if (!canWrite) {
             throw new Error('Permission denied: cannot create files in this folder');
         }
@@ -53,13 +56,13 @@ const createFile = asyncHandler(async (req, res) => {
         name,
         type,
         ownerId: req.userId,
-        parentId,
+        parentId: normalizedParentId,
         size: 0  // Size will be updated by uploadFile
     });
 
     // If it's not a folder, upload to storage server
     if (type !== 'folder') {
-        await fileService.uploadFile(file.id, content);
+        await fileService.uploadFile({ fileId: file.id, content });
     }
 
     // Return 201 Created with Location header (empty body per assignment spec)
@@ -75,7 +78,7 @@ const createFile = asyncHandler(async (req, res) => {
 const getFileById = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const file = await fileService.getFileInfo(id, req.userId);
+    const file = await fileService.getFileInfo({ fileId: id, userId: req.userId });
 
     res.status(200).json(file);
 });
@@ -104,19 +107,20 @@ const updateFile = asyncHandler(async (req, res) => {
 
     // If content update is requested, check if file type allows it
     if (content !== undefined) {
-        const fileInfo = await fileService.getFileInfo(id, req.userId);
+        const fileInfo = await fileService.getFileInfo({ fileId: id, userId: req.userId });
         if (fileInfo.type === 'pdf' || fileInfo.type === 'image') {
             throw new Error(`Cannot modify content of ${fileInfo.type} files - they are read-only`);
         }
     }
 
     // Build updates object with only provided fields
+    // Normalize: fields not provided should not be included (not set to null)
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (content !== undefined) updates.content = content;
     if (parentId !== undefined) updates.parentId = parentId;
 
-    await fileService.updateFile(id, updates, req.userId);
+    await fileService.updateFile({ fileId: id, updates, userId: req.userId });
 
     // Return 204 No Content
     res.status(204).end();
@@ -129,7 +133,7 @@ const updateFile = asyncHandler(async (req, res) => {
 const deleteFile = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    await fileService.removeFile(id, req.userId);
+    await fileService.removeFile({ fileId: id, userId: req.userId });
 
     // Return 204 No Content
     res.status(204).end();
@@ -140,7 +144,7 @@ const deleteFile = asyncHandler(async (req, res) => {
  * Get all starred files for current user
  */
 const getStarredFiles = asyncHandler(async (req, res) => {
-    const files = await fileService.getStarredFiles(req.userId);
+    const files = await fileService.getStarredFiles({ userId: req.userId });
     res.status(200).json(files);
 });
 
@@ -149,7 +153,7 @@ const getStarredFiles = asyncHandler(async (req, res) => {
  * Get recently accessed files for current user
  */
 const getRecentFiles = asyncHandler(async (req, res) => {
-    const files = await fileService.getRecentFiles(req.userId);
+    const files = await fileService.getRecentFiles({ userId: req.userId });
     res.status(200).json(files);
 });
 
@@ -159,7 +163,7 @@ const getRecentFiles = asyncHandler(async (req, res) => {
  */
 const toggleStarFile = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const result = await fileService.toggleStarFile(id, req.userId);
+    const result = await fileService.toggleStarFile({ fileId: id, userId: req.userId });
     res.status(200).json(result);
 });
 
@@ -169,9 +173,23 @@ const toggleStarFile = asyncHandler(async (req, res) => {
  */
 const copyFile = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { parentId, newName } = req.body;
+    const { parentId, newName, ...extraFields } = req.body;
 
-    const copiedFile = await fileService.copyFile(id, req.userId, { parentId, newName });
+    // Check for unexpected fields
+    const allowedFields = ['parentId', 'newName'];
+    const receivedFields = Object.keys(req.body);
+    const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
+    
+    if (invalidFields.length > 0) {
+        throw new Error(`Invalid fields: ${invalidFields.join(', ')}. Only parentId and newName are allowed`);
+    }
+
+    // Normalize optional fields: set to undefined if not provided (service will handle defaults)
+    const options = {};
+    if (parentId !== undefined) options.parentId = parentId;
+    if (newName !== undefined) options.newName = newName;
+
+    const copiedFile = await fileService.copyFile({ fileId: id, userId: req.userId, options });
 
     // Return 201 Created with Location header
     res.status(201)
@@ -184,7 +202,7 @@ const copyFile = asyncHandler(async (req, res) => {
  * Get files shared with current user
  */
 const getSharedFiles = asyncHandler(async (req, res) => {
-    const files = await fileService.getSharedFiles(req.userId);
+    const files = await fileService.getSharedFiles({ userId: req.userId });
     res.status(200).json(files);
 });
 
@@ -193,7 +211,7 @@ const getSharedFiles = asyncHandler(async (req, res) => {
  * Get all items in trash (top-level only)
  */
 const getTrashItems = asyncHandler(async (req, res) => {
-    const trashItems = await fileService.getTrashItems(req.userId);
+    const trashItems = await fileService.getTrashItems({ userId: req.userId });
     res.status(200).json(trashItems);
 });
 
@@ -203,7 +221,7 @@ const getTrashItems = asyncHandler(async (req, res) => {
  */
 const permanentDeleteFile = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    await fileService.permanentDeleteFile(id, req.userId);
+    await fileService.permanentDeleteFile({ fileId: id, userId: req.userId });
     res.status(204).end();
 });
 
@@ -213,7 +231,7 @@ const permanentDeleteFile = asyncHandler(async (req, res) => {
  */
 const restoreFile = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    await fileService.restoreFile(id, req.userId);
+    await fileService.restoreFile({ fileId: id, userId: req.userId });
     res.status(204).end();
 });
 
@@ -222,7 +240,7 @@ const restoreFile = asyncHandler(async (req, res) => {
  * Empty trash (permanently delete all trashed items)
  */
 const emptyTrash = asyncHandler(async (req, res) => {
-    const result = await fileService.emptyTrash(req.userId);
+    const result = await fileService.emptyTrash({ userId: req.userId });
     res.status(200).json(result);
 });
 
@@ -231,7 +249,7 @@ const emptyTrash = asyncHandler(async (req, res) => {
  * Restore all items from trash
  */
 const restoreAllTrash = asyncHandler(async (req, res) => {
-    const result = await fileService.restoreAllTrash(req.userId);
+    const result = await fileService.restoreAllTrash({ userId: req.userId });
     res.status(200).json(result);
 });
 

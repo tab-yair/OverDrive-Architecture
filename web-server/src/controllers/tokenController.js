@@ -29,7 +29,7 @@ const login = asyncHandler(async (req, res) => {
     }
 
     // Call service to authenticate
-    const user = await userService.authenticate(username, password);
+    const user = await userService.authenticate({ username, password });
 
     // Generate JWT token
     const token = authStore.generateToken({
