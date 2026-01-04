@@ -54,10 +54,10 @@ SUBFOLDER=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: B
 echo "  ✓ Created subfolder: $SUBFOLDER"
 
 # Files in folder structure
-FILE1=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"name\":\"root_file.txt\",\"type\":\"docs\",\"content\":\"File in root\",\"parentId\":\"$FOLDER\"}" -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
+FILE1=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"name\":\"root_file.txt\",\"type\":\"docs\",\"content\":\"File in root\\nLine 2\\nLine 3\",\"parentId\":\"$FOLDER\"}" -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
 echo "  ✓ Created file in root: $FILE1"
 
-FILE2=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"name\":\"sub_file.txt\",\"type\":\"docs\",\"content\":\"File in subfolder\",\"parentId\":\"$SUBFOLDER\"}" -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
+FILE2=$(curl -s -X POST http://localhost:3000/api/files -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"name\":\"sub_file.txt\",\"type\":\"docs\",\"content\":\"File in subfolder\\nAnother line\\nThird line\",\"parentId\":\"$SUBFOLDER\"}" -i | grep Location | awk -F'/' '{print $NF}' | tr -d '\r\n')
 echo "  ✓ Created file in subfolder: $FILE2"
 
 # Test single file downloads
@@ -208,10 +208,21 @@ if [[ $HTTP_CODE -eq 0 ]]; then
         
         # Verify content is included and properly unescaped (no \\n)
         ROOT_CONTENT=$(jq -r '.[] | select(.name=="root_file.txt") | .content' /tmp/folder_export.json)
-        if [[ "$ROOT_CONTENT" == "File in root" ]]; then
+        SUB_CONTENT=$(jq -r '.[] | select(.name=="sub_file.txt") | .content' /tmp/folder_export.json)
+        
+        if [[ "$ROOT_CONTENT" == *"File in root"* && "$SUB_CONTENT" == *"File in subfolder"* ]]; then
             echo -e "  ${GREEN}✓${NC} Content included in export"
         else
             echo -e "  ${RED}✗${NC} Content missing or incorrect"
+        fi
+        
+        # Verify newlines are preserved in folder export content
+        ROOT_LINES=$(echo "$ROOT_CONTENT" | wc -l)
+        SUB_LINES=$(echo "$SUB_CONTENT" | wc -l)
+        if [[ $ROOT_LINES -ge 3 && $SUB_LINES -ge 3 ]]; then
+            echo -e "  ${GREEN}✓${NC} Newlines preserved in exported files (root: $ROOT_LINES lines, sub: $SUB_LINES lines)"
+        else
+            echo -e "  ${RED}✗${NC} Newlines not preserved in exported files (root: $ROOT_LINES, sub: $SUB_LINES)"
         fi
         
         # Verify newlines are properly unescaped (not escaped as \\n)
