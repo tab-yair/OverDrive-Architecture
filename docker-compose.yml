@@ -43,11 +43,9 @@ services:
   react-client:
     build:
       context: ./react-client
-      args:
-        - REACT_APP_API_URL=
     container_name: overdrive-react-client
     ports:
-      - "8080:80"
+      - "3001:3001"
     depends_on:
       - web-server
     networks:
