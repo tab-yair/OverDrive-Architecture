@@ -1,0 +1,39 @@
+/* Layout Component Styles */
+
+.layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+}
+
+.layout-body {
+    display: flex;
+    flex: 1;
+    margin-top: 64px; /* Account for fixed navbar height */
+    min-height: calc(100vh - 64px);
+}
+
+/* Loading state */
+.layout-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: var(--bg-primary);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

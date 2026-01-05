@@ -1,0 +1,22 @@
+/* MainContent Component Styles */
+
+.main-content {
+    flex: 1;
+    min-height: calc(100vh - 64px);
+    background-color: var(--bg-primary);
+    overflow-y: auto;
+    transition: background-color 0.3s ease;
+}
+
+.main-content-inner {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 24px 32px;
+}
+
+/* Responsive padding */
+@media (max-width: 768px) {
+    .main-content-inner {
+        padding: 16px;
+    }
+}
