@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo/Logo';
 import './Pages.css';
 
 /**
@@ -31,10 +32,12 @@ function GuestLandingPage() {
         <div className="page guest-landing-page">
             <div className="landing-hero">
                 <div className="landing-icon">
-                    <span className="material-symbols-outlined">cloud</span>
+                    <Logo size="xl" showText={false} />
                 </div>
 
-                <h1 className="landing-title">Welcome to OverDrive</h1>
+                <h1 className="landing-title">
+                    Welcome to <Logo size="lg" />
+                </h1>
                 <p className="landing-subtitle">
                     Secure cloud storage for all your files. Access them anywhere, anytime.
                 </p>

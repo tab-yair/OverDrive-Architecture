@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
+import { UserPreferencesProvider } from '../context/UserPreferencesContext';
 import Layout from '../components/Layout/Layout';
 import ProtectedRoute from '../components/ProtectedRoute/ProtectedRoute';
 
@@ -12,6 +13,10 @@ import SharedPage from '../pages/SharedPage';
 import RecentPage from '../pages/RecentPage';
 import StarredPage from '../pages/StarredPage';
 import TrashPage from '../pages/TrashPage';
+import StoragePage from '../pages/StoragePage';
+import SettingsPage from '../pages/SettingsPage';
+import GeneralSettingsPage from '../pages/GeneralSettingsPage';
+import AccountSettingsPage from '../pages/AccountSettingsPage';
 import LoginPage from '../pages/LoginPage';
 import SignupPage from '../pages/SignupPage';
 
@@ -71,6 +76,13 @@ function AppRoutes() {
                     <Route path="/recent" element={<RecentPage />} />
                     <Route path="/starred" element={<StarredPage />} />
                     <Route path="/trash" element={<TrashPage />} />
+                    <Route path="/storage" element={<StoragePage />} />
+
+                    {/* Settings with nested routes */}
+                    <Route path="/settings" element={<SettingsPage />}>
+                        <Route path="general" element={<GeneralSettingsPage />} />
+                        <Route path="account" element={<AccountSettingsPage />} />
+                    </Route>
                 </Route>
 
                 {/* Catch-all route */}
@@ -96,9 +108,11 @@ function App() {
     return (
         <AuthProvider>
             <ThemeProvider>
-                <div className="app">
-                    <AppRoutes />
-                </div>
+                <UserPreferencesProvider>
+                    <div className="app">
+                        <AppRoutes />
+                    </div>
+                </UserPreferencesProvider>
             </ThemeProvider>
         </AuthProvider>
     );

@@ -1,5 +1,5 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
+import Logo from '../components/Logo/Logo';
 import './Pages.css';
 
 /**
@@ -11,8 +11,7 @@ function SignupPage() {
         <div className="page signup-page">
             <div className="auth-container">
                 <div className="auth-logo">
-                    <span className="material-symbols-outlined">cloud</span>
-                    <span>OverDrive</span>
+                    <Logo size="md" />
                 </div>
 
                 <h1 className="auth-title">Create account</h1>

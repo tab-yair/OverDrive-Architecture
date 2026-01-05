@@ -1,14 +1,14 @@
-import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import SidebarItem from './SidebarItem';
+import NewButton from './NewButton/NewButton';
 import StorageIndicator from '../StorageIndicator/StorageIndicator';
 import './Sidebar.css';
 
 /**
  * Sidebar Component
  * Navigation sidebar with:
- * - "New" button for creating files/folders
- * - Navigation items (Home, My Drive, Shared, Recent, Starred, Trash)
+ * - "New" button dropdown for creating files/folders
+ * - Navigation items (Home, My Drive, Shared, Recent, Starred, Trash, Storage)
  * - Storage indicator at the bottom
  *
  * Only renders when user is authenticated (controlled by Layout)
@@ -29,26 +29,14 @@ function Sidebar() {
         { icon: 'schedule', label: 'Recent', to: '/recent' },
         { icon: 'star', label: 'Starred', to: '/starred' },
         { icon: 'delete', label: 'Trash', to: '/trash' },
+        { icon: 'cloud', label: 'Storage', to: '/storage' },
     ];
-
-    // Handle "New" button click
-    const handleNewClick = () => {
-        // TODO: Open "New" menu (Create folder, Upload file, etc.)
-        console.log('New button clicked - TODO: Implement new file/folder menu');
-    };
 
     return (
         <aside className="sidebar">
-            {/* New button */}
+            {/* New button with dropdown */}
             <div className="sidebar-new-btn-container">
-                <button
-                    className="sidebar-new-btn"
-                    onClick={handleNewClick}
-                    aria-label="Create new file or folder"
-                >
-                    <span className="material-symbols-outlined">add</span>
-                    <span className="sidebar-new-btn-text">New</span>
-                </button>
+                <NewButton />
             </div>
 
             {/* Navigation items */}

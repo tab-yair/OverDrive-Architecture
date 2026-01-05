@@ -38,6 +38,21 @@ services:
       - STORAGE_LIMIT_MB=100
     networks:
       - overdrive_net
+
+  # React Client (Exercise 4)
+  react-client:
+    build:
+      context: ./react-client
+      args:
+        - REACT_APP_API_URL=
+    container_name: overdrive-react-client
+    ports:
+      - "8080:80"
+    depends_on:
+      - web-server
+    networks:
+      - overdrive_net
+
   tests:
     build:
       context: .

@@ -1,0 +1,221 @@
+/* StoragePage Styles */
+
+.storage-page {
+    padding: 24px;
+    max-width: 900px;
+}
+
+/* Storage overview section */
+.storage-overview {
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.storage-overview-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.storage-overview-icon {
+    font-size: 40px;
+    color: var(--accent-color);
+}
+
+.storage-overview-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.storage-overview-used {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.storage-overview-percent {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.storage-overview-bar {
+    height: 8px;
+    background-color: var(--bg-hover);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.storage-overview-bar-fill {
+    height: 100%;
+    background-color: var(--accent-color);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.storage-loading {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+}
+
+/* Files section */
+.storage-files-section {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.storage-files-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    margin: 0;
+}
+
+/* Files list */
+.storage-files-list {
+    max-height: calc(100vh - 400px);
+    overflow-y: auto;
+}
+
+.storage-files-header {
+    display: grid;
+    grid-template-columns: 1fr 140px 100px;
+    gap: 16px;
+    padding: 12px 20px;
+    background-color: var(--bg-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.storage-file-row {
+    display: grid;
+    grid-template-columns: 1fr 140px 100px;
+    gap: 16px;
+    padding: 12px 20px;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.storage-file-row:last-child {
+    border-bottom: none;
+}
+
+.storage-file-row:hover {
+    background-color: var(--bg-hover);
+}
+
+.storage-file-name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.storage-file-icon {
+    font-size: 24px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.storage-file-name-text {
+    font-size: 14px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.storage-file-date,
+.storage-file-size {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.storage-file-size {
+    text-align: right;
+}
+
+/* Loading state */
+.storage-files-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 48px 24px;
+    color: var(--text-secondary);
+}
+
+.storage-files-loading .spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.storage-files-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 48px 24px;
+    color: var(--danger-color);
+}
+
+/* Empty state */
+.storage-files-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.storage-files-empty .material-symbols-outlined {
+    font-size: 64px;
+    color: var(--border-color);
+    margin-bottom: 16px;
+}
+
+.storage-files-empty p {
+    margin: 0;
+    font-size: 14px;
+}
+
+.storage-files-empty-hint {
+    color: var(--text-secondary);
+    margin-top: 8px !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .storage-page {
+        padding: 16px;
+    }
+
+    .storage-files-header,
+    .storage-file-row {
+        grid-template-columns: 1fr 80px;
+    }
+
+    .storage-file-date-header,
+    .storage-file-date {
+        display: none;
+    }
+}

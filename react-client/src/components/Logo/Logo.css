@@ -1,0 +1,84 @@
+/* Logo Component Styles
+ * Single source of truth for all logo styling
+ * Uses CSS custom properties for easy size adjustments
+ */
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--logo-gap);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.logo__icon {
+    width: var(--logo-icon-size);
+    height: var(--logo-icon-size);
+    object-fit: contain;
+    margin-right: var(--logo-icon-margin-right);
+    margin-top: var(--logo-icon-margin-top);
+}
+
+.logo__text {
+    font-size: var(--logo-font-size);
+    font-weight: 500;
+    letter-spacing: -0.5px;
+}
+
+/* Size variants - override CSS variables */
+
+/* Small - for navbar */
+.logo--sm {
+    --logo-icon-size: 38px;
+    --logo-font-size: 22px;
+    --logo-gap: 5px;
+    --logo-icon-margin-right: -6px;
+    --logo-icon-margin-top: -10px;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.logo--sm:hover {
+    background-color: var(--bg-hover);
+}
+
+/* Medium - for auth pages */
+.logo--md {
+    --logo-icon-size: 36px;
+    --logo-font-size: 24px;
+    --logo-gap: 0;
+    --logo-icon-margin-right: -6px;
+    --logo-icon-margin-top: -2px;
+}
+
+/* Large - for landing page title */
+.logo--lg {
+    --logo-icon-size: 58px;
+    --logo-font-size: 48px;
+    --logo-gap: 0;
+    --logo-icon-margin-right: -10px;
+    --logo-icon-margin-top: -4px;
+}
+
+/* Extra large - for landing hero icon */
+.logo--xl {
+    --logo-icon-size: 100px;
+    --logo-font-size: 48px;
+    --logo-gap: 0;
+    --logo-icon-margin-right: 0;
+    --logo-icon-margin-top: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .logo--sm .logo__text {
+        display: none;
+    }
+
+    .logo--lg {
+        --logo-icon-size: 42px;
+        --logo-font-size: 32px;
+        --logo-icon-margin-right: -8px;
+    }
+}

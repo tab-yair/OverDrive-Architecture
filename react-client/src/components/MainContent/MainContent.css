@@ -8,6 +8,11 @@
     transition: background-color 0.3s ease;
 }
 
+/* When sidebar is present, add left margin to account for fixed sidebar */
+.main-content.with-sidebar {
+    margin-left: 256px;
+}
+
 .main-content-inner {
     max-width: 1600px;
     margin: 0 auto;
@@ -15,6 +20,12 @@
 }
 
 /* Responsive padding */
+@media (max-width: 1024px) {
+    .main-content.with-sidebar {
+        margin-left: 72px;
+    }
+}
+
 @media (max-width: 768px) {
     .main-content-inner {
         padding: 16px;

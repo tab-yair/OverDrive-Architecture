@@ -1,6 +1,6 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo/Logo';
 import './Pages.css';
 
 /**
@@ -14,8 +14,7 @@ function LoginPage() {
         <div className="page login-page">
             <div className="auth-container">
                 <div className="auth-logo">
-                    <span className="material-symbols-outlined">cloud</span>
-                    <span>OverDrive</span>
+                    <Logo size="md" />
                 </div>
 
                 <h1 className="auth-title">Sign in</h1>

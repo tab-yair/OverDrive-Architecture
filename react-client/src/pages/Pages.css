@@ -41,7 +41,10 @@
     max-width: 300px;
 }
 
-/* Auth pages (Login/Signup) */
+/* ===========================================
+   AUTH PAGES (Login/Signup)
+   =========================================== */
+
 .login-page,
 .signup-page {
     display: flex;
@@ -66,16 +69,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
     margin-bottom: 32px;
-    font-size: 24px;
-    font-weight: 500;
-    color: var(--text-primary);
-}
-
-.auth-logo .material-symbols-outlined {
-    font-size: 32px;
-    color: var(--accent-color);
 }
 
 .auth-title {
@@ -126,7 +120,10 @@
     text-decoration: underline;
 }
 
-/* Guest Landing Page */
+/* ===========================================
+   GUEST LANDING PAGE
+   =========================================== */
+
 .guest-landing-page {
     display: flex;
     align-items: center;
@@ -144,16 +141,16 @@
     margin-bottom: 24px;
 }
 
-.landing-icon .material-symbols-outlined {
-    font-size: 80px;
-    color: var(--accent-color);
-}
-
 .landing-title {
     font-size: 48px;
     font-weight: 500;
     color: var(--text-primary);
     margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .landing-subtitle {
@@ -171,11 +168,6 @@
     justify-content: center;
     gap: 16px;
     margin-bottom: 64px;
-}
-
-.btn-large {
-    padding: 14px 32px;
-    font-size: 16px;
 }
 
 /* Landing features */
@@ -226,18 +218,10 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Update landing actions to support icons in buttons */
-.landing-actions .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
+/* ===========================================
+   RESPONSIVE
+   =========================================== */
 
-.landing-actions .btn .material-symbols-outlined {
-    font-size: 20px;
-}
-
-/* Responsive */
 @media (max-width: 768px) {
     .landing-title {
         font-size: 32px;
@@ -256,7 +240,7 @@
         flex-direction: column;
     }
 
-    .btn-large {
+    .landing-actions .btn-large {
         width: 100%;
     }
 

@@ -23,32 +23,6 @@
     min-width: 256px;
 }
 
-.navbar-logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    color: var(--text-primary);
-    padding: 8px;
-    border-radius: 8px;
-    transition: background-color 0.2s ease;
-}
-
-.navbar-logo:hover {
-    background-color: var(--bg-hover);
-}
-
-.logo-icon {
-    font-size: 32px;
-    color: var(--accent-color);
-}
-
-.logo-text {
-    font-size: 22px;
-    font-weight: 500;
-    letter-spacing: -0.5px;
-}
-
 /* Center section - Search */
 .navbar-center {
     flex: 1;
@@ -79,6 +53,15 @@
 .navbar-icon-btn:hover {
     background-color: var(--bg-hover);
     color: var(--text-primary);
+}
+
+/* Settings button with rotation on hover */
+.navbar-settings-btn .material-symbols-outlined {
+    transition: transform 0.3s ease;
+}
+
+.navbar-settings-btn:hover .material-symbols-outlined {
+    transform: rotate(90deg);
 }
 
 /* User menu */
@@ -204,39 +187,6 @@
     gap: 12px;
 }
 
-/* Button styles */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.btn-primary {
-    background-color: var(--accent-color);
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: var(--accent-hover);
-    color: white;
-}
-
-.btn-secondary {
-    background-color: transparent;
-    color: var(--accent-color);
-    border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover {
-    background-color: var(--accent-light);
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .navbar-center {
@@ -245,9 +195,5 @@
 
     .navbar-left {
         min-width: auto;
-    }
-
-    .logo-text {
-        display: none;
     }
 }

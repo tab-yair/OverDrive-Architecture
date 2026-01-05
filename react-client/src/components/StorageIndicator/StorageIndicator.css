@@ -5,6 +5,17 @@
     align-items: flex-start;
     gap: 12px;
     padding: 12px 8px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.2s ease;
+}
+
+.storage-indicator:hover {
+    background-color: var(--bg-hover);
 }
 
 /* Cloud icon */
