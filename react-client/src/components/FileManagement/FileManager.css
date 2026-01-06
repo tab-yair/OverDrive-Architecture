@@ -1,0 +1,224 @@
+/* FileManager Container Styles */
+
+.file-manager {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  padding: 0 24px 24px 24px;
+  /* Creates clickable gaps on left, right, and bottom for deselection */
+}
+
+/* Header with View Toggle */
+.file-manager-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 0;
+  margin-bottom: 16px;
+  /* Creates clickable gap between toolbar and list */
+  border-bottom: 1px solid var(--border-color);
+}
+
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.view-toggle-button {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.view-toggle-button:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.view-toggle-button.active {
+  background-color: var(--accent-light);
+  color: var(--accent-color);
+}
+
+.view-toggle-button .material-symbols-outlined {
+  font-size: 20px;
+}
+
+/* List View Container */
+.file-list-container {
+  width: 100%;
+  max-width: 100%;
+  min-height: calc(100vh - 250px);
+  /* Ensure empty space below rows is clickable for deselection */
+  /* Parent padding creates clickable side gaps */
+}
+
+/* List Header */
+.file-list-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: default;
+  /* Header clicks trigger deselection via handleBackgroundClick */
+}
+
+.file-list-header-name {
+  flex: 1;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.file-list-header-cell {
+  padding: 0 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-list-header-actions {
+  width: 160px;
+  text-align: right;
+  margin-left: auto;
+}
+
+/* File List */
+.file-list {
+  width: 100%;
+  min-height: 400px;
+  /* Ensure there's clickable space below rows for deselection */
+}
+
+/* Grid View */
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  min-height: calc(100vh - 250px);
+  /* Ensure empty space is clickable for deselection */
+  /* Note: Parent container (.file-manager) already has padding */
+}
+
+/* Empty State */
+.file-manager-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  min-height: 400px;
+}
+
+.empty-icon {
+  width: 120px;
+  height: 120px;
+  opacity: 0.3;
+  margin-bottom: 24px;
+}
+
+/* Dark mode - make empty icon visible */
+[data-theme="dark"] .empty-icon {
+  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+  opacity: 0.2;
+}
+
+.empty-message {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-submessage {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 400px;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .file-list-header-name {
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .file-manager {
+    padding: 0 12px 12px 12px;
+    /* Reduce padding on mobile for more screen space */
+  }
+  
+  .file-manager-header {
+    padding: 8px 0;
+  }
+  
+  .file-list-header {
+    padding: 8px 12px;
+  }
+  
+  .file-list-header-cell {
+    display: none;
+  }
+  
+  .file-list-header-cell:first-of-type {
+    display: block;
+  }
+  
+  .file-list-header-actions {
+    display: none;
+  }
+  
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .file-manager {
+    padding: 0 8px 8px 8px;
+    /* Minimal padding on very small screens */
+  }
+  
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  
+  .empty-icon {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .empty-message {
+    font-size: 18px;
+  }
+  
+  .empty-submessage {
+    font-size: 13px;
+  }
+}

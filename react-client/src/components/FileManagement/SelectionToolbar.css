@@ -1,0 +1,103 @@
+/* SelectionToolbar Component Styles */
+
+.selection-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: var(--bg-secondary, #f8f9fa);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  min-height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  animation: toolbarSlideDown 0.2s ease-out;
+}
+
+@keyframes toolbarSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-theme="dark"] .selection-toolbar {
+  background-color: var(--bg-secondary, #2d2d2d);
+  border-bottom-color: var(--border-color, #444);
+}
+
+/* Left Section */
+.selection-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.selection-toolbar-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  color: var(--text-primary, #202124);
+}
+
+.selection-toolbar-close:hover {
+  background-color: rgba(60, 64, 67, 0.08);
+}
+
+[data-theme="dark"] .selection-toolbar-close:hover {
+  background-color: rgba(232, 234, 237, 0.08);
+}
+
+.selection-toolbar-close .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.selection-toolbar-counter {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #202124);
+  user-select: none;
+}
+
+/* Right Section */
+.selection-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Danger button styling in toolbar */
+.selection-toolbar-actions .danger-button {
+  color: #d93025;
+}
+
+.selection-toolbar-actions .danger-button:hover:not(.disabled) {
+  background-color: rgba(217, 48, 37, 0.08);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .selection-toolbar {
+    padding: 8px 12px;
+    min-height: 50px;
+  }
+
+  .selection-toolbar-left {
+    gap: 12px;
+  }
+
+  .selection-toolbar-counter {
+    font-size: 13px;
+  }
+}

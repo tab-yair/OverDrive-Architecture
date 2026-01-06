@@ -20,6 +20,9 @@ import AccountSettingsPage from '../pages/AccountSettingsPage';
 import LoginPage from '../pages/LoginPage';
 import SignupPage from '../pages/SignupPage';
 
+// --- הייבוא החדש עבור הדמו ---
+import FileManagementExample from '../components/FileManagement/FileManagementExample';
+
 import './App.css';
 
 /**
@@ -39,6 +42,10 @@ function AppRoutes() {
         <Routes>
             {/* Layout wrapper - all routes render inside Layout */}
             <Route element={<Layout />}>
+
+            {/* נתיב זמני לבדיקת הרכיבים החדשים */}
+            {/* גש בדפדפן לכתובת: http://localhost:3000/test */}
+            <Route path="/test" element={<FileManagementExample />} />
 
                 {/* Root route - redirect based on auth status */}
                 <Route

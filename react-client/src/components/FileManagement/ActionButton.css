@@ -1,0 +1,99 @@
+/* ActionButton Component Styles */
+
+.action-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.15s ease;
+  padding: 0;
+  position: relative;
+}
+
+/* Enabled state: Show gray circular background on hover */
+.action-button:hover:not(.disabled) {
+  background-color: var(--bg-hover, rgba(95, 99, 104, 0.1));
+}
+
+/* Light theme fallback */
+[data-theme="light"] .action-button:hover:not(.disabled) {
+  background-color: rgba(60, 64, 67, 0.08);
+}
+
+/* Dark theme */
+[data-theme="dark"] .action-button:hover:not(.disabled) {
+  background-color: rgba(232, 234, 237, 0.08);
+}
+
+.action-button:active:not(.disabled) {
+  background-color: var(--bg-input, rgba(95, 99, 104, 0.15));
+}
+
+[data-theme="light"] .action-button:active:not(.disabled) {
+  background-color: rgba(60, 64, 67, 0.12);
+}
+
+[data-theme="dark"] .action-button:active:not(.disabled) {
+  background-color: rgba(232, 234, 237, 0.12);
+}
+
+.action-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Disabled state: No hover effect, no cursor change */
+.action-button.disabled {
+  cursor: default;
+  pointer-events: none;
+  background-color: transparent !important;
+}
+
+.action-button.disabled:hover {
+  background-color: transparent !important;
+}
+
+.action-button.disabled .action-button-icon {
+  opacity: 0.3;
+}
+
+.action-button-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  transition: opacity 0.2s ease;
+  opacity: 1;
+}
+
+/* Dark mode - make icons visible (except star and share which have currentColor) */
+[data-theme="dark"] .action-button-icon:not(.star-icon):not(.share-icon) {
+  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+}
+
+/* Star and share icons should maintain their natural color - no filter */
+.action-button-icon.star-icon,
+.action-button-icon.share-icon {
+  filter: none;
+}
+
+.action-button:hover:not(.disabled) .action-button-icon {
+  opacity: 1;
+}
+
+/* Star button specific styles */
+.action-button.star-button .action-button-icon {
+  opacity: 0.7;
+}
+
+.action-button.star-button.starred .action-button-icon {
+  opacity: 1;
+}
+
+.action-button.star-button:hover .action-button-icon {
+  opacity: 1;
+}
