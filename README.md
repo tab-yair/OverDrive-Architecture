@@ -51,7 +51,7 @@ Authorization: Bearer <JWT_TOKEN>
 | Method | Endpoint | Auth Required | Description |
 |:---:|:---|:---:|:---|
 | `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 8+ char password). Fields: `username`, `password`, `firstName`, `profileImage` (required Base64 image), `lastName` (optional, defaults to `null`). **Automatically creates default preferences** |
-| `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
+| `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details. **Owner**: Returns full profile (id, username, firstName, lastName, profileImage, storageUsed, createdAt, modifiedAt). **Non-owner**: Returns limited public profile (id, firstName, lastName, username, profileImage) |
 | `PATCH` | `/api/users/:id` | ✅ | **Update User Profile**: Update user details. Allowed fields: `password`, `firstName`, `lastName`, `profileImage`. Username cannot be changed. Set `lastName` or `profileImage` to `null` to remove them |
 | `GET` | `/api/users/:id/preference` | ✅ | **Get User Preferences**: Retrieve user's preferences (`theme`, `landingPage`). User can only access their own preferences |
 | `PATCH` | `/api/users/:id/preference` | ✅ | **Update User Preferences**: Update preferences. Allowed fields: `theme` (light/dark), `landingPage` (home/storage). Partial updates supported |
@@ -78,6 +78,90 @@ Authorization: Bearer <JWT_TOKEN>
 | `POST` | `/api/files/:id/permissions` | ✅ | **Grant Permission**: Create new permission for a user. Body: `{ targetUserId, permissionLevel }`. Levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
 | `PATCH` | `/api/files/:id/permissions/:pId` | ✅ | **Update Permission**: Modify permission level. Body: `{ permissionLevel }`. Allowed levels: VIEWER, EDITOR, or OWNER. When `permissionLevel=OWNER`, ownership transfer occurs (requester must be current owner) |
 | `DELETE` | `/api/files/:id/permissions/:pId` | ✅ | **Revoke Permission**: Remove a specific permission |
+
+---
+
+## User Privacy & Profile Access
+
+OverDrive implements privacy-aware user profile access with differential data exposure based on ownership.
+
+### Profile Data Levels
+
+When accessing user profiles via `GET /api/users/:id`, the returned data varies based on the relationship between the requester and the profile owner:
+
+#### Owner Access (Full Profile)
+When users access **their own profile**, they receive complete account information:
+
+| Field | Type | Description |
+|:---:|:---:|:---|
+| `id` | String (UUID) | User's unique identifier |
+| `username` | String (Email) | User's email address |
+| `firstName` | String | User's first name |
+| `lastName` | String \| null | User's last name (optional) |
+| `profileImage` | String \| null | Base64 image or URL |
+| `storageUsed` | Number | Storage consumed in bytes |
+| `createdAt` | ISO 8601 | Account creation timestamp |
+| `modifiedAt` | ISO 8601 | Last modification timestamp |
+
+#### Non-Owner Access (Limited Profile)
+When users access **another user's profile**, they receive only public information for privacy protection:
+
+| Field | Type | Description |
+|:---:|:---:|:---|
+| `id` | String (UUID) | User's unique identifier |
+| `firstName` | String | User's first name |
+| `lastName` | String \| null | User's last name (optional) |
+| `username` | String (Email) | User's email address |
+| `profileImage` | String \| null | Base64 image or URL |
+
+**Hidden Fields for Non-Owners:**
+- `storageUsed` - Storage consumption details are private
+- `createdAt` - Account creation date is private
+- `modifiedAt` - Last modification date is private
+- `password` - Never exposed in any response
+
+### Use Cases
+
+This privacy model enables:
+- **Sharing Collaboration**: Users can see basic info about people they're sharing files with
+- **User Discovery**: Limited profile data allows identifying collaborators without exposing sensitive details
+- **Account Management**: Full profile access for account owners to manage their own data
+- **Privacy Protection**: Non-owners cannot access storage usage, timestamps, or other private information
+
+### Example Responses
+
+```bash
+# Owner accessing own profile
+GET /api/users/user-123
+Authorization: Bearer <owner-token>
+
+Response (200 OK):
+{
+  "id": "user-123",
+  "username": "alice@gmail.com",
+  "firstName": "Alice",
+  "lastName": "Anderson",
+  "profileImage": "data:image/png;base64,...",
+  "storageUsed": 10485760,
+  "createdAt": "2025-01-01T12:00:00.000Z",
+  "modifiedAt": "2025-01-06T15:30:00.000Z"
+}
+```
+
+```bash
+# Non-owner accessing another user's profile
+GET /api/users/user-123
+Authorization: Bearer <other-user-token>
+
+Response (200 OK):
+{
+  "id": "user-123",
+  "firstName": "Alice",
+  "lastName": "Anderson",
+  "username": "alice@gmail.com",
+  "profileImage": "data:image/png;base64,..."
+}
+```
 
 ---
 
@@ -1325,10 +1409,20 @@ Expected Response: 200 OK. Body: `{"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ
 
 1.3 Get User Profile
 ```Bash
+# Owner accessing their own profile (full details)
 curl -i -X GET http://localhost:3000/api/users/<USER_ID> \
      -H "Authorization: Bearer <TOKEN>"
 ```
-Expected Response: 200 OK. Body: User object (ID, username, firstName, lastName, profileImage).
+Expected Response: 200 OK. Body: Full user object (id, username, firstName, lastName, profileImage, storageUsed, createdAt, modifiedAt).
+
+```Bash
+# Non-owner accessing another user's profile (limited details)
+curl -i -X GET http://localhost:3000/api/users/<OTHER_USER_ID> \
+     -H "Authorization: Bearer <TOKEN>"
+```
+Expected Response: 200 OK. Body: Limited public profile (id, firstName, lastName, username, profileImage).
+
+**Note**: Owners receive full profile details including storage usage and timestamps. Non-owners receive only public information (id, firstName, lastName, username, profileImage) for privacy protection.
 
 1.4 Update User Profile
 ```Bash
@@ -1582,6 +1676,47 @@ curl -i -X GET http://localhost:3000/api/files/<FILE_ID>/permissions \
      -H "Authorization: Bearer <TOKEN>"
 ```
 Expected Response: 200 OK. Returns array of all permissions for the file/folder.
+
+**Response Structure:**
+Each permission object includes:
+- `pid`: Permission ID
+- `fileId`: File or folder ID
+- `userId`: User who has the permission
+- `level`: Permission level (VIEWER, EDITOR, OWNER)
+- `isInherited`: Whether permission was inherited from parent folder
+- `inheritedFrom`: Parent folder ID (if inherited)
+- `createdBy`: User ID of who granted this permission
+- `user`: Object with user details (id, username, firstName, lastName)
+- `sharedBy`: Object with details of who shared/granted this permission (id, username, firstName, lastName), or `null` for inherited permissions
+
+**Example Response:**
+```json
+[
+  {
+    "pid": "perm-123",
+    "fileId": "file-456",
+    "userId": "user-789",
+    "level": "EDITOR",
+    "isInherited": false,
+    "inheritedFrom": null,
+    "createdBy": "user-owner-123",
+    "createdAt": "2026-01-05T10:30:00.000Z",
+    "modifiedAt": "2026-01-05T10:30:00.000Z",
+    "user": {
+      "id": "user-789",
+      "username": "editor@gmail.com",
+      "firstName": "Robert",
+      "lastName": "Smith"
+    },
+    "sharedBy": {
+      "id": "user-owner-123",
+      "username": "owner@gmail.com",
+      "firstName": "Alicia",
+      "lastName": "Johnson"
+    }
+  }
+]
+```
 
 3.3 Grant Permission (RBAC)
 ```Bash

@@ -42,7 +42,7 @@ const createUser = asyncHandler(async (req, res) => {
     // Automatically create default preferences for the new user
     await preferenceService.createDefaultPreference(user.id);
 
-    // Return 201 Created with user (including password)
+    // Return 201 Created with user (without password for security)
     res.status(201)
        .location(`/api/users/${user.id}`)
        .json(user);
@@ -51,22 +51,32 @@ const createUser = asyncHandler(async (req, res) => {
 /**
  * GET /api/users/:id
  * Get user profile information
+ * - Owner: Full profile (id, username, firstName, lastName, profileImage, storageUsed, createdAt, modifiedAt)
+ * - Non-owner: Limited profile (id, firstName, lastName, username, profileImage)
  */
 const getUserById = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const requestingUserId = req.userId; // Set by requireAuth middleware
 
-    // Users can only access their own profile
-    if (id !== requestingUserId) {
-        const error = new Error('Access denied');
-        error.status = 403;
-        throw error;
-    }
-
     // Call service to get user
     const user = await userService.getUserById({ userId: id });
 
-    res.status(200).json(user);
+    // If requester is the owner, return full profile
+    if (id === requestingUserId) {
+        res.status(200).json(user);
+        return;
+    }
+
+    // If requester is not the owner, return limited profile
+    const limitedProfile = {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username,
+        profileImage: user.profileImage
+    };
+
+    res.status(200).json(limitedProfile);
 });
 
 /**
