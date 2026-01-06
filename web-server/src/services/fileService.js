@@ -293,10 +293,11 @@ class FileService {
         return files;
     }
 
-    // SEARCH - Search files by name (metadata) AND content (C++ storage server)
-    async searchFiles({ query, userId }) {
+    // SEARCH - Advanced search with filters
+    // Filters: searchName, searchContent, type, owner, dateRange, sharedWith, isStarred
+    async searchFiles({ searchName = null, searchContent = null, type = null, owner = null, dateRange = null, sharedWith = null, isStarred = null, userId }) {
         try {
-            // Get all files the user has access to - convert to Set for O(1) lookups
+            // Get all files the user has access to
             const accessibleFileIdsArray = await permissionStore.getAccessibleFileIds(userId);
             const accessibleFileIds = new Set(accessibleFileIdsArray);
 
@@ -306,69 +307,123 @@ class FileService {
             }
 
             // ===== Stage 1: Parallel Search =====
-            // Search metadata (name) and content (C++ server) in parallel
             const metadataMatches = new Set();
-            const storageMatches = new Set();
+            const contentMatches = new Set();
 
-            // 1A. Search by logical name in metadata
-            const metadataSearchPromise = (async () => {
-                const promises = Array.from(accessibleFileIds).map(async (fileId) => {
+            // 1A. Search by name in metadata (if provided)
+            if (searchName) {
+                const nameQuery = searchName.trim().toLowerCase();
+                for (const fileId of accessibleFileIds) {
                     const file = await filesStore.getById(fileId);
-                    if (file && file.name.includes(query)) {
-                        return fileId;
-                    }
-                    return null;
-                });
-                const results = await Promise.all(promises);
-                results.forEach(fileId => {
-                    if (fileId !== null) {
+                    if (file && file.name.toLowerCase().includes(nameQuery)) {
                         metadataMatches.add(fileId);
                     }
-                });
-            })();
-
-            // 1B. Search by content via C++ storage server SEARCH command
-            const storageSearchPromise = (async () => {
-                try {
-                    const searchResponse = await storageClient.search(query);
-                    if (searchResponse.success && searchResponse.data) {
-                        // C++ server returns space-separated file IDs
-                        // Clean any newlines or extra whitespace first
-                        const cleanedData = searchResponse.data.replace(/\s+/g, ' ').trim();
-                        const matchedIds = cleanedData
-                            .split(' ')
-                            .map(id => id.trim())
-                            .filter(id => id.length > 0);
-
-                        // Only include IDs user has access to (security filter)
-                        for (const id of matchedIds) {
-                            if (accessibleFileIds.has(id)) {
-                                storageMatches.add(id);
-                            }
-                        }
-                    }
-                } catch (error) {
-                    // Storage server search failed - continue with metadata only
-                }
-            })();
-
-            // Wait for both searches to complete
-            await Promise.all([metadataSearchPromise, storageSearchPromise]);
-
-            // ===== Stage 2: Merge & Return =====
-            // Union of both sets
-            const allMatchedIds = new Set([...metadataMatches, ...storageMatches]);
-
-            // Fetch full file objects for all matched IDs
-            const validatedFiles = [];
-            for (const fileId of allMatchedIds) {
-                const file = await filesStore.getById(fileId);
-                if (file) {
-                    validatedFiles.push(file);
                 }
             }
 
-            return validatedFiles;
+            // 1B. Search by content via storage server (if provided)
+            if (searchContent) {
+                const contentQuery = searchContent.trim().toLowerCase();
+                for (const fileId of accessibleFileIds) {
+                    const file = await filesStore.getById(fileId);
+                    if (file && file.type === 'docs') {
+                        try {
+                            const storageResponse = await storageClient.get(fileId);
+                            if (storageResponse.success && storageResponse.data) {
+                                if (storageResponse.data.toLowerCase().includes(contentQuery)) {
+                                    contentMatches.add(fileId);
+                                }
+                            }
+                        } catch (error) {
+                            // Skip files that don't have content
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            // ===== Stage 2: Combine search results =====
+            let candidateIds;
+            
+            if (searchName && searchContent) {
+                // Both name and content search: union of results
+                candidateIds = new Set([...metadataMatches, ...contentMatches]);
+            } else if (searchName) {
+                candidateIds = metadataMatches;
+            } else if (searchContent) {
+                candidateIds = contentMatches;
+            } else {
+                // No search query: all accessible files are candidates
+                candidateIds = accessibleFileIds;
+            }
+
+            // ===== Stage 3: Apply filters =====
+            const results = [];
+            
+            for (const fileId of candidateIds) {
+                const file = await filesStore.getById(fileId);
+                if (!file) continue;
+
+                // Skip trashed files
+                const inTrash = await this._isInTrash(fileId);
+                if (inTrash) continue;
+
+                // Filter by type
+                if (type && type.length > 0) {
+                    if (!type.includes(file.type)) {
+                        continue;
+                    }
+                }
+
+                // Filter by owner
+                if (owner === 'owned') {
+                    if (file.ownerId !== userId) continue;
+                } else if (owner === 'shared') {
+                    // Must not be owned by user AND must have permissions on it
+                    if (file.ownerId === userId) continue;
+                    // Verify user actually has permissions (not just owner)
+                    const permissions = await permissionStore.getByFileId(fileId);
+                    const hasPermission = permissions.some(p => 
+                        p.userId === userId && (p.level === 'VIEWER' || p.level === 'EDITOR')
+                    );
+                    if (!hasPermission) continue;
+                }
+
+                // Filter by date range
+                if (dateRange) {
+                    const modifiedDate = new Date(file.modifiedAt || file.createdAt);
+                    if (dateRange.start && modifiedDate < dateRange.start) continue;
+                    if (dateRange.end && modifiedDate > dateRange.end) continue;
+                }
+
+                // Filter by sharedWith
+                if (sharedWith) {
+                    const permissions = await permissionStore.getByFileId(fileId);
+                    const hasSharedUser = permissions.some(p => 
+                        p.userId === sharedWith && (p.level === 'VIEWER' || p.level === 'EDITOR')
+                    );
+                    if (!hasSharedUser) continue;
+                }
+
+                // Filter by starred status
+                if (isStarred !== null) {
+                    const metadata = await userFileMetadataStore.get(userId, fileId);
+                    const fileIsStarred = metadata ? metadata.isStarred : false;
+                    if (isStarred && !fileIsStarred) continue;
+                    if (!isStarred && fileIsStarred) continue;
+                }
+
+                // Get user metadata
+                const metadata = await userFileMetadataStore.get(userId, fileId);
+                results.push({
+                    ...file,
+                    isStarred: metadata ? metadata.isStarred : false,
+                    lastViewedAt: metadata ? metadata.lastViewedAt : null,
+                    lastEditedAt: metadata ? metadata.lastEditedAt : null
+                });
+            }
+
+            return results;
         } catch (error) {
             throw new Error(`Search failed: ${error.message}`);
         }

@@ -360,6 +360,261 @@ curl -H "x-filter-date-start: 2024-12-31T00:00:00.000Z" \
 
 ---
 
+## Advanced Search
+
+OverDrive provides a powerful advanced search endpoint (`GET /api/search/:query`) that combines text-based search with comprehensive filtering capabilities.
+
+### Search Endpoint
+
+**Endpoint:** `GET /api/search/:query`
+
+**Authentication:** Required (JWT Bearer token)
+
+**Path Parameters:**
+- `query` - The search term (required). This is what you're looking for.
+
+**Description:** Search files by the query term in name and/or content, with optional filters via headers to refine where to search and apply additional filtering.
+
+### Search & Filter Headers
+
+| Header | Values | Description |
+|:---|:---|:---|
+| **A. Search Location** | | |
+| `x-search-in` | `name`, `content`, `both` | Where to search for the query. Default: `both` |
+| **B. Metadata Filters** | | |
+| `x-filter-type` | `image`, `folder`, `pdf`, `docs` | Filter by file type. Comma-separated for multiple types |
+| `x-filter-owner` | `owned`, `shared` | Filter by ownership status |
+| `x-filter-starred` | `true`, `false` | Filter by starred status |
+| `x-filter-shared-with` | User ID (UUID) | Find files shared with a specific user |
+| **C. Date Filters** | | |
+| `x-filter-date-category` | `today`, `last7days`, `last30days`, `thisyear`, `lastyear` | Predefined date ranges |
+| `x-filter-date-start` | ISO 8601 date | Custom date range start (requires `x-filter-date-end`) |
+| `x-filter-date-end` | ISO 8601 date | Custom date range end (requires `x-filter-date-start`) |
+
+### Search Logic
+
+**Text Search Behavior:**
+- **Query (required):** The search term is always in the path parameter `:query`
+- **Search Location (`x-search-in`):**
+  - `name` - Search only in file names
+  - `content` - Search only in file content (docs type only)
+  - `both` - Search in both name and content (default)
+- **Search Logic:** If searching in both, results include files matching **either** name OR content (OR logic)
+
+**Filter Combination:**
+- All filters are combined with **AND** logic
+- Example: `type=docs` + `owner=owned` + `starred=true` → Only your starred docs
+- Filters are applied **after** the text search
+
+**Content Search Limitations:**
+- Content search only works on `docs` type files
+- Binary files (`image`, `pdf`) are excluded from content search
+- Folders have no content to search
+
+### Usage Examples
+
+#### Basic Text Search
+
+```bash
+# Search "report" in both name and content (default)
+curl -H "Authorization: Bearer <token>" \
+     http://localhost:3000/api/search/report
+
+# Search only in file names
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: name" \
+     http://localhost:3000/api/search/project
+
+# Search only in content
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     http://localhost:3000/api/search/confidential
+```
+
+#### Search with Type Filter
+
+```bash
+# Find all PDFs with "report" in the name
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: name" \
+     -H "x-filter-type: pdf" \
+     http://localhost:3000/api/search/report
+
+# Find docs containing "quarterly"
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     -H "x-filter-type: docs" \
+     http://localhost:3000/api/search/quarterly
+```
+
+#### Search with Ownership Filter
+
+```bash
+# Find your own files with "draft" in name
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: name" \
+     -H "x-filter-owner: owned" \
+     http://localhost:3000/api/search/draft
+
+# Find shared files containing "collaboration"
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     -H "x-filter-owner: shared" \
+     http://localhost:3000/api/search/collaboration
+```
+
+#### Search with Date Filters
+
+```bash
+# Find files modified today with "urgent" in name
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-category: today" \
+     http://localhost:3000/api/search/urgent
+
+# Find files from last 7 days containing "meeting"
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     -H "x-filter-date-category: last7days" \
+     http://localhost:3000/api/search/meeting
+
+# Custom date range
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-start: 2025-01-01T00:00:00.000Z" \
+     -H "x-filter-date-end: 2025-12-31T23:59:59.999Z" \
+     http://localhost:3000/api/search/report
+```
+
+#### Search with Starred Filter
+
+```bash
+# Find all starred files with "important" in name or content
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-starred: true" \
+     http://localhost:3000/api/search/important
+
+# Find non-starred docs containing "draft"
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     -H "x-filter-type: docs" \
+     -H "x-filter-starred: false" \
+     http://localhost:3000/api/search/draft
+```
+
+#### Complex Multi-Filter Queries
+
+```bash
+# Triple threat: search term + type + date
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: pdf,docs" \
+     -H "x-filter-date-category: last30days" \
+     http://localhost:3000/api/search/project
+
+# Ultimate query: 5 filters combined
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: name" \
+     -H "x-filter-type: pdf" \
+     -H "x-filter-owner: owned" \
+     -H "x-filter-starred: true" \
+     -H "x-filter-date-category: thisyear" \
+     http://localhost:3000/api/search/report
+
+# Find files shared with a specific user
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-shared-with: user-456-uuid" \
+     http://localhost:3000/api/search/team
+```
+
+### Validation & Error Handling
+
+**Invalid Search Location:**
+```bash
+# Error: Invalid x-search-in value
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: invalid" \
+     http://localhost:3000/api/search/test
+# Returns: 400 Bad Request - "Invalid search-in value: invalid. Must be 'name', 'content', or 'both'"
+```
+
+**Invalid Type:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: video" \
+     http://localhost:3000/api/search/test
+
+# Returns: 400 Bad Request
+# { "error": "Invalid file type: video. Allowed types: image, folder, pdf, docs" }
+```
+
+**Invalid Owner:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-owner: public" \
+     http://localhost:3000/api/search/test
+
+# Returns: 400 Bad Request
+# { "error": "Invalid owner filter: public. Must be 'owned' or 'shared'" }
+```
+
+**Invalid Starred Value:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-starred: yes" \
+     http://localhost:3000/api/search/test
+
+# Returns: 400 Bad Request
+# { "error": "Invalid starred filter: must be \"true\" or \"false\"" }
+```
+
+**Invalid Date Range:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-start: 2025-12-31T00:00:00.000Z" \
+     -H "x-filter-date-end: 2025-01-01T00:00:00.000Z" \
+     http://localhost:3000/api/search/test
+
+# Returns: 400 Bad Request
+# { "error": "Invalid date range: end date must be after start date" }
+```
+
+### Search Response
+
+**Successful Search:**
+```json
+[
+  {
+    "id": "file-123",
+    "name": "Q4_Report.pdf",
+    "type": "pdf",
+    "ownerId": "user-456",
+    "parentId": null,
+    "size": 245760,
+    "isTrashed": false,
+    "createdAt": "2025-10-15T10:30:00.000Z",
+    "modifiedAt": "2025-12-20T14:45:00.000Z",
+    "isStarred": true,
+    "lastViewedAt": "2026-01-05T09:20:00.000Z",
+    "lastEditedAt": null
+  }
+]
+```
+
+**No Results:**
+```json
+[]
+```
+
+### Search Behavioral Notes
+
+1. **Case-Insensitive:** All text searches are case-insensitive
+2. **Substring Matching:** Search terms use substring matching (e.g., "rep" matches "report", "reporting", "repository")
+3. **Whitespace Trimming:** Leading/trailing whitespace in all header values is automatically removed
+4. **Security:** Only returns files the authenticated user has permission to access
+5. **Trash Exclusion:** Trashed files are automatically excluded from search results
+6. **Folder Content:** Folders have no searchable content (content search skips folders)
+7. **Performance:** Content search requires fetching file content from storage server, which may be slower for large result sets
+
+---
+
 ## Storage Management: Owner-Based Quotas
 
 OverDrive implements a **file ownership-based storage quota system** similar to Google Drive, where storage consumption is attributed to file owners rather than folder containers.
