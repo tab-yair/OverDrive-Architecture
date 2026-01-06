@@ -1,0 +1,91 @@
+/* Sidebar Component Styles */
+
+.sidebar {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    width: 256px;
+    min-width: 256px;
+    height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    padding: 8px 12px;
+    overflow: hidden;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    z-index: 100;
+}
+
+/* New button container */
+.sidebar-new-btn-container {
+    padding: 8px 0 16px 0;
+}
+
+/* New button */
+.sidebar-new-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: var(--shadow);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.sidebar-new-btn:hover {
+    background-color: var(--accent-light);
+    box-shadow: var(--shadow-elevated);
+}
+
+.sidebar-new-btn .material-symbols-outlined {
+    font-size: 24px;
+    color: var(--accent-color);
+}
+
+/* Navigation section */
+.sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 0;
+}
+
+/* Footer section (storage indicator) */
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 72px;
+        min-width: 72px;
+        padding: 8px;
+    }
+
+    .sidebar-new-btn {
+        width: 48px;
+        height: 48px;
+        padding: 12px;
+        border-radius: 16px;
+        justify-content: center;
+    }
+
+    .sidebar-new-btn-text {
+        display: none;
+    }
+
+    .sidebar-new-btn .material-symbols-outlined {
+        margin: 0;
+    }
+}

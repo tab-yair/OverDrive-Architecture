@@ -1,0 +1,88 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import Logo from '../Logo/Logo';
+import SearchBar from '../SearchBar/SearchBar';
+import ProfileDropdown from '../ProfileDropdown/ProfileDropdown';
+import './Navbar.css';
+
+/**
+ * Navbar Component
+ * Displays different content based on authentication state:
+ * - Guest: Logo + Login/Register button
+ * - Authenticated: Logo + SearchBar + Theme toggle + Settings + User profile dropdown
+ */
+function Navbar() {
+    const { isAuthenticated, mockLogin } = useAuth();
+    const { isDarkMode, toggleTheme } = useTheme();
+    const navigate = useNavigate();
+
+    return (
+        <nav className="navbar">
+            {/* Logo section - always visible */}
+            <div className="navbar-left">
+                <Logo
+                    size="sm"
+                    to={isAuthenticated ? '/home' : '/'}
+                />
+            </div>
+
+            {/* Center section - search bar (only when authenticated) */}
+            {isAuthenticated && (
+                <div className="navbar-center">
+                    <SearchBar />
+                </div>
+            )}
+
+            {/* Right section - differs based on auth state */}
+            <div className="navbar-right">
+                {isAuthenticated ? (
+                    <>
+                        {/* Theme toggle button */}
+                        <button
+                            className="navbar-icon-btn"
+                            onClick={toggleTheme}
+                            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                            aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                        >
+                            <span className="material-symbols-outlined">
+                                {isDarkMode ? 'light_mode' : 'dark_mode'}
+                            </span>
+                        </button>
+
+                        {/* Settings button */}
+                        <button
+                            className="navbar-icon-btn navbar-settings-btn"
+                            onClick={() => navigate('/settings')}
+                            title="Settings"
+                            aria-label="Settings"
+                        >
+                            <span className="material-symbols-outlined">settings</span>
+                        </button>
+
+                        {/* User profile dropdown */}
+                        <ProfileDropdown />
+                    </>
+                ) : (
+                    /* Guest mode: Login/Register and Mock Login buttons */
+                    <div className="navbar-guest-actions">
+                        {/* Mock login for testing */}
+                        <button
+                            className="btn btn-secondary"
+                            onClick={mockLogin}
+                            title="Development: Login with mock user"
+                        >
+                            Mock Login
+                        </button>
+
+                        <Link to="/login" className="btn btn-primary">
+                            Login / Register
+                        </Link>
+                    </div>
+                )}
+            </div>
+        </nav>
+    );
+}
+
+export default Navbar;
