@@ -182,6 +182,184 @@ Content-Type: application/json
 
 ---
 
+## Advanced Filtering via HTTP Headers
+
+OverDrive supports sophisticated client-side filtering for file retrieval endpoints through custom HTTP headers. This allows clients to filter results by file type, modification date, and ownership **without modifying the URL**.
+
+### Supported Endpoints
+
+The following endpoints support filtering via HTTP headers:
+- `GET /api/files` - List all files at root level
+- `GET /api/files/starred` - Get starred files
+- `GET /api/files/recent` - Get recently accessed files
+- `GET /api/files/shared` - Get files shared with me
+- `GET /api/files/trash` - Get trash items (ownership filter ignored)
+
+### Filter Headers
+
+| Header | Values | Description |
+|:---|:---|:---|
+| `x-filter-type` | `image`, `folder`, `pdf`, `docs` | Filter by file type. Can specify multiple comma-separated values: `image,pdf` |
+| `x-filter-date-category` | `today`, `last7days`, `last30days`, `thisyear`, `lastyear` | Filter by predefined date ranges based on modification date |
+| `x-filter-date-start` | ISO 8601 date | Custom date range start (inclusive). Requires `x-filter-date-end` |
+| `x-filter-date-end` | ISO 8601 date | Custom date range end (inclusive). Requires `x-filter-date-start` |
+| `x-filter-ownership` | `owned`, `shared`, `all` | Filter by file ownership. Default: `all` |
+
+### Filter Logic
+
+**Multiple Filters (AND Logic):**
+- When multiple filters are specified, they are combined with **AND** logic
+- Example: Type=`image` + Date=`last7days` + Ownership=`owned` → Returns only images you own modified in the last 7 days
+
+**Date Range Priority:**
+- If both `x-filter-date-category` and custom dates (`x-filter-date-start`/`x-filter-date-end`) are provided, the custom dates take precedence
+- Custom date ranges require **both** start and end dates
+
+**Ownership Filter Restrictions:**
+- The `/trash` endpoint **always ignores** the ownership filter (trash shows only your files by design)
+- The `/storage` endpoint also ignores the ownership filter
+
+### Usage Examples
+
+#### Filter by File Type
+```bash
+# Get only images
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: image" \
+     http://localhost:3000/api/files
+
+# Get images and PDFs
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: image,pdf" \
+     http://localhost:3000/api/files/starred
+```
+
+#### Filter by Date Category
+```bash
+# Get files modified today
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-category: today" \
+     http://localhost:3000/api/files
+
+# Get files modified in the last 7 days
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-category: last7days" \
+     http://localhost:3000/api/files/recent
+```
+
+#### Filter by Custom Date Range
+```bash
+# Get files modified between Jan 1-15, 2024
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-start: 2024-01-01T00:00:00.000Z" \
+     -H "x-filter-date-end: 2024-01-15T23:59:59.999Z" \
+     http://localhost:3000/api/files
+```
+
+#### Filter by Ownership
+```bash
+# Get only files you own
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-ownership: owned" \
+     http://localhost:3000/api/files
+
+# Get only files shared with you
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-ownership: shared" \
+     http://localhost:3000/api/files/starred
+```
+
+#### Combine Multiple Filters
+```bash
+# Get your own images modified in the last 30 days
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: image" \
+     -H "x-filter-date-category: last30days" \
+     -H "x-filter-ownership: owned" \
+     http://localhost:3000/api/files
+
+# Get shared PDFs modified this year
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: pdf" \
+     -H "x-filter-date-category: thisyear" \
+     -H "x-filter-ownership: shared" \
+     http://localhost:3000/api/files/shared
+```
+
+### Validation & Error Handling
+
+**Invalid Filter Values:**
+```bash
+# Invalid file type
+curl -H "x-filter-type: video"
+# Returns: 400 Bad Request
+# { "error": "Invalid file type: video. Allowed types: image, folder, pdf, docs" }
+
+# Invalid date category
+curl -H "x-filter-date-category: yesterday"
+# Returns: 400 Bad Request
+# { "error": "Invalid date category: yesterday. Allowed: today, last7days, last30days, thisyear, lastyear" }
+
+# Invalid ownership value
+curl -H "x-filter-ownership: public"
+# Returns: 400 Bad Request
+# { "error": "Invalid ownership filter: public. Allowed: owned, shared, all" }
+```
+
+**Incomplete Custom Date Range:**
+```bash
+# Missing end date
+curl -H "x-filter-date-start: 2024-01-01T00:00:00.000Z"
+# Returns: 400 Bad Request
+# { "error": "Both x-filter-date-start and x-filter-date-end are required for custom date range" }
+```
+
+**Invalid Date Format:**
+```bash
+# Non-ISO date
+curl -H "x-filter-date-start: 01/01/2024" \
+     -H "x-filter-date-end: 01/15/2024"
+# Returns: 400 Bad Request
+# { "error": "Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ)" }
+```
+
+**Invalid Date Range (End Before Start):**
+```bash
+curl -H "x-filter-date-start: 2024-12-31T00:00:00.000Z" \
+     -H "x-filter-date-end: 2024-01-01T00:00:00.000Z"
+# Returns: 400 Bad Request
+# { "error": "Invalid date range: end date must be after start date" }
+```
+
+### Behavioral Notes
+
+1. **No Headers = No Filtering:**
+   - If no filter headers are provided, all accessible files are returned (default behavior)
+
+2. **Case-Insensitive Values:**
+   - Filter values are case-insensitive: `IMAGE` = `image`, `OWNED` = `owned`
+
+3. **Whitespace Handling:**
+   - Leading/trailing whitespace in header values is automatically trimmed
+   - Multiple types: `"image, pdf"` and `"image,pdf"` are equivalent
+
+4. **Date Category Reference:**
+   - `today`: Files modified since midnight (00:00:00) today in server timezone
+   - `last7days`: Files modified in the last 7 days (168 hours)
+   - `last30days`: Files modified in the last 30 days (720 hours)
+   - `thisyear`: Files modified since Jan 1 of current year
+   - `lastyear`: Files modified during the previous calendar year only
+
+5. **Ownership Context:**
+   - `owned`: Files where you are the owner
+   - `shared`: Files where you have VIEWER or EDITOR permissions but are NOT the owner
+   - `all`: Both owned and shared files (default)
+
+6. **Empty Results:**
+   - If filters exclude all files, the endpoint returns an empty array `[]` with `200 OK`
+
+---
+
 ## Storage Management: Owner-Based Quotas
 
 OverDrive implements a **file ownership-based storage quota system** similar to Google Drive, where storage consumption is attributed to file owners rather than folder containers.

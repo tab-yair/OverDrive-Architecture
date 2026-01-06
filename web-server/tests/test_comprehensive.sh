@@ -3,7 +3,6 @@
 BASE_URL="http://localhost:3000"
 TESTS_PASSED=0
 TESTS_FAILED=0
-# שימוש בפורמט מספרים בלבד כדי למנוע תווים אסורים
 TS=$(date +%s%N | cut -b1-13) 
 
 # Colors
@@ -104,7 +103,7 @@ fi
 
 section "SECTION 4: SECURITY & PERMISSION FILTERING"
 
-# בדיקה שמשתמש ב' (U2) לא רואה את הקובץ בחיפוש כי אין לו הרשאה
+
 info "Verifying User 2 (Guest) CANNOT see the file in search..."
 SEARCH_U2=$(curl -s -X GET "$BASE_URL/api/search/CONFIDENTIAL" -H "Authorization: Bearer $TOKEN2")
 
@@ -115,7 +114,7 @@ else
     echo "Leakage data: $SEARCH_U2"
 fi
 
-# אופציונלי: מתן הרשאה ובדיקה שמעכשיו הוא כן רואה
+
 info "Granting VIEWER permission to User 2..."
 curl -s -X POST "$BASE_URL/api/files/$FILE_ID/permissions" \
   -H "Authorization: Bearer $TOKEN" \
