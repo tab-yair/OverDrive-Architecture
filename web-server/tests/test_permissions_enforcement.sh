@@ -8,8 +8,8 @@
 # 5. Viewers cannot grant permissions
 
 BASE_URL="http://localhost:3000"
-PASS=0
-FAIL=0
+TESTS_PASSED=0
+TESTS_FAILED=0
 TS=$(date +%s%N | cut -b1-13)
 
 # Colors
@@ -19,9 +19,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-pass() { echo -e "${GREEN}✓${NC} $1"; ((PASS++)); }
-fail() { echo -e "${RED}✗${NC} $1"; ((FAIL++)); }
-info() { echo -e "${YELLOW}→${NC} $1"; }
+pass() { echo -e "${GREEN}✓ PASS${NC}: $1"; ((TESTS_PASSED++)); }
+fail() { echo -e "${RED}✗ FAIL${NC}: $1"; ((TESTS_FAILED++)); }
+info() { echo -e "${YELLOW}➜${NC} $1"; }
 
 section() {
     echo -e "\n${BLUE}======================================${NC}"
@@ -44,17 +44,17 @@ VIEWER_EMAIL="viewer${TS}@gmail.com"
 
 OWNER_RESP=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$OWNER_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Owner\"}")
+  -d "{\"username\":\"$OWNER_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Owner\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}")
 OWNER_ID=$(extract_id "$OWNER_RESP")
 
 EDITOR_RESP=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$EDITOR_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Editor\"}")
+  -d "{\"username\":\"$EDITOR_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Editor\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}")
 EDITOR_ID=$(extract_id "$EDITOR_RESP")
 
 VIEWER_RESP=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$VIEWER_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Viewer\"}")
+  -d "{\"username\":\"$VIEWER_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Viewer\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}")
 VIEWER_ID=$(extract_id "$VIEWER_RESP")
 
 if [[ -n "$OWNER_ID" && -n "$EDITOR_ID" && -n "$VIEWER_ID" ]]; then
@@ -310,7 +310,7 @@ info "Creating target user for sharing test..."
 TARGET_EMAIL="target${TS}@gmail.com"
 TARGET_RESP=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$TARGET_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Target\"}")
+  -d "{\"username\":\"$TARGET_EMAIL\",\"password\":\"password12345678\",\"firstName\":\"Target\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}")
 TARGET_ID=$(extract_id "$TARGET_RESP")
 
 if [[ -n "$TARGET_ID" ]]; then
@@ -349,14 +349,15 @@ else
 fi
 
 section "SUMMARY"
-echo -e "${GREEN}Passed: $PASS${NC}"
-echo -e "${RED}Failed: $FAIL${NC}"
-echo -e "Total: $((PASS + FAIL))"
+TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+echo "Test Summary: $TESTS_PASSED/$TOTAL passed"
+echo -e "${GREEN}Passed: $TESTS_PASSED${NC}"
+echo -e "${RED}Failed: $TESTS_FAILED${NC}"
 
-if [[ $FAIL -eq 0 ]]; then
+if [[ $TESTS_FAILED -eq 0 ]]; then
     echo -e "\n${GREEN}✓ All tests passed!${NC}"
     exit 0
 else
-    echo -e "\n${RED}✗ Some tests failed${NC}"
+    echo -e "\n${RED}✗ $TESTS_FAILED test(s) failed${NC}"
     exit 1
 fi

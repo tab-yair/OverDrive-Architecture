@@ -1,19 +1,61 @@
 #!/bin/bash
 # Test download endpoint - single files and folder exports
 
-echo "=== Testing Download Endpoint ==="
-echo ""
-
 # Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
+
+# Test counters
+TESTS_PASSED=0
+TESTS_FAILED=0
+
+# Helper functions
+pass() {
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    echo -e "${GREEN}✓ PASS${NC}: $1"
+}
+
+fail() {
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    echo -e "${RED}✗ FAIL${NC}: $1"
+}
+
+info() {
+    echo -e "${YELLOW}➜${NC} $1"
+}
+
+# Print summary at exit
+print_summary() {
+    echo ""
+    echo "=========================================="
+    TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+    echo "Test Summary: $TESTS_PASSED/$TOTAL passed"
+    if [ $TESTS_FAILED -eq 0 ]; then
+        echo -e "${GREEN}All tests passed!${NC}"
+        exit 0
+    else
+        echo -e "${RED}$TESTS_FAILED test(s) failed${NC}"
+        exit 1
+    fi
+}
+
+trap print_summary EXIT
+
+echo "=========================================="
+echo "Testing Download Endpoint"
+echo "=========================================="
+echo ""
 
 # Create test users with unique emails
 echo "1. Creating test users..."
 RAND=$(( $RANDOM % 10000 ))
-U1=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d "{\"username\":\"dlown${RAND}@gmail.com\",\"password\":\"pass12345678\",\"firstName\":\"DownloadOwner\"}" | jq -r '.id')
-U2=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d "{\"username\":\"dlview${RAND}@gmail.com\",\"password\":\"pass12345678\",\"firstName\":\"DownloadViewer\"}" | jq -r '.id')
+# Small base64 test image (1x1 red pixel PNG)
+PROFILE_IMG="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
+
+U1=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d "{\"username\":\"dlown${RAND}@gmail.com\",\"password\":\"pass12345678\",\"firstName\":\"DownloadOwner\",\"profileImage\":\"$PROFILE_IMG\"}" | jq -r '.id')
+U2=$(curl -s -X POST http://localhost:3000/api/users -H "Content-Type: application/json" -d "{\"username\":\"dlview${RAND}@gmail.com\",\"password\":\"pass12345678\",\"firstName\":\"DownloadViewer\",\"profileImage\":\"$PROFILE_IMG\"}" | jq -r '.id')
 echo "✓ Users created: $U1, $U2"
 
 # Login as owner

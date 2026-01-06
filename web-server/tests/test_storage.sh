@@ -1,7 +1,51 @@
 #!/bin/bash
 # Test storage tracking and limits
 
-echo "=== Testing Storage Tracking and Limits ==="
+# Colors for output
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Test counters
+TESTS_PASSED=0
+TESTS_FAILED=0
+
+# Helper functions
+pass() {
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    echo -e "${GREEN}✓ PASS${NC}: $1"
+}
+
+fail() {
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    echo -e "${RED}✗ FAIL${NC}: $1"
+}
+
+info() {
+    echo -e "${YELLOW}➜${NC} $1"
+}
+
+# Print summary at exit
+print_summary() {
+    echo ""
+    echo "=========================================="
+    TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+    echo "Test Summary: $TESTS_PASSED/$TOTAL passed"
+    if [ $TESTS_FAILED -eq 0 ]; then
+        echo -e "${GREEN}All tests passed!${NC}"
+        exit 0
+    else
+        echo -e "${RED}$TESTS_FAILED test(s) failed${NC}"
+        exit 1
+    fi
+}
+
+trap print_summary EXIT
+
+echo "=========================================="
+echo "Testing Storage Tracking and Limits"
+echo "=========================================="
 echo ""
 
 BASE_URL="http://localhost:3000"
@@ -12,59 +56,48 @@ extract_id() {
 }
 
 # Create test user
-echo "1. Creating test user..."
+info "1. Creating test user..."
 RANDOM_ID=$(date +%s%N)
 TEST_USER="storagetest${RANDOM_ID}@gmail.com"
 CREATE_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/users \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"$TEST_USER\",\"password\":\"test12345678\",\"firstName\":\"StorageTest\"}")
+    -d "{\"username\":\"$TEST_USER\",\"password\":\"test12345678\",\"firstName\":\"StorageTest\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}")
 USER_ID=$(extract_id "$CREATE_RESPONSE")
-echo "✓ User created: $USER_ID"
+[[ -n "$USER_ID" ]] && pass "User created: $USER_ID" || fail "User creation failed"
 
 # Login
-echo "2. Logging in..."
+info "2. Logging in..."
 TOKEN=$(curl -s -X POST $BASE_URL/api/tokens \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"$TEST_USER\",\"password\":\"test12345678\"}" | jq -r '.token')
-echo "✓ Token received"
+[[ -n "$TOKEN" && "$TOKEN" != "null" ]] && pass "Token received" || fail "Login failed"
 
 # Check initial storage (should be 0)
-echo "3. Checking initial storage..."
+info "3. Checking initial storage..."
 STORAGE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN")
 USED=$(echo "$STORAGE" | jq -r '.storageUsed')
 LIMIT=$(echo "$STORAGE" | jq -r '.storageLimit')
 USED_MB=$(echo "$STORAGE" | jq -r '.storageUsedMB')
 LIMIT_MB=$(echo "$STORAGE" | jq -r '.storageLimitMB')
-echo "✓ Storage used: $USED bytes ($USED_MB MB)"
-echo "✓ Storage limit: $LIMIT bytes ($LIMIT_MB MB)"
+[[ "$USED" == "0" ]] && pass "Initial storage: $USED bytes ($USED_MB MB), Limit: $LIMIT_MB MB" || fail "Initial storage should be 0, got $USED"
 
-if [[ "$USED" != "0" ]]; then
-    echo "✗ ERROR: Initial storage should be 0, got $USED"
-    exit 1
-fi
-
-# Create a small file (single line as per requirements)
-echo "4. Creating small file..."
+# Create a small file
+info "4. Creating small file..."
 FILE1_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/files \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d '{"name":"small.txt","type":"docs","content":"AAAA"}')
 FILE1_ID=$(extract_id "$FILE1_RESPONSE")
-echo "✓ File created: $FILE1_ID"
+[[ -n "$FILE1_ID" ]] && pass "File created: $FILE1_ID" || fail "File creation failed"
 
 # Check storage increased
-echo "5. Checking storage after file creation..."
+info "5. Checking storage after file creation..."
 STORAGE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN")
 USED=$(echo "$STORAGE" | jq -r '.storageUsed')
-echo "✓ Storage used: $USED bytes"
-
-if [[ "$USED" == "0" ]]; then
-    echo "✗ ERROR: Storage should have increased"
-    exit 1
-fi
+[[ "$USED" -gt "0" ]] && pass "Storage increased to: $USED bytes" || fail "Storage should have increased"
 
 # Update file with larger content
-echo "6. Updating file with larger content..."
+info "6. Updating file with larger content..."
 curl -s -X PATCH $BASE_URL/api/files/$FILE1_ID \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
@@ -72,12 +105,7 @@ curl -s -X PATCH $BASE_URL/api/files/$FILE1_ID \
     
 STORAGE=$(curl -s $BASE_URL/api/storage -H "Authorization: Bearer $TOKEN")
 USED_AFTER=$(echo "$STORAGE" | jq -r '.storageUsed')
-echo "✓ Storage after update: $USED_AFTER bytes"
-
-if [[ "$USED_AFTER" -le "$USED" ]]; then
-    echo "✗ ERROR: Storage should have increased after update"
-    exit 1
-fi
+[[ "$USED_AFTER" -gt "$USED" ]] && pass "Storage after update: $USED_AFTER bytes" || fail "Storage should have increased after update"
 
 # Create another file
 echo "7. Creating another file..."
@@ -198,7 +226,7 @@ RANDOM_ID2=$(date +%s%N)
 TEST_USER2="storagetest${RANDOM_ID2}@gmail.com"
 CREATE_RESPONSE2=$(curl -s -i -X POST $BASE_URL/api/users \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"$TEST_USER2\",\"password\":\"test12345678\",\"firstName\":\"StorageTest2\"}")
+    -d "{\"username\":\"$TEST_USER2\",\"password\":\"test12345678\",\"firstName\":\"StorageTest2\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}")
 USER2_ID=$(extract_id "$CREATE_RESPONSE2")
 echo "✓ Second user created: $USER2_ID"
 

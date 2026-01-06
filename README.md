@@ -50,9 +50,11 @@ Authorization: Bearer <JWT_TOKEN>
 
 | Method | Endpoint | Auth Required | Description |
 |:---:|:---|:---:|:---|
-| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
+| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 8+ char password). Fields: `username`, `password`, `firstName`, `profileImage` (required Base64 image), `lastName` (optional, defaults to `null`). **Automatically creates default preferences** |
 | `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
 | `PATCH` | `/api/users/:id` | ✅ | **Update User Profile**: Update user details. Allowed fields: `password`, `firstName`, `lastName`, `profileImage`. Username cannot be changed. Set `lastName` or `profileImage` to `null` to remove them |
+| `GET` | `/api/users/:id/preference` | ✅ | **Get User Preferences**: Retrieve user's preferences (`theme`, `landingPage`). User can only access their own preferences |
+| `PATCH` | `/api/users/:id/preference` | ✅ | **Update User Preferences**: Update preferences. Allowed fields: `theme` (light/dark), `landingPage` (home/storage). Partial updates supported |
 | `POST` | `/api/tokens` | ❌ | **Login**: Authenticate user and retrieve JWT token. Returns: `{ token: "<JWT>" }` |
 | `GET` | `/api/storage` | ✅ | **Get Storage Info**: Retrieve current storage usage and limit for authenticated user. Returns: `{ storageUsed, storageLimit, storageAvailable, storageUsedMB, storageLimitMB, storageAvailableMB, usagePercentage }` |
 | `POST` | `/api/files` | ✅ | **Create**: Upload a new file or create a folder |
@@ -98,6 +100,518 @@ OverDrive supports four file types with different content modification behaviors
   }
   ```
 - You can still rename or move `pdf`/`image` files using PATCH with `name` or `parentId` fields
+
+---
+
+## User Preferences System
+
+OverDrive provides a personalization system that allows users to customize their experience through preferences.
+
+### Automatic Initialization
+
+**When a user registers** (POST `/api/users`), a preference record is **automatically created** with default values:
+- `theme`: `"light"`
+- `landingPage`: `"home"`
+
+This ensures every user has preferences available immediately after registration without requiring explicit setup.
+
+### Preference Schema
+
+| Field | Type | Allowed Values | Default | Description |
+|:---:|:---:|:---:|:---:|:---|
+| `userId` | String (UUID) | - | - | Links preference to its owner (1:1 relationship) |
+| `theme` | String | `"light"`, `"dark"` | `"light"` | UI color scheme preference |
+| `landingPage` | String | `"home"`, `"storage"` | `"home"` | Default page after login |
+
+### API Usage
+
+#### Get User Preferences
+```bash
+GET /api/users/:id/preference
+Authorization: Bearer <token>
+
+# Response (200 OK):
+{
+  "userId": "user-123",
+  "theme": "light",
+  "landingPage": "home"
+}
+```
+
+#### Update Preferences (Partial Update)
+```bash
+# Update only theme
+PATCH /api/users/:id/preference
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "theme": "dark"
+}
+
+# Update both fields
+PATCH /api/users/:id/preference
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "theme": "dark",
+  "landingPage": "storage"
+}
+
+# Response: 204 No Content
+```
+
+#### Validation & Security
+
+**Input Validation:**
+- Invalid theme values (e.g., `"blue"`) → `400 Bad Request`
+- Invalid landingPage values (e.g., `"dashboard"`) → `400 Bad Request`
+- Unknown fields → `400 Bad Request`
+
+**User Isolation:**
+- Users can **only** access their own preferences
+- Attempting to access another user's preferences → `403 Forbidden`
+
+**Example Error:**
+```json
+{
+  "error": "Invalid theme: blue. Must be one of: light, dark"
+}
+```
+
+---
+
+## Advanced Filtering via HTTP Headers
+
+OverDrive supports sophisticated client-side filtering for file retrieval endpoints through custom HTTP headers. This allows clients to filter results by file type, modification date, and ownership **without modifying the URL**.
+
+### Supported Endpoints
+
+The following endpoints support filtering via HTTP headers:
+- `GET /api/files` - List all files at root level
+- `GET /api/files/starred` - Get starred files
+- `GET /api/files/recent` - Get recently accessed files
+- `GET /api/files/shared` - Get files shared with me
+- `GET /api/files/trash` - Get trash items (ownership filter ignored)
+
+### Filter Headers
+
+| Header | Values | Description |
+|:---|:---|:---|
+| `x-filter-type` | `image`, `folder`, `pdf`, `docs` | Filter by file type. Can specify multiple comma-separated values: `image,pdf` |
+| `x-filter-date-category` | `today`, `last7days`, `last30days`, `thisyear`, `lastyear` | Filter by predefined date ranges based on modification date |
+| `x-filter-date-start` | ISO 8601 date | Custom date range start (inclusive). Requires `x-filter-date-end` |
+| `x-filter-date-end` | ISO 8601 date | Custom date range end (inclusive). Requires `x-filter-date-start` |
+| `x-filter-ownership` | `owned`, `shared`, `all` | Filter by file ownership. Default: `all` |
+
+### Filter Logic
+
+**Multiple Filters (AND Logic):**
+- When multiple filters are specified, they are combined with **AND** logic
+- Example: Type=`image` + Date=`last7days` + Ownership=`owned` → Returns only images you own modified in the last 7 days
+
+**Date Range Priority:**
+- If both `x-filter-date-category` and custom dates (`x-filter-date-start`/`x-filter-date-end`) are provided, the custom dates take precedence
+- Custom date ranges require **both** start and end dates
+
+**Ownership Filter Restrictions:**
+- The `/trash` endpoint **always ignores** the ownership filter (trash shows only your files by design)
+- The `/storage` endpoint also ignores the ownership filter
+
+### Usage Examples
+
+#### Filter by File Type
+```bash
+# Get only images
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: image" \
+     http://localhost:3000/api/files
+
+# Get images and PDFs
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: image,pdf" \
+     http://localhost:3000/api/files/starred
+```
+
+#### Filter by Date Category
+```bash
+# Get files modified today
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-category: today" \
+     http://localhost:3000/api/files
+
+# Get files modified in the last 7 days
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-category: last7days" \
+     http://localhost:3000/api/files/recent
+```
+
+#### Filter by Custom Date Range
+```bash
+# Get files modified between Jan 1-15, 2024
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-start: 2024-01-01T00:00:00.000Z" \
+     -H "x-filter-date-end: 2024-01-15T23:59:59.999Z" \
+     http://localhost:3000/api/files
+```
+
+#### Filter by Ownership
+```bash
+# Get only files you own
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-ownership: owned" \
+     http://localhost:3000/api/files
+
+# Get only files shared with you
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-ownership: shared" \
+     http://localhost:3000/api/files/starred
+```
+
+#### Combine Multiple Filters
+```bash
+# Get your own images modified in the last 30 days
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: image" \
+     -H "x-filter-date-category: last30days" \
+     -H "x-filter-ownership: owned" \
+     http://localhost:3000/api/files
+
+# Get shared PDFs modified this year
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: pdf" \
+     -H "x-filter-date-category: thisyear" \
+     -H "x-filter-ownership: shared" \
+     http://localhost:3000/api/files/shared
+```
+
+### Validation & Error Handling
+
+**Invalid Filter Values:**
+```bash
+# Invalid file type
+curl -H "x-filter-type: video"
+# Returns: 400 Bad Request
+# { "error": "Invalid file type: video. Allowed types: image, folder, pdf, docs" }
+
+# Invalid date category
+curl -H "x-filter-date-category: yesterday"
+# Returns: 400 Bad Request
+# { "error": "Invalid date category: yesterday. Allowed: today, last7days, last30days, thisyear, lastyear" }
+
+# Invalid ownership value
+curl -H "x-filter-ownership: public"
+# Returns: 400 Bad Request
+# { "error": "Invalid ownership filter: public. Allowed: owned, shared, all" }
+```
+
+**Incomplete Custom Date Range:**
+```bash
+# Missing end date
+curl -H "x-filter-date-start: 2024-01-01T00:00:00.000Z"
+# Returns: 400 Bad Request
+# { "error": "Both x-filter-date-start and x-filter-date-end are required for custom date range" }
+```
+
+**Invalid Date Format:**
+```bash
+# Non-ISO date
+curl -H "x-filter-date-start: 01/01/2024" \
+     -H "x-filter-date-end: 01/15/2024"
+# Returns: 400 Bad Request
+# { "error": "Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ)" }
+```
+
+**Invalid Date Range (End Before Start):**
+```bash
+curl -H "x-filter-date-start: 2024-12-31T00:00:00.000Z" \
+     -H "x-filter-date-end: 2024-01-01T00:00:00.000Z"
+# Returns: 400 Bad Request
+# { "error": "Invalid date range: end date must be after start date" }
+```
+
+### Behavioral Notes
+
+1. **No Headers = No Filtering:**
+   - If no filter headers are provided, all accessible files are returned (default behavior)
+
+2. **Case-Insensitive Values:**
+   - Filter values are case-insensitive: `IMAGE` = `image`, `OWNED` = `owned`
+
+3. **Whitespace Handling:**
+   - Leading/trailing whitespace in header values is automatically trimmed
+   - Multiple types: `"image, pdf"` and `"image,pdf"` are equivalent
+
+4. **Date Category Reference:**
+   - `today`: Files modified since midnight (00:00:00) today in server timezone
+   - `last7days`: Files modified in the last 7 days (168 hours)
+   - `last30days`: Files modified in the last 30 days (720 hours)
+   - `thisyear`: Files modified since Jan 1 of current year
+   - `lastyear`: Files modified during the previous calendar year only
+
+5. **Ownership Context:**
+   - `owned`: Files where you are the owner
+   - `shared`: Files where you have VIEWER or EDITOR permissions but are NOT the owner
+   - `all`: Both owned and shared files (default)
+
+6. **Empty Results:**
+   - If filters exclude all files, the endpoint returns an empty array `[]` with `200 OK`
+
+---
+
+## Advanced Search
+
+OverDrive provides a powerful advanced search endpoint (`GET /api/search/:query`) that combines text-based search with comprehensive filtering capabilities.
+
+### Search Endpoint
+
+**Endpoint:** `GET /api/search/:query`
+
+**Authentication:** Required (JWT Bearer token)
+
+**Path Parameters:**
+- `query` - The search term (required). This is what you're looking for.
+
+**Description:** Search files by the query term in name and/or content, with optional filters via headers to refine where to search and apply additional filtering.
+
+### Search & Filter Headers
+
+| Header | Values | Description |
+|:---|:---|:---|
+| **A. Search Location** | | |
+| `x-search-in` | `name`, `content`, `both` | Where to search for the query. Default: `both` |
+| **B. Metadata Filters** | | |
+| `x-filter-type` | `image`, `folder`, `pdf`, `docs` | Filter by file type. Comma-separated for multiple types |
+| `x-filter-owner` | `owned`, `shared` | Filter by ownership status |
+| `x-filter-starred` | `true`, `false` | Filter by starred status |
+| `x-filter-shared-with` | User ID (UUID) | Find files shared with a specific user |
+| **C. Date Filters** | | |
+| `x-filter-date-category` | `today`, `last7days`, `last30days`, `thisyear`, `lastyear` | Predefined date ranges |
+| `x-filter-date-start` | ISO 8601 date | Custom date range start (requires `x-filter-date-end`) |
+| `x-filter-date-end` | ISO 8601 date | Custom date range end (requires `x-filter-date-start`) |
+
+### Search Logic
+
+**Text Search Behavior:**
+- **Query (required):** The search term is always in the path parameter `:query`
+- **Search Location (`x-search-in`):**
+  - `name` - Search only in file names
+  - `content` - Search only in file content (docs type only)
+  - `both` - Search in both name and content (default)
+- **Search Logic:** If searching in both, results include files matching **either** name OR content (OR logic)
+
+**Filter Combination:**
+- All filters are combined with **AND** logic
+- Example: `type=docs` + `owner=owned` + `starred=true` → Only your starred docs
+- Filters are applied **after** the text search
+
+**Content Search Limitations:**
+- Content search only works on `docs` type files
+- Binary files (`image`, `pdf`) are excluded from content search
+- Folders have no content to search
+
+### Usage Examples
+
+#### Basic Text Search
+
+```bash
+# Search "report" in both name and content (default)
+curl -H "Authorization: Bearer <token>" \
+     http://localhost:3000/api/search/report
+
+# Search only in file names
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: name" \
+     http://localhost:3000/api/search/project
+
+# Search only in content
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     http://localhost:3000/api/search/confidential
+```
+
+#### Search with Type Filter
+
+```bash
+# Find all PDFs with "report" in the name
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: name" \
+     -H "x-filter-type: pdf" \
+     http://localhost:3000/api/search/report
+
+# Find docs containing "quarterly"
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     -H "x-filter-type: docs" \
+     http://localhost:3000/api/search/quarterly
+```
+
+#### Search with Ownership Filter
+
+```bash
+# Find your own files with "draft" in name
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: name" \
+     -H "x-filter-owner: owned" \
+     http://localhost:3000/api/search/draft
+
+# Find shared files containing "collaboration"
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     -H "x-filter-owner: shared" \
+     http://localhost:3000/api/search/collaboration
+```
+
+#### Search with Date Filters
+
+```bash
+# Find files modified today with "urgent" in name
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-category: today" \
+     http://localhost:3000/api/search/urgent
+
+# Find files from last 7 days containing "meeting"
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     -H "x-filter-date-category: last7days" \
+     http://localhost:3000/api/search/meeting
+
+# Custom date range
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-start: 2025-01-01T00:00:00.000Z" \
+     -H "x-filter-date-end: 2025-12-31T23:59:59.999Z" \
+     http://localhost:3000/api/search/report
+```
+
+#### Search with Starred Filter
+
+```bash
+# Find all starred files with "important" in name or content
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-starred: true" \
+     http://localhost:3000/api/search/important
+
+# Find non-starred docs containing "draft"
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: content" \
+     -H "x-filter-type: docs" \
+     -H "x-filter-starred: false" \
+     http://localhost:3000/api/search/draft
+```
+
+#### Complex Multi-Filter Queries
+
+```bash
+# Triple threat: search term + type + date
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: pdf,docs" \
+     -H "x-filter-date-category: last30days" \
+     http://localhost:3000/api/search/project
+
+# Ultimate query: 5 filters combined
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: name" \
+     -H "x-filter-type: pdf" \
+     -H "x-filter-owner: owned" \
+     -H "x-filter-starred: true" \
+     -H "x-filter-date-category: thisyear" \
+     http://localhost:3000/api/search/report
+
+# Find files shared with a specific user
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-shared-with: user-456-uuid" \
+     http://localhost:3000/api/search/team
+```
+
+### Validation & Error Handling
+
+**Invalid Search Location:**
+```bash
+# Error: Invalid x-search-in value
+curl -H "Authorization: Bearer <token>" \
+     -H "x-search-in: invalid" \
+     http://localhost:3000/api/search/test
+# Returns: 400 Bad Request - "Invalid search-in value: invalid. Must be 'name', 'content', or 'both'"
+```
+
+**Invalid Type:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-type: video" \
+     http://localhost:3000/api/search/test
+
+# Returns: 400 Bad Request
+# { "error": "Invalid file type: video. Allowed types: image, folder, pdf, docs" }
+```
+
+**Invalid Owner:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-owner: public" \
+     http://localhost:3000/api/search/test
+
+# Returns: 400 Bad Request
+# { "error": "Invalid owner filter: public. Must be 'owned' or 'shared'" }
+```
+
+**Invalid Starred Value:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-starred: yes" \
+     http://localhost:3000/api/search/test
+
+# Returns: 400 Bad Request
+# { "error": "Invalid starred filter: must be \"true\" or \"false\"" }
+```
+
+**Invalid Date Range:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -H "x-filter-date-start: 2025-12-31T00:00:00.000Z" \
+     -H "x-filter-date-end: 2025-01-01T00:00:00.000Z" \
+     http://localhost:3000/api/search/test
+
+# Returns: 400 Bad Request
+# { "error": "Invalid date range: end date must be after start date" }
+```
+
+### Search Response
+
+**Successful Search:**
+```json
+[
+  {
+    "id": "file-123",
+    "name": "Q4_Report.pdf",
+    "type": "pdf",
+    "ownerId": "user-456",
+    "parentId": null,
+    "size": 245760,
+    "isTrashed": false,
+    "createdAt": "2025-10-15T10:30:00.000Z",
+    "modifiedAt": "2025-12-20T14:45:00.000Z",
+    "isStarred": true,
+    "lastViewedAt": "2026-01-05T09:20:00.000Z",
+    "lastEditedAt": null
+  }
+]
+```
+
+**No Results:**
+```json
+[]
+```
+
+### Search Behavioral Notes
+
+1. **Case-Insensitive:** All text searches are case-insensitive
+2. **Substring Matching:** Search terms use substring matching (e.g., "rep" matches "report", "reporting", "repository")
+3. **Whitespace Trimming:** Leading/trailing whitespace in all header values is automatically removed
+4. **Security:** Only returns files the authenticated user has permission to access
+5. **Trash Exclusion:** Trashed files are automatically excluded from search results
+6. **Folder Content:** Folders have no searchable content (content search skips folders)
+7. **Performance:** Content search requires fetching file content from storage server, which may be slower for large result sets
 
 ---
 
@@ -794,10 +1308,10 @@ Follow these steps to explore the system. Replace <...> values with actual IDs r
 ```Bash
 curl -i -X POST http://localhost:3000/api/users \
      -H "Content-Type: application/json" \
-     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\",\"firstName\":\"<FIRST_NAME>\",\"lastName\":\"<LAST_NAME>\"}"
+     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\",\"firstName\":\"<FIRST_NAME>\",\"lastName\":\"<LAST_NAME>\",\"profileImage\":\"data:image/png;base64,<BASE64_IMAGE>\"}"
 ```
 Expected Response: 201 Created. Header Location contains the USER_ID.
-Note: `lastName` and `profileImage` are optional fields.
+Note: `lastName` is optional. `profileImage` is required and must be a Base64-encoded image string (e.g., "data:image/png;base64,iVBORw0KG...").
 
 1.2 User Login
 ```Bash

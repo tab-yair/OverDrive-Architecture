@@ -1,9 +1,8 @@
 #!/bin/bash
 
 BASE_URL="http://localhost:3000"
-PASS=0
-FAIL=0
-# שימוש בפורמט מספרים בלבד כדי למנוע תווים אסורים
+TESTS_PASSED=0
+TESTS_FAILED=0
 TS=$(date +%s%N | cut -b1-13) 
 
 # Colors
@@ -13,9 +12,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-pass() { echo -e "${GREEN}✓${NC} $1"; ((PASS++)); }
-fail() { echo -e "${RED}✗${NC} $1"; ((FAIL++)); }
-info() { echo -e "${YELLOW}→${NC} $1"; }
+pass() { echo -e "${GREEN}✓ PASS${NC}: $1"; ((TESTS_PASSED++)); }
+fail() { echo -e "${RED}✗ FAIL${NC}: $1"; ((TESTS_FAILED++)); }
+info() { echo -e "${YELLOW}➜${NC} $1"; }
 
 section() {
     echo -e "\n${BLUE}======================================${NC}"
@@ -32,17 +31,18 @@ section "SECTION 1: USER MANAGEMENT"
 
 U1_EMAIL="owner${TS}@gmail.com"
 U2_EMAIL="editor${TS}@gmail.com"
+PROFILE_IMG="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
 
 info "Registering users: $U1_EMAIL and $U2_EMAIL"
 
 RESP1=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"password123\",\"firstName\":\"Owner\"}")
+  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"password123\",\"firstName\":\"Owner\",\"profileImage\":\"$PROFILE_IMG\"}")
 U1=$(extract_id "$RESP1")
 
 RESP2=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"password123\",\"firstName\":\"Editor\"}")
+  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"password123\",\"firstName\":\"Editor\",\"profileImage\":\"$PROFILE_IMG\"}")
 U2=$(echo "$RESP2" | grep -i "Location:" | sed 's/.*\/users\///' | tr -d '\r\n ')
 
 if [[ -n "$U1" && -n "$U2" ]]; then 
@@ -103,7 +103,7 @@ fi
 
 section "SECTION 4: SECURITY & PERMISSION FILTERING"
 
-# בדיקה שמשתמש ב' (U2) לא רואה את הקובץ בחיפוש כי אין לו הרשאה
+
 info "Verifying User 2 (Guest) CANNOT see the file in search..."
 SEARCH_U2=$(curl -s -X GET "$BASE_URL/api/search/CONFIDENTIAL" -H "Authorization: Bearer $TOKEN2")
 
@@ -114,7 +114,7 @@ else
     echo "Leakage data: $SEARCH_U2"
 fi
 
-# אופציונלי: מתן הרשאה ובדיקה שמעכשיו הוא כן רואה
+
 info "Granting VIEWER permission to User 2..."
 curl -s -X POST "$BASE_URL/api/files/$FILE_ID/permissions" \
   -H "Authorization: Bearer $TOKEN" \
@@ -907,5 +907,15 @@ else
 fi
 
 section "FINAL SUMMARY"
-echo -e "Tests Passed: ${GREEN}$PASS${NC}"
-echo -e "Tests Failed: ${RED}$FAIL${NC}"
+TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+echo "Test Summary: $TESTS_PASSED/$TOTAL passed"
+echo -e "Tests Passed: ${GREEN}$TESTS_PASSED${NC}"
+echo -e "Tests Failed: ${RED}$TESTS_FAILED${NC}"
+
+if [[ $TESTS_FAILED -eq 0 ]]; then
+    echo -e "\n${GREEN}✓ All tests passed!${NC}"
+    exit 0
+else
+    echo -e "\n${RED}✗ $TESTS_FAILED test(s) failed${NC}"
+    exit 1
+fi

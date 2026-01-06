@@ -75,7 +75,7 @@ echo -e "${YELLOW}[SETUP] Creating test users and files...${NC}"
 # Register User 1 (Owner)
 curl -s -X POST "$BASE_URL/api/users" \
   -H "$CONTENT_TYPE" \
-  -d '{"username":"owner1@gmail.com","password":"pass1234","firstName":"Owner"}' > /dev/null
+  -d '{"username":"owner1@gmail.com","password":"pass1234","firstName":"Owner","profileImage":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="}' > /dev/null
 
 TOKEN1=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "$CONTENT_TYPE" \
@@ -85,7 +85,7 @@ echo "  • Owner logged in (TOKEN1)"
 # Register User 2 (Editor)
 curl -s -X POST "$BASE_URL/api/users" \
   -H "$CONTENT_TYPE" \
-  -d '{"username":"editor1@gmail.com","password":"pass1234","firstName":"Editor"}' > /dev/null
+  -d '{"username":"editor1@gmail.com","password":"pass1234","firstName":"Editor","profileImage":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="}' > /dev/null
 
 TOKEN2=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "$CONTENT_TYPE" \
@@ -95,7 +95,7 @@ echo "  • Editor logged in (TOKEN2)"
 # Register User 3 (Viewer)
 curl -s -X POST "$BASE_URL/api/users" \
   -H "$CONTENT_TYPE" \
-  -d '{"username":"viewer1@gmail.com","password":"pass1234","firstName":"Viewer"}' > /dev/null
+  -d '{"username":"viewer1@gmail.com","password":"pass1234","firstName":"Viewer","profileImage":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="}' > /dev/null
 
 TOKEN3=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "$CONTENT_TYPE" \

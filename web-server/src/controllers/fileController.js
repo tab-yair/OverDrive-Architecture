@@ -1,12 +1,22 @@
 const { fileService } = require('../services/fileService');
+const { filterService } = require('../services/filterService');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 /**
  * GET /api/files
  * Get all files in root folder (parentId = null)
+ * Supports filtering via HTTP headers
  */
 const getAllFiles = asyncHandler(async (req, res) => {
-    const files = await fileService.getFilesInFolder({ parentId: null, userId: req.userId });
+    // Parse filter headers
+    const filters = filterService.parseFilters(req.headers);
+    
+    // Get all files
+    let files = await fileService.getFilesInFolder({ parentId: null, userId: req.userId });
+    
+    // Apply filters
+    files = filterService.applyFilters(files, filters, req.userId);
+    
     res.status(200).json(files);
 });
 
@@ -142,18 +152,36 @@ const deleteFile = asyncHandler(async (req, res) => {
 /**
  * GET /api/files/starred
  * Get all starred files for current user
+ * Supports filtering via HTTP headers
  */
 const getStarredFiles = asyncHandler(async (req, res) => {
-    const files = await fileService.getStarredFiles({ userId: req.userId });
+    // Parse filter headers
+    const filters = filterService.parseFilters(req.headers);
+    
+    // Get starred files
+    let files = await fileService.getStarredFiles({ userId: req.userId });
+    
+    // Apply filters
+    files = filterService.applyFilters(files, filters, req.userId);
+    
     res.status(200).json(files);
 });
 
 /**
  * GET /api/files/recent
  * Get recently accessed files for current user
+ * Supports filtering via HTTP headers
  */
 const getRecentFiles = asyncHandler(async (req, res) => {
-    const files = await fileService.getRecentFiles({ userId: req.userId });
+    // Parse filter headers
+    const filters = filterService.parseFilters(req.headers);
+    
+    // Get recent files
+    let files = await fileService.getRecentFiles({ userId: req.userId });
+    
+    // Apply filters
+    files = filterService.applyFilters(files, filters, req.userId);
+    
     res.status(200).json(files);
 });
 
@@ -200,18 +228,41 @@ const copyFile = asyncHandler(async (req, res) => {
 /**
  * GET /api/files/shared
  * Get files shared with current user
+ * Supports filtering via HTTP headers
  */
 const getSharedFiles = asyncHandler(async (req, res) => {
-    const files = await fileService.getSharedFiles({ userId: req.userId });
+    // Parse filter headers
+    const filters = filterService.parseFilters(req.headers);
+    
+    // Get shared files
+    let files = await fileService.getSharedFiles({ userId: req.userId });
+    
+    // Apply filters
+    files = filterService.applyFilters(files, filters, req.userId);
+    
     res.status(200).json(files);
 });
 
 /**
  * GET /api/files/trash
  * Get all items in trash (top-level only)
+ * Supports filtering via HTTP headers (ownership filter is ignored)
  */
 const getTrashItems = asyncHandler(async (req, res) => {
-    const trashItems = await fileService.getTrashItems({ userId: req.userId });
+    // Parse filter headers
+    const filters = filterService.parseFilters(req.headers);
+    
+    // Trash always shows only user's own files - ignore ownership filter
+    if (filterService.shouldIgnoreOwnershipFilter(req.path)) {
+        delete filters.ownership;
+    }
+    
+    // Get trash items
+    let trashItems = await fileService.getTrashItems({ userId: req.userId });
+    
+    // Apply filters (excluding ownership)
+    trashItems = filterService.applyFilters(trashItems, filters, req.userId);
+    
     res.status(200).json(trashItems);
 });
 

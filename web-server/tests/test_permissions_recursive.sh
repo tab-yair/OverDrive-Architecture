@@ -1,8 +1,8 @@
 #!/bin/bash
 
 BASE_URL="http://localhost:3000"
-PASS=0
-FAIL=0
+TESTS_PASSED=0
+TESTS_FAILED=0
 
 # Colors
 GREEN='\033[0;32m'
@@ -11,9 +11,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-pass() { echo -e "${GREEN}✓${NC} $1"; ((PASS++)); }
-fail() { echo -e "${RED}✗${NC} $1"; ((FAIL++)); }
-info() { echo -e "${YELLOW}→${NC} $1"; }
+pass() { echo -e "${GREEN}✓ PASS${NC}: $1"; ((TESTS_PASSED++)); }
+fail() { echo -e "${RED}✗ FAIL${NC}: $1"; ((TESTS_FAILED++)); }
+info() { echo -e "${YELLOW}➜${NC} $1"; }
 section() {
     echo -e "\n${BLUE}======================================${NC}"
     echo -e "${BLUE}  $1${NC}"
@@ -32,15 +32,15 @@ U3_EMAIL="viewer${TS}@gmail.com"
 
 curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"pass12345678\",\"firstName\":\"Owner\"}" > /dev/null
+  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"pass12345678\",\"firstName\":\"Owner\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}" > /dev/null
 
 curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"pass12345678\",\"firstName\":\"Editor\"}" > /dev/null
+  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"pass12345678\",\"firstName\":\"Editor\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}" > /dev/null
 
 curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U3_EMAIL\",\"password\":\"pass12345678\",\"firstName\":\"Viewer\"}" > /dev/null
+  -d "{\"username\":\"$U3_EMAIL\",\"password\":\"pass12345678\",\"firstName\":\"Viewer\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}" > /dev/null
 
 # Login all users
 TOKEN1=$(curl -s -X POST "$BASE_URL/api/tokens" \
@@ -351,13 +351,15 @@ if [[ -n "$CHILD_FILES" ]]; then
 fi
 
 section "FINAL SUMMARY"
-echo -e "Tests Passed: ${GREEN}$PASS${NC}"
-echo -e "Tests Failed: ${RED}$FAIL${NC}"
+TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+echo "Test Summary: $TESTS_PASSED/$TOTAL passed"
+echo -e "Tests Passed: ${GREEN}$TESTS_PASSED${NC}"
+echo -e "Tests Failed: ${RED}$TESTS_FAILED${NC}"
 
-if [[ $FAIL -eq 0 ]]; then
+if [[ $TESTS_FAILED -eq 0 ]]; then
     echo -e "\n${GREEN}🎉 All tests passed!${NC}"
     exit 0
 else
-    echo -e "\n${RED}❌ Some tests failed${NC}"
+    echo -e "\n${RED}❌ $TESTS_FAILED test(s) failed${NC}"
     exit 1
 fi

@@ -1,7 +1,7 @@
 const { EmailValidator } = require('./EmailValidator.js');
 
 class User {
-    constructor(id, username, password, firstName, lastName = null, profileImage = null) {
+    constructor(id, username, password, firstName, lastName = null, profileImage) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -27,10 +27,13 @@ class User {
         if (!data.firstName) {
             return "First name is required";
         }
-        if (data.profileImage && !data.profileImage.startsWith('data:image/')) {
+        if (!data.profileImage) {
+            return "Profile image is required";
+        }
+        if (!data.profileImage.startsWith('data:image/')) {
             return "Invalid image format. Must be Base64 image string";
         }
-        if (data.profileImage && data.profileImage.length > 2 * 1024 * 1024) {
+        if (data.profileImage.length > 2 * 1024 * 1024) {
             return "Profile image exceeds size limit of 2MB";
         }
         return null;

@@ -175,7 +175,7 @@ class StorageServerClient {
                 // Send command
                 try {
                     // PROTOCOL NOTE: Commands are line-based (\n delimited)
-                    // File content uses escaped newlines (\n → \\n) to remain searchable
+                    // File content is JSON-encoded to handle special characters
                     connection.write(command + '\n');
                 } catch (err) {
                     cleanup();
@@ -197,20 +197,16 @@ class StorageServerClient {
     }
 
     // POST - Save file to server
-    // Newlines are escaped (\n → \\n) to support multi-line files
-    // while keeping content searchable and compatible with line-based C++ protocol
+    // Content is JSON-encoded to handle special characters (newlines, etc.)
     async post(fileId, content) {
         // Convert to string if buffer
         const textContent = Buffer.isBuffer(content)
             ? content.toString('utf-8')
             : content;
         
-        // Escape special characters to prevent protocol violations
-        // Order matters: escape backslashes first, then newlines
-        const escapedContent = textContent
-            .replace(/\\/g, '\\\\')  // Escape backslashes: \ → \\\\
-            .replace(/\n/g, '\\n')     // Escape newlines: \n → \\n
-            .replace(/\r/g, '\\r');    // Escape carriage returns: \r → \\r
+        // Use JSON.stringify to handle all escaping automatically
+        // This properly escapes newlines, quotes, backslashes, etc.
+        const escapedContent = JSON.stringify(textContent);
         
         const command = `POST ${fileId} ${escapedContent}`;
 
@@ -218,21 +214,17 @@ class StorageServerClient {
     }
 
     // GET - Retrieve file from server
-    // Escaped newlines are restored (\\n → \n) to return original multi-line content
+    // Content is JSON-decoded to restore original format
     async get(fileId) {
         const command = `GET ${fileId}`;
         const response = await this.sendCommand(command);
         
-        // Unescape content if present
+        // Parse JSON content if present
         if (response.success && response.data) {
             try {
-                // Restore escaped characters
-                // Order matters: unescape newlines/returns first, then backslashes
-                const unescaped = response.data
-                    .replace(/\\n/g, '\n')      // Unescape newlines: \\n → \n
-                    .replace(/\\r/g, '\r')      // Unescape carriage returns: \\r → \r
-                    .replace(/\\\\/g, '\\');   // Unescape backslashes: \\\\ → \ (must be last)
-                response.data = unescaped;
+                // Use JSON.parse to restore original content
+                // This handles all escaped characters automatically
+                response.data = JSON.parse(response.data);
             } catch (err) {
                 console.warn(`Failed to unescape content for ${fileId}: ${err.message}`);
             }

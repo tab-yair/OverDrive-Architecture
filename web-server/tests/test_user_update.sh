@@ -41,7 +41,8 @@ REGISTER_RESPONSE=$(curl -s -X POST "$BASE_URL/users" \
         \"username\": \"$TEST_USERNAME\",
         \"password\": \"testpass123\",
         \"firstName\": \"Original\",
-        \"lastName\": \"Name\"
+        \"lastName\": \"Name\",
+        \"profileImage\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"
     }")
 
 USER_ID=$(echo "$REGISTER_RESPONSE" | jq -r '.id')
@@ -271,11 +272,16 @@ echo "=========================================="
 echo "Tests run: $TESTS_RUN"
 echo "Tests passed: $TESTS_PASSED"
 echo "Tests failed: $((TESTS_RUN - TESTS_PASSED))"
+echo ""
+echo "=========================================="
+echo "Test Summary: $TESTS_PASSED/$TESTS_RUN passed"
+echo "=========================================="
 
 if [ $TESTS_PASSED -eq $TESTS_RUN ]; then
-    echo -e "${GREEN}All tests passed!${NC}"
+    echo -e "${GREEN}✓ All tests passed!${NC}"
     exit 0
 else
-    echo -e "${RED}Some tests failed.${NC}"
+    TESTS_FAILED=$((TESTS_RUN - TESTS_PASSED))
+    echo -e "${RED}✗ $TESTS_FAILED test(s) failed${NC}"
     exit 1
 fi
