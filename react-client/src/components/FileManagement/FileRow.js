@@ -44,18 +44,11 @@ const FileRow = ({
 
   const metadataConfig = getMetadataConfig(pageContext);
   
-  // Get actions using the single source of truth
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, permissionLevel, isOwner);
+  // Get actions using the single source of truth (ACTION_REGISTRY)
+  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred });
   
-  // Get row buttons based on page context
-  let rowButtons;
-  if (pageContext === 'Trash') {
-    // Trash page: Show Restore and Delete Permanently buttons
-    rowButtons = getRowActionButtons(pageContext, { ...file, starred: isStarred }, permissionLevel, isOwner);
-  } else {
-    // Standard pages: Show Star, Rename, Download, Share buttons
-    rowButtons = getRowActionButtons(pageContext, { ...file, starred: isStarred }, permissionLevel, isOwner);
-  }
+  // Get row buttons using the ACTION_REGISTRY
+  const rowButtons = getRowActionButtons(pageContext, { ...file, starred: isStarred });
 
   const handleMenuClick = (event) => {
     event.stopPropagation();

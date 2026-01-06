@@ -42,7 +42,7 @@ const FileCard = ({
     return `${process.env.PUBLIC_URL}/assets/${iconMap[type] || 'Docs.svg'}`;
   };
 
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, permissionLevel, isOwner);
+  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred });
 
   const handleMenuClick = (event) => {
     event.stopPropagation();

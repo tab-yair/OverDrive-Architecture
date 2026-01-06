@@ -7,14 +7,46 @@ import { getMetadataConfig } from './fileUtils';
 import './FileManager.css';
 
 /**
+ * ═══════════════════════════════════════════════════════════════════
+ * FileManager - GLOBAL LAYOUT COMPONENT
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * This is the central layout component that implements "Default First"
+ * architecture for the entire application.
+ * 
+ * GLOBAL DEFAULTS:
+ * ──────────────────────────────────────────────────────────────────
+ * 1. View Mode: Grid View (cards) - applies to ALL views unless overridden
+ * 2. Selection: Unified selection logic works identically in List/Grid
+ * 3. Toolbar: Context-aware SelectionToolbar (Standard vs Trash actions)
+ * 4. Click-Away: Background clicks clear selection globally
+ * 5. Hover: Grey circle on enabled items, disabled items have pointer-events: none
+ * 
+ * LAYOUT-LEVEL BEHAVIORS:
+ * ──────────────────────────────────────────────────────────────────
+ * - Clicking empty space → Clears selection (and closes Info Panel if present)
+ * - Selection state is managed at this level, not in pages
+ * - Toolbar dynamically changes based on pageContext (Standard/Trash)
+ * - All new pages automatically inherit these behaviors
+ * 
+ * FUTURE EXTENSIBILITY:
+ * ──────────────────────────────────────────────────────────────────
+ * - New pages/folders: Automatically get Grid view + Standard toolbar
+ * - Override view mode: Pass viewMode prop from parent if needed
+ * - Custom toolbars: pageContext determines which toolbar actions appear
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ */
+
+/**
  * FileManager Container Component
  * Manages the display of files in either List or Grid view
  * @param {Object} props
  * @param {Array} props.files - Array of file objects
- * @param {string} props.pageContext - Current page context
+ * @param {string} props.pageContext - Current page context ('MyDrive', 'Shared', 'Trash', etc.)
  * @param {string} props.permissionLevel - User's permission level
  * @param {boolean} props.isOwner - Whether current user is the owner
- * @param {string} props.viewMode - 'list' or 'grid'
+ * @param {string} props.viewMode - 'list' or 'grid' (default: 'grid')
  * @param {Function} props.onViewModeChange - Callback when view mode changes
  * @param {Function} props.onAction - Callback for file actions
  * @param {Function} props.onFileClick - Callback when file is clicked
@@ -24,7 +56,7 @@ const FileManager = ({
   pageContext = 'MyDrive',
   permissionLevel = 'viewer',
   isOwner = true,
-  viewMode = 'list',
+  viewMode = 'grid', // GLOBAL DEFAULT: Grid View for all new pages
   onViewModeChange,
   onAction,
   onFileClick,
@@ -89,9 +121,36 @@ const FileManager = ({
   };
 
   /**
-   * CLICK-AWAY HANDLER
-   * Clear selection when clicking on empty background areas
-   * Works for both List View and Grid View
+   * ═══════════════════════════════════════════════════════════════
+   * GLOBAL CLICK-AWAY DESELECTION HANDLER
+   * ═══════════════════════════════════════════════════════════════
+   * 
+   * This is a LAYOUT-LEVEL behavior that applies to ALL views.
+   * Clicking on empty space triggers a "neutral state" reset:
+   * 
+   * 1. Clears all file selections
+   * 2. Should close Info Panel (Details pane) if implemented
+   * 3. Resets UI to neutral state
+   * 
+   * Why at this level?
+   * - Ensures consistent behavior across ALL pages
+   * - New pages automatically inherit this behavior
+   * - No need to reimplement per page
+   * 
+   * Clickable Areas (trigger deselection):
+   * - .file-manager (root container + 24px padding gaps)
+   * - .file-list-container (list view outer container)
+   * - .file-list-header (header row with column names)
+   * - .file-list (empty space below rows)
+   * - .file-grid (empty space between cards)
+   * 
+   * NOT Clickable (FileRow/FileCard stop propagation):
+   * - Individual file rows
+   * - Individual file cards
+   * - Action buttons
+   * - Context menus
+   * 
+   * ═══════════════════════════════════════════════════════════════
    */
   const handleBackgroundClick = (e) => {
     // Clear selection if clicking on the background (not on a specific file)

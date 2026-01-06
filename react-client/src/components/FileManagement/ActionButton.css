@@ -1,3 +1,33 @@
+/* ═══════════════════════════════════════════════════════════════════
+ * ActionButton - GLOBAL INTERACTION RULES
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * Implements consistent hover and disabled states across ALL components.
+ * 
+ * ENABLED STATE:
+ * ─────────────────────────────────────────────────────────────────────
+ * - Hover: Grey circle background (rgba(60, 64, 67, 0.08))
+ * - Click: Slightly darker background
+ * - Cursor: pointer
+ * - Full interaction available
+ * 
+ * DISABLED STATE:
+ * ─────────────────────────────────────────────────────────────────────
+ * - Opacity: 0.3 (icon is faded)
+ * - Background: transparent (no hover effect)
+ * - Cursor: default
+ * - pointer-events: none (completely unclickable)
+ * - NO grey circle on hover
+ * 
+ * This ensures consistent UX across:
+ * - FileRow action buttons
+ * - FileCard action buttons
+ * - SelectionToolbar buttons
+ * - Context menu buttons
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ */
+
 /* ActionButton Component Styles */
 
 .action-button {
@@ -47,10 +77,18 @@
   outline-offset: 2px;
 }
 
-/* Disabled state: No hover effect, no cursor change */
+/* ─────────────────────────────────────────────────────────────────────
+ * DISABLED STATE - Strict No-Interaction Rule
+ * ─────────────────────────────────────────────────────────────────────
+ * When disabled:
+ * 1. Icon opacity reduced to 0.3 (visual feedback)
+ * 2. pointer-events: none (completely prevents interaction)
+ * 3. No hover background (ensured by pointer-events: none)
+ * 4. Background stays transparent (important for visual clarity)
+ * ───────────────────────────────────────────────────────────────────── */
 .action-button.disabled {
   cursor: default;
-  pointer-events: none;
+  pointer-events: none; /* CRITICAL: Prevents all interaction */
   background-color: transparent !important;
 }
 
@@ -59,7 +97,7 @@
 }
 
 .action-button.disabled .action-button-icon {
-  opacity: 0.3;
+  opacity: 0.3; /* Visual indicator of disabled state */
 }
 
 .action-button-icon {

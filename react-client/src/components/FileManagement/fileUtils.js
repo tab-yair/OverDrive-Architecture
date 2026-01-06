@@ -1,5 +1,114 @@
 /**
- * Utility functions for file management components
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FILE MANAGEMENT UTILITIES - "ACTION REGISTRY" PATTERN
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * SINGLE SOURCE OF TRUTH ARCHITECTURE:
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 
+ * ALL actions (Open, Download, Share, Delete, etc.) are defined in ONE place:
+ * → ACTION_REGISTRY (line ~350)
+ * 
+ * Each action contains:
+ * - label: Display text
+ * - iconSrc: Icon path
+ * - isDanger: Red styling flag
+ * - isVisible(file, pageContext): Should this action appear?
+ * - isEnabled(file, pageContext): Can user click it?
+ * 
+ * ALL UI components use the SAME registry:
+ * - FileRow quick buttons → evaluateAction()
+ * - FileCard quick buttons → evaluateAction()
+ * - More (⋮) context menu → getAvailableActions()
+ * - Selection Toolbar → getBulkMenuActions() + getToolbarActions()
+ * 
+ * GUARANTEED CONSISTENCY:
+ * - No duplicate logic
+ * - No conflicts between components
+ * - Permissions checked once in ACTION_REGISTRY
+ * - Changes in one place affect entire app
+ * 
+ * ─────────────────────────────────────────────────────────────────────────────
+ * GLOBAL DEFAULTS (Automatically inherited by all pages):
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 
+ * 1. VIEW MODE:
+ *    ✓ Grid View (cards) is the default for ALL pages
+ *    ✓ Pages can override by passing viewMode='list' prop
+ * 
+ * 2. METADATA COLUMNS:
+ *    ✓ Owner (with avatar)
+ *    ✓ Last Modified (smart date: "14:06" today, "21 Jan" older)
+ *    ✓ Location (parent folder)
+ *    ✓ File Size
+ * 
+ * 3. CONTEXT MENU (More ⋮):
+ *    ✓ Files: Open, Download, Rename, Copy, Share, Move, Details, Delete
+ *    ✓ Folders: Download, Rename, Share, Move, Details, Delete
+ * 
+ * 4. QUICK ACTIONS (Hover buttons):
+ *    ✓ Star/Unstar, Rename, Download, Share
+ *    ✓ Three dots (⋮) is permanently visible
+ * 
+ * 5. SELECTION TOOLBAR:
+ *    ✓ Standard: Share, Download, Move, Delete/Remove, More (⋮)
+ *    ✓ Actions follow "strictest" permission logic
+ * 
+ * 6. INTERACTION RULES:
+ *    ✓ Enabled items: Grey circle hover background
+ *    ✓ Disabled items: Opacity 0.3, pointer-events: none
+ * 
+ * 7. LAYOUT BEHAVIORS:
+ *    ✓ Click empty space → Clear selection
+ *    ✓ Selection state managed at layout level
+ *    ✓ Google Drive-style clickable gaps (24px padding)
+ * 
+ * 8. MIXED SELECTION HANDLING:
+ *    ✓ INTERSECTION RULE: Actions visible only if ALL items support them
+ *    ✓ RESTRICTIVE RULE: Actions enabled only if ALL items have permission
+ *    ✓ Example: File + Folder selected → "Open" hidden (folders don't support)
+ *    ✓ Example: 1 read-only file → "Delete" disabled for entire selection
+ *    ✓ SYNC GUARANTEE: Toolbar buttons are SUBSET of More menu (no conflicts)
+ * 
+ * ─────────────────────────────────────────────────────────────────────────────
+ * HOW TO ADD A NEW ACTION:
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 
+ * 1. Add icon to icons export below
+ * 2. Add entry to ACTION_REGISTRY (around line 350)
+ * 3. Add to menu configuration (DEFAULT_FILE_ACTIONS or CONTEXT_MENU_OVERRIDES)
+ * 4. Done! ALL components automatically use it
+ * 
+ * Example:
+ * ```javascript
+ * // Step 1: Add icon
+ * export const icons = {
+ *   ...existing icons...,
+ *   archive: getIconPath('archive.svg'),
+ * };
+ * 
+ * // Step 2: Add to ACTION_REGISTRY
+ * const ACTION_REGISTRY = {
+ *   ...existing actions...,
+ *   archive: {
+ *     label: 'Archive',
+ *     iconSrc: icons.archive,
+ *     isDanger: false,
+ *     isVisible: (file, pageContext) => pageContext !== 'Trash',
+ *     isEnabled: (file, pageContext) => {
+ *       const permissionLevel = file.permissionLevel || 'viewer';
+ *       return permissionLevel === 'owner' || permissionLevel === 'editor';
+ *     },
+ *   },
+ * };
+ * 
+ * // Step 3: Add to menu
+ * const DEFAULT_FILE_ACTIONS = [
+ *   'open', 'download', 'archive', ... // Add 'archive' here
+ * ];
+ * ```
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
 // Helper function to get icon path
@@ -145,241 +254,521 @@ export const formatDate = (date) => {
 };
 
 /**
+ * ═══════════════════════════════════════════════════════════════════
+ * ARCHITECTURAL REFACTOR: "ACTION REGISTRY" PATTERN
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * Philosophy:
+ * - ONE centralized registry for ALL actions (ACTION_REGISTRY)
+ * - Each action defines its own visibility and permission logic
+ * - No duplication - all components use the same registry
+ * - Easy to add new actions - just add to registry
+ * - Guaranteed consistency across all UI components
+ * 
+ * ───────────────────────────────────────────────────────────────────
+ * SINGLE SOURCE OF TRUTH:
+ * ───────────────────────────────────────────────────────────────────
+ * 
+ * ACTION_REGISTRY contains ALL actions with:
+ *   - label: Display text
+ *   - iconSrc: Icon path
+ *   - isDanger: Red styling flag
+ *   - isVisible: Function that determines if action should appear
+ *   - isEnabled: Function that determines if action is clickable
+ * 
+ * All components (FileRow, SelectionToolbar, More menu) use:
+ *   evaluateAction(actionId, file, pageContext) → Single file
+ *   evaluateBulkAction(actionId, files, pageContext) → Multiple files
+ * 
+ * ───────────────────────────────────────────────────────────────────
+ * HOW TO ADD A NEW ACTION:
+ * ───────────────────────────────────────────────────────────────────
+ * 
+ * 1. Add icon to icons export (top of file)
+ * 2. Add entry to ACTION_REGISTRY:
+ *    ```
+ *    newAction: {
+ *      label: 'My Action',
+ *      iconSrc: icons.myIcon,
+ *      isDanger: false,
+ *      isVisible: (file, pageContext) => {
+ *        // Return true/false based on file type, context, etc.
+ *      },
+ *      isEnabled: (file, pageContext) => {
+ *        // Return true/false based on permissions
+ *      }
+ *    }
+ *    ```
+ * 3. Add to context menu configuration (if needed)
+ * 4. Done! All components will automatically use it
+ * 
+ * ───────────────────────────────────────────────────────────────────
+ * CURRENT CONFIGURATION SUMMARY:
+ * ───────────────────────────────────────────────────────────────────
+ * 
+ * DEFAULT (MyDrive, Starred, any new views):
+ *   Metadata: [Owner, Last Modified, Location, Size]
+ *   File Menu: [Open, Download, Rename, Copy, Share, Move, Details, Delete]
+ *   Folder Menu: [Download, Rename, Share, Move, Details, Delete]
+ *   Quick Actions: [Star, Rename, Download, Share]
+ * 
+ * OVERRIDES:
+ *   Shared:
+ *     Metadata: [Shared By, Share Date]
+ *   
+ *   Recently:
+ *     Metadata: [Owner, Last Activity, Size, Location]
+ *   
+ *   Trash:
+ *     Metadata: [Original Location, Owner, Date Deleted, Size]
+ *     Menu: [Restore, Delete Permanently] (same for files & folders)
+ *     Quick Actions: [Restore, Delete Permanently]
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * DEFAULT METADATA CONFIGURATION
+ * Used by: MyDrive, Starred, and any future views unless overridden
+ */
+const DEFAULT_METADATA = [
+  { key: 'owner', label: 'Owner', width: '15%' },
+  { key: 'lastModified', label: 'Last Modified', width: '20%', formatter: formatSmartDate },
+  { key: 'location', label: 'Location', width: '18%', isLocation: true },
+  { key: 'size', label: 'Size', width: '15%' },
+];
+
+/**
+ * METADATA OVERRIDES
+ * Only specify what's different from the default
+ */
+const METADATA_OVERRIDES = {
+  Shared: [
+    { key: 'sharer', label: 'Shared By', width: '20%', isSharer: true },
+    { key: 'shareDate', label: 'Share Date', width: '20%', formatter: formatSmartDate },
+  ],
+  Recently: [
+    { key: 'owner', label: 'Owner', width: '15%' },
+    { key: 'lastActions', label: 'Last Activity', width: '25%', isActions: true },
+    { key: 'size', label: 'Size', width: '12%' },
+    { key: 'location', label: 'Location', width: '18%', isLocation: true },
+  ],
+  Trash: [
+    { key: 'originalLocation', label: 'Original Location', width: '18%', isLocation: true },
+    { key: 'owner', label: 'Owner', width: '15%' },
+    { key: 'deletionDate', label: 'Date Deleted', width: '20%', formatter: formatSmartDate },
+    { key: 'size', label: 'Size', width: '12%' },
+  ],
+};
+
+/**
  * Get metadata configuration based on page context
+ * Falls back to DEFAULT if no override exists
+ * 
  * @param {string} pageContext - Page context: 'MyDrive', 'Shared', 'Recently', 'Trash', 'Starred'
  * @returns {Array} Array of metadata field configurations
  */
 export const getMetadataConfig = (pageContext) => {
-  const configs = {
-    MyDrive: [
-      { key: 'owner', label: 'Owner', width: '15%' },
-      { key: 'lastModified', label: 'Last Modified', width: '20%', formatter: formatSmartDate },
-      { key: 'size', label: 'Size', width: '15%' },
-    ],
-    Shared: [
-      { key: 'sharer', label: 'Shared By', width: '20%', isSharer: true },
-      { key: 'shareDate', label: 'Share Date', width: '20%', formatter: formatSmartDate },
-    ],
-    Recently: [
-      { key: 'owner', label: 'Owner', width: '15%' },
-      { key: 'lastActions', label: 'Last Actions', width: '25%', isActions: true },
-      { key: 'size', label: 'Size', width: '12%' },
-      { key: 'location', label: 'Location', width: '18%', isLocation: true },
-    ],
-    Trash: [
-      { key: 'owner', label: 'Owner', width: '15%' },
-      { key: 'deletionDate', label: 'Deleted', width: '20%', formatter: formatSmartDate },
-      { key: 'size', label: 'Size', width: '12%' },
-      { key: 'originalLocation', label: 'Original Location', width: '18%', isLocation: true },
-    ],
-    Starred: [
-      { key: 'owner', label: 'Owner', width: '15%' },
-      { key: 'lastModified', label: 'Last Modified', width: '20%', formatter: formatSmartDate },
-      { key: 'size', label: 'Size', width: '12%' },
-      { key: 'location', label: 'Location', width: '18%', isLocation: true },
-    ],
-  };
-  
-  return configs[pageContext] || configs.MyDrive;
+  // Return override if it exists, otherwise return default
+  return METADATA_OVERRIDES[pageContext] || DEFAULT_METADATA;
 };
 
 /**
- * SINGLE SOURCE OF TRUTH for all action logic
- * This function determines the complete state of any action for any context
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ACTION REGISTRY - SINGLE SOURCE OF TRUTH FOR ALL ACTIONS
+ * ═══════════════════════════════════════════════════════════════════════════
  * 
- * @param {string} actionId - The action identifier
- * @param {string} fileType - 'folder', 'pdf', 'image', 'docs'
- * @param {string} pageContext - 'MyDrive', 'Shared', 'Recently', 'Trash', 'Starred'
- * @param {string} permissionLevel - 'owner', 'editor', 'viewer'
- * @param {boolean} isOwner - Whether current user owns the file
- * @param {boolean} isStarred - Whether file is currently starred
- * @returns {Object} { isEnabled: boolean, label: string, isVisible: boolean, iconSrc: string, isDanger: boolean }
+ * This is THE definitive registry of all possible file/folder actions.
+ * Every action's visibility and permission logic is defined HERE and ONLY here.
+ * 
+ * All UI components (FileRow, FileCard, SelectionToolbar, More menu) use this
+ * registry through evaluateAction() and evaluateBulkAction().
+ * 
+ * NO DUPLICATION - guaranteed consistency across the entire application.
  */
-export const getActionStatus = (actionId, fileType, pageContext, permissionLevel, isOwner = true, isStarred = false) => {
-  const isFolder = fileType === 'folder';
-  const canEdit = permissionLevel === 'owner' || permissionLevel === 'editor';
-  const canShare = permissionLevel === 'owner';
+const ACTION_REGISTRY = {
+  open: {
+    label: 'Open',
+    iconSrc: icons.info,
+    isDanger: false,
+    /**
+     * Visibility: Only files can be opened (folders cannot)
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      if (pageContext === 'Trash') return false;
+      return file.type !== 'folder';
+    },
+    /**
+     * Permission: Everyone can open files they have access to
+     */
+    isEnabled: (file, pageContext) => {
+      return file.type !== 'folder';
+    },
+  },
   
-  // Action definitions with their base properties
-  const actionDefinitions = {
-    open: {
-      label: 'Open',
-      iconSrc: icons.info,
-      isDanger: false,
+  download: {
+    label: 'Download',
+    iconSrc: icons.download,
+    isDanger: false,
+    /**
+     * Visibility: Both files and folders
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      return pageContext !== 'Trash';
     },
-    download: {
-      label: 'Download',
-      iconSrc: icons.download,
-      isDanger: false,
+    /**
+     * Permission: Everyone can download
+     */
+    isEnabled: (file, pageContext) => {
+      return true;
     },
-    star: {
-      label: 'Add to Starred',
-      iconSrc: icons.starEmpty,
-      isDanger: false,
-    },
-    unstar: {
-      label: 'Remove from Starred',
-      iconSrc: icons.starFilled,
-      isDanger: false,
-    },
-    move: {
-      label: 'Move to',
-      iconSrc: icons.move,
-      isDanger: false,
-    },
-    share: {
-      label: 'Share',
-      iconSrc: icons.share,
-      isDanger: false,
-    },
-    rename: {
-      label: 'Rename',
-      iconSrc: icons.edit,
-      isDanger: false,
-    },
-    copy: {
-      label: 'Make a Copy',
-      iconSrc: icons.copy,
-      isDanger: false,
-    },
-    details: {
-      label: 'Details',
-      iconSrc: icons.info,
-      isDanger: false,
-    },
-    trash: {
-      label: isOwner ? 'Move to Trash' : 'Remove',
-      iconSrc: icons.delete,
-      isDanger: true,
-    },
-    restore: {
-      label: 'Restore',
-      iconSrc: icons.restore,
-      isDanger: false,
-    },
-    deletePermanently: {
-      label: 'Delete Permanently',
-      iconSrc: icons.deleteForever,
-      isDanger: true,
-    },
-  };
+  },
   
-  const action = actionDefinitions[actionId];
+  star: {
+    label: 'Add to Starred',
+    iconSrc: icons.starEmpty,
+    isDanger: false,
+    /**
+     * Visibility: Only if NOT already starred
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      if (pageContext === 'Trash') return false;
+      const isStarred = file.starred || pageContext === 'Starred';
+      return !isStarred;
+    },
+    /**
+     * Permission: Everyone can star
+     */
+    isEnabled: (file, pageContext) => {
+      return true;
+    },
+  },
+  
+  unstar: {
+    label: 'Remove from Starred',
+    iconSrc: icons.starFilled,
+    isDanger: false,
+    /**
+     * Visibility: Only if currently starred
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      if (pageContext === 'Trash') return false;
+      const isStarred = file.starred || pageContext === 'Starred';
+      return isStarred;
+    },
+    /**
+     * Permission: Everyone can unstar
+     */
+    isEnabled: (file, pageContext) => {
+      return true;
+    },
+  },
+  
+  rename: {
+    label: 'Rename',
+    iconSrc: icons.edit,
+    isDanger: false,
+    /**
+     * Visibility: Both files and folders
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      return pageContext !== 'Trash';
+    },
+    /**
+     * Permission: Owner or Editor only
+     */
+    isEnabled: (file, pageContext) => {
+      const permissionLevel = file.permissionLevel || 'viewer';
+      return permissionLevel === 'owner' || permissionLevel === 'editor';
+    },
+  },
+  
+  copy: {
+    label: 'Make a Copy',
+    iconSrc: icons.copy,
+    isDanger: false,
+    /**
+     * Visibility: Only files (folders cannot be copied)
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      if (pageContext === 'Trash') return false;
+      return file.type !== 'folder';
+    },
+    /**
+     * Permission: Everyone can copy files they can access
+     */
+    isEnabled: (file, pageContext) => {
+      return file.type !== 'folder';
+    },
+  },
+  
+  share: {
+    label: 'Share',
+    iconSrc: icons.share,
+    isDanger: false,
+    /**
+     * Visibility: Both files and folders
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      return pageContext !== 'Trash';
+    },
+    /**
+     * Permission: Owner only
+     */
+    isEnabled: (file, pageContext) => {
+      const permissionLevel = file.permissionLevel || 'viewer';
+      return permissionLevel === 'owner';
+    },
+  },
+  
+  move: {
+    label: 'Move to',
+    iconSrc: icons.move,
+    isDanger: false,
+    /**
+     * Visibility: Both files and folders
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      return pageContext !== 'Trash';
+    },
+    /**
+     * Permission: Owner or Editor only
+     */
+    isEnabled: (file, pageContext) => {
+      const permissionLevel = file.permissionLevel || 'viewer';
+      return permissionLevel === 'owner' || permissionLevel === 'editor';
+    },
+  },
+  
+  details: {
+    label: 'Details',
+    iconSrc: icons.info,
+    isDanger: false,
+    /**
+     * Visibility: Both files and folders
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      return pageContext !== 'Trash';
+    },
+    /**
+     * Permission: Everyone can view details
+     */
+    isEnabled: (file, pageContext) => {
+      return true;
+    },
+  },
+  
+  trash: {
+    label: (file) => {
+      const isOwner = file.isOwner !== undefined ? file.isOwner : true;
+      return isOwner ? 'Move to Trash' : 'Remove';
+    },
+    iconSrc: icons.delete,
+    isDanger: true,
+    /**
+     * Visibility: Both files and folders
+     * Available in: Standard pages only (not Trash)
+     */
+    isVisible: (file, pageContext) => {
+      return pageContext !== 'Trash';
+    },
+    /**
+     * Permission: Owner or Editor only
+     */
+    isEnabled: (file, pageContext) => {
+      const permissionLevel = file.permissionLevel || 'viewer';
+      return permissionLevel === 'owner' || permissionLevel === 'editor';
+    },
+  },
+  
+  restore: {
+    label: 'Restore',
+    iconSrc: icons.restore,
+    isDanger: false,
+    /**
+     * Visibility: Trash page only
+     */
+    isVisible: (file, pageContext) => {
+      return pageContext === 'Trash';
+    },
+    /**
+     * Permission: Everyone can restore
+     */
+    isEnabled: (file, pageContext) => {
+      return true;
+    },
+  },
+  
+  deletePermanently: {
+    label: 'Delete Permanently',
+    iconSrc: icons.deleteForever,
+    isDanger: true,
+    /**
+     * Visibility: Trash page only
+     */
+    isVisible: (file, pageContext) => {
+      return pageContext === 'Trash';
+    },
+    /**
+     * Permission: Owner or Editor only
+     */
+    isEnabled: (file, pageContext) => {
+      const permissionLevel = file.permissionLevel || 'viewer';
+      return permissionLevel === 'owner' || permissionLevel === 'editor';
+    },
+  },
+};
+
+/**
+ * Evaluate an action for a SINGLE file
+ * This is the ONLY function that determines action availability
+ * 
+ * @param {string} actionId - Action identifier (e.g., 'share', 'download')
+ * @param {Object} file - File object with type, permissionLevel, isOwner, starred
+ * @param {string} pageContext - Page context ('MyDrive', 'Shared', 'Trash', etc.)
+ * @returns {Object} { isVisible: boolean, isEnabled: boolean, label: string, iconSrc: string, isDanger: boolean }
+ */
+export const evaluateAction = (actionId, file, pageContext) => {
+  const action = ACTION_REGISTRY[actionId];
+  
   if (!action) {
-    return { isEnabled: false, isVisible: false, label: '', iconSrc: '', isDanger: false };
+    return { isVisible: false, isEnabled: false, label: '', iconSrc: '', isDanger: false };
   }
   
-  // Trash context: ONLY restore and deletePermanently are visible
-  if (pageContext === 'Trash') {
-    if (actionId === 'restore') {
-      return { ...action, isEnabled: true, isVisible: true };
-    }
-    if (actionId === 'deletePermanently') {
-      return { ...action, isEnabled: canEdit, isVisible: true };
-    }
-    return { ...action, isEnabled: false, isVisible: false };
+  const isVisible = action.isVisible(file, pageContext);
+  const isEnabled = action.isEnabled(file, pageContext);
+  const label = typeof action.label === 'function' ? action.label(file) : action.label;
+  
+  return {
+    isVisible,
+    isEnabled,
+    label,
+    iconSrc: action.iconSrc,
+    isDanger: action.isDanger,
+  };
+};
+
+/**
+ * Evaluate an action for MULTIPLE files (bulk selection)
+ * 
+ * Implements "Most Restrictive" logic:
+ * - INTERSECTION RULE: Visible only if visible for ALL files
+ * - RESTRICTIVE RULE: Enabled only if enabled for ALL files
+ * 
+ * @param {string} actionId - Action identifier
+ * @param {Array} files - Array of file objects
+ * @param {string} pageContext - Page context
+ * @returns {Object} { isVisible: boolean, isEnabled: boolean, label: string, iconSrc: string, isDanger: boolean }
+ */
+export const evaluateBulkAction = (actionId, files, pageContext) => {
+  if (!files || files.length === 0) {
+    return { isVisible: false, isEnabled: false, label: '', iconSrc: '', isDanger: false };
   }
   
-  // Standard contexts (MyDrive, Shared, Recently, Starred)
-  // Apply visibility rules based on file type and action
-  let isVisible = true;
-  let isEnabled = true;
+  // Get the base properties from the first file
+  const firstFile = files[0];
+  const baseEval = evaluateAction(actionId, firstFile, pageContext);
   
-  switch (actionId) {
-    case 'open':
-      isVisible = !isFolder; // Only files can be opened
-      isEnabled = !isFolder;
-      break;
-      
-    case 'download':
-      isVisible = true; // Both files and folders
-      isEnabled = true;
-      break;
-      
-    case 'star':
-      isVisible = !isStarred; // Only show if not already starred
-      isEnabled = true;
-      break;
-      
-    case 'unstar':
-      isVisible = isStarred; // Only show if currently starred
-      isEnabled = true;
-      break;
-      
-    case 'rename':
-      isVisible = true; // Both files and folders
-      isEnabled = canEdit;
-      break;
-      
-    case 'copy':
-      isVisible = !isFolder; // Only files can be copied
-      isEnabled = !isFolder;
-      break;
-      
-    case 'share':
-      isVisible = true; // Both files and folders
-      isEnabled = canShare;
-      break;
-      
-    case 'move':
-      isVisible = true; // Both files and folders
-      isEnabled = canEdit;
-      break;
-      
-    case 'details':
-      isVisible = true; // Both files and folders
-      isEnabled = true;
-      break;
-      
-    case 'trash':
-      isVisible = true; // Both files and folders
-      isEnabled = canEdit;
-      break;
-      
-    default:
-      isVisible = false;
-      isEnabled = false;
+  // Check if action is visible and enabled for ALL files
+  let isVisibleForAll = baseEval.isVisible;
+  let isEnabledForAll = baseEval.isEnabled;
+  
+  for (let i = 1; i < files.length; i++) {
+    const fileEval = evaluateAction(actionId, files[i], pageContext);
+    
+    if (!fileEval.isVisible) {
+      isVisibleForAll = false;
+      break; // If not visible for any file, stop checking
+    }
+    
+    if (!fileEval.isEnabled) {
+      isEnabledForAll = false;
+      // Continue checking visibility for remaining files
+    }
   }
   
   return {
-    ...action,
-    isEnabled,
-    isVisible,
+    isVisible: isVisibleForAll,
+    isEnabled: isEnabledForAll,
+    label: baseEval.label,
+    iconSrc: baseEval.iconSrc,
+    isDanger: baseEval.isDanger,
   };
 };
 
 /**
- * Get all visible actions for a given context with their complete status
- * This is the ONLY function that should be called to get actions
+ * ═══════════════════════════════════════════════════════════════════
+ * MENU & ACTION CONFIGURATIONS
+ * ═══════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * DEFAULT CONTEXT MENU (More ⋮) - Used unless overridden
+ */
+const DEFAULT_FILE_ACTIONS = ['open', 'download', 'rename', 'copy', 'share', 'move', 'details', 'trash'];
+const DEFAULT_FOLDER_ACTIONS = ['download', 'rename', 'share', 'move', 'details', 'trash'];
+
+/**
+ * DEFAULT QUICK ACTIONS (Hover Icons) - Used unless overridden
+ */
+const DEFAULT_QUICK_ACTIONS = ['star', 'unstar', 'rename', 'download', 'share'];
+
+/**
+ * CONTEXT MENU OVERRIDES
+ * Only Trash has a different menu - everything else uses default
+ */
+const CONTEXT_MENU_OVERRIDES = {
+  Trash: {
+    // In Trash, both files and folders get the same actions
+    file: ['restore', 'deletePermanently'],
+    folder: ['restore', 'deletePermanently'],
+  },
+};
+
+/**
+ * QUICK ACTIONS OVERRIDES
+ * Only Trash has different quick actions
+ */
+const QUICK_ACTIONS_OVERRIDES = {
+  Trash: ['restore', 'deletePermanently'],
+};
+
+/**
+ * Get all visible actions for a single file (used by FileRow/FileCard More menu)
  * 
  * @param {string} pageContext - Page context
  * @param {Object} file - File object
- * @param {string} permissionLevel - User's permission level
- * @param {boolean} isOwner - Whether current user is the owner
  * @returns {Array} Array of action objects with complete status
  */
-export const getAvailableActions = (pageContext, file, permissionLevel, isOwner = true) => {
-  const fileType = file.type;
-  const isStarred = file.starred || pageContext === 'Starred';
-  const isFolder = fileType === 'folder';
+export const getAvailableActions = (pageContext, file) => {
+  const isFolder = file.type === 'folder';
   
-  // Define the action order for each context
+  // Check for context menu override (e.g., Trash)
   let actionOrder;
   
-  if (pageContext === 'Trash') {
-    actionOrder = ['restore', 'deletePermanently'];
-  } else if (isFolder) {
-    // Folder actions in standard contexts
-    actionOrder = ['download', 'rename', 'share', 'move', 'details', 'trash'];
+  if (CONTEXT_MENU_OVERRIDES[pageContext]) {
+    // Use override for this specific context
+    actionOrder = isFolder 
+      ? CONTEXT_MENU_OVERRIDES[pageContext].folder
+      : CONTEXT_MENU_OVERRIDES[pageContext].file;
   } else {
-    // File actions in standard contexts
-    actionOrder = ['open', 'download', 'rename', 'copy', 'share', 'move', 'details', 'trash'];
+    // Use default menu based on file type
+    actionOrder = isFolder ? DEFAULT_FOLDER_ACTIONS : DEFAULT_FILE_ACTIONS;
   }
   
-  // Build the action list using the single source of truth
+  // Build the action list using ACTION_REGISTRY
   return actionOrder
     .map(actionId => {
-      const status = getActionStatus(actionId, fileType, pageContext, permissionLevel, isOwner, isStarred);
+      const status = evaluateAction(actionId, file, pageContext);
       return {
         id: actionId,
         label: status.label,
@@ -393,33 +782,22 @@ export const getAvailableActions = (pageContext, file, permissionLevel, isOwner 
 };
 
 /**
- * Get action buttons for FileRow (the inline buttons, not the menu)
+ * Get action buttons for FileRow (the inline quick actions, not the menu)
+ * 
  * Standard pages: Star, Rename, Download, Share
  * Trash page: Restore, Delete Permanently
  * 
  * @param {string} pageContext - Page context
  * @param {Object} file - File object
- * @param {string} permissionLevel - User's permission level
- * @param {boolean} isOwner - Whether current user is the owner
  * @returns {Array} Array of button action objects
  */
-export const getRowActionButtons = (pageContext, file, permissionLevel, isOwner = true) => {
-  const fileType = file.type;
-  const isStarred = file.starred || pageContext === 'Starred';
-  
-  let buttonActions;
-  
-  if (pageContext === 'Trash') {
-    // Trash context: Show Restore and Delete Permanently buttons
-    buttonActions = ['restore', 'deletePermanently'];
-  } else {
-    // Standard contexts: Star/Unstar, Rename, Download, Share buttons
-    buttonActions = ['star', 'unstar', 'rename', 'download', 'share'];
-  }
+export const getRowActionButtons = (pageContext, file) => {
+  // Check for quick actions override (e.g., Trash)
+  const buttonActions = QUICK_ACTIONS_OVERRIDES[pageContext] || DEFAULT_QUICK_ACTIONS;
   
   return buttonActions
     .map(actionId => {
-      const status = getActionStatus(actionId, fileType, pageContext, permissionLevel, isOwner, isStarred);
+      const status = evaluateAction(actionId, file, pageContext);
       return {
         id: actionId,
         label: status.label,
@@ -432,75 +810,102 @@ export const getRowActionButtons = (pageContext, file, permissionLevel, isOwner 
 };
 
 /**
- * BULK ACTIONS: "Most Restrictive" Logic
- * Determines if a bulk action is enabled for a selection of files
- * A button is enabled ONLY if the action is allowed for EVERY item
+ * Get context menu actions for multi-selection (More ⋮ menu)
+ * Handles mixed selection with Intersection Rule
  * 
- * @param {string} actionId - The action identifier
- * @param {Array} selectedFiles - Array of selected file objects
+ * When multiple items are selected:
+ * - Only shows actions that ALL items support (Intersection Rule)
+ * - Enables actions only if ALL items have permission (Restrictive Rule)
+ * 
+ * Example:
+ * - Selection: 1 Folder + 1 File
+ * - Result: "Open" is hidden (folders don't support it)
+ *          "Download" is shown (both support it)
+ * 
  * @param {string} pageContext - Page context
- * @param {string} permissionLevel - User's permission level
- * @param {boolean} isOwner - Whether current user owns the files
- * @returns {Object} { isEnabled: boolean, label: string, iconSrc: string, isDanger: boolean }
+ * @param {Array} selectedFiles - Array of selected file objects
+ * @returns {Array} Array of context menu action objects
  */
-export const getBulkActionStatus = (actionId, selectedFiles, pageContext, permissionLevel, isOwner = true) => {
+export const getBulkMenuActions = (pageContext, selectedFiles) => {
   if (!selectedFiles || selectedFiles.length === 0) {
-    return { isEnabled: false, label: '', iconSrc: '', isDanger: false };
+    return [];
   }
   
-  // Get the base action definition
-  const firstFile = selectedFiles[0];
-  const baseStatus = getActionStatus(actionId, firstFile.type, pageContext, permissionLevel, isOwner, firstFile.starred);
+  // Determine the full set of possible actions based on context
+  let candidateActions;
   
-  // Check if action is enabled for ALL selected files (most restrictive logic)
-  const isEnabledForAll = selectedFiles.every(file => {
-    const fileStatus = getActionStatus(actionId, file.type, pageContext, permissionLevel, isOwner, file.starred);
-    return fileStatus.isEnabled && fileStatus.isVisible;
-  });
+  if (pageContext === 'Trash') {
+    // Trash: Same actions for all items regardless of type
+    candidateActions = ['restore', 'deletePermanently'];
+  } else {
+    // Standard contexts: Combine all possible actions
+    // We'll filter based on what ALL items support
+    candidateActions = [
+      'open',
+      'download',
+      'rename',
+      'copy',
+      'share',
+      'move',
+      'details',
+      'trash',
+    ];
+  }
   
-  return {
-    isEnabled: isEnabledForAll,
-    label: baseStatus.label,
-    iconSrc: baseStatus.iconSrc,
-    isDanger: baseStatus.isDanger,
-  };
+  // Apply Intersection Rule: Only include actions that ALL files support
+  return candidateActions
+    .map(actionId => {
+      const status = evaluateBulkAction(actionId, selectedFiles, pageContext);
+      return {
+        id: actionId,
+        label: status.label,
+        iconSrc: status.iconSrc,
+        enabled: status.isEnabled,
+        visible: status.isVisible,
+        isDanger: status.isDanger,
+      };
+    })
+    .filter(action => action.visible); // Only return actions visible for ALL items
 };
 
 /**
  * Get toolbar actions for multi-selection
  * Returns the action buttons that should appear in the SelectionToolbar
  * 
+ * Implements "Most Restrictive" logic:
+ * - Actions are only visible if they apply to ALL selected items (Intersection Rule)
+ * - Actions are only enabled if ALL selected items have permission (Restrictive Rule)
+ * 
+ * NOTE: Toolbar actions are a SUBSET of menu actions (shown in More ⋮)
+ * The full set is available in getBulkMenuActions()
+ * 
  * @param {string} pageContext - Page context
- * @param {Array} selectedFiles - Array of selected file objects
- * @param {string} permissionLevel - User's permission level
- * @param {boolean} isOwner - Whether current user owns the files
- * @returns {Array} Array of toolbar action objects
+ * @param {Array} selectedFiles - Array of selected file objects (each with type, permissionLevel, isOwner)
+ * @returns {Array} Array of toolbar action objects with visibility and enabled status
  */
-export const getToolbarActions = (pageContext, selectedFiles, permissionLevel, isOwner = true) => {
+export const getToolbarActions = (pageContext, selectedFiles) => {
   if (!selectedFiles || selectedFiles.length === 0) {
     return [];
   }
   
-  let actionOrder;
+  // Get ALL possible actions from the menu
+  const allMenuActions = getBulkMenuActions(pageContext, selectedFiles);
+  
+  // Define which actions appear as quick buttons in the toolbar
+  let priorityActionIds;
   
   if (pageContext === 'Trash') {
-    // Trash: Only Restore and Delete Permanently
-    actionOrder = ['restore', 'deletePermanently'];
+    // Trash: Only Restore and Delete Permanently as quick buttons
+    priorityActionIds = ['restore', 'deletePermanently'];
   } else {
-    // Standard pages: Share, Download, Move, Delete/Remove
-    actionOrder = ['share', 'download', 'move', 'trash'];
+    // Standard pages: Most common actions as quick buttons
+    // Others available via More (⋮) menu
+    priorityActionIds = ['share', 'download', 'move', 'trash'];
   }
   
-  return actionOrder.map(actionId => {
-    const status = getBulkActionStatus(actionId, selectedFiles, pageContext, permissionLevel, isOwner);
-    return {
-      id: actionId,
-      label: status.label,
-      iconSrc: status.iconSrc,
-      enabled: status.isEnabled,
-      isDanger: status.isDanger,
-    };
-  });
+  // Return only the priority actions that are also available in the menu
+  // This ensures toolbar is always a subset of menu (no sync issues)
+  return allMenuActions.filter(action => priorityActionIds.includes(action.id));
 };
 
 /**

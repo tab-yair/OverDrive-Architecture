@@ -1,8 +1,56 @@
 import React, { useState, useRef } from 'react';
 import ActionButton from './ActionButton';
 import FileActionMenu from './FileActionMenu';
-import { getToolbarActions, getAvailableActions } from './fileUtils';
+import { getToolbarActions, getBulkMenuActions } from './fileUtils';
 import './SelectionToolbar.css';
+
+/**
+ * ═══════════════════════════════════════════════════════════════════
+ * SelectionToolbar - CONTEXT-AWARE GLOBAL TOOLBAR
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * Implements "Default First" architecture with "Most Restrictive" logic:
+ * 
+ * STANDARD DEFAULT (All pages except Trash):
+ * ──────────────────────────────────────────────────────────────────
+ * Actions: [Share, Download, Move, Delete/Remove, More (⋮)]
+ * - Share: Share with other users (owner only)
+ * - Download: Download selected files/folders
+ * - Move: Move to different folder (owner/editor only)
+ * - Delete: "Move to Trash" (owner) or "Remove" (non-owner)
+ * - More: Additional actions in dropdown
+ * 
+ * TRASH EXCEPTION:
+ * ──────────────────────────────────────────────────────────────────
+ * Actions: [Restore, Delete Permanently]
+ * - Restore: Restore to original location
+ * - Delete Permanently: Permanently delete (owner/editor only)
+ * 
+ * MIXED SELECTION HANDLING:
+ * ──────────────────────────────────────────────────────────────────
+ * INTERSECTION RULE:
+ * - Actions appear only if ALL selected items support them
+ * - Example: File + Folder → "Open" hidden (folders don't support)
+ * 
+ * RESTRICTIVE RULE:
+ * - Actions enabled only if ALL items have permission
+ * - Example: 1 read-only file → "Delete" disabled (opacity 0.3)
+ * - Disabled buttons: No hover effect, pointer-events: none
+ * 
+ * DYNAMIC BEHAVIOR:
+ * ──────────────────────────────────────────────────────────────────
+ * - Toolbar appears when items are selected
+ * - Per-file permission checking (each file can have different permissions)
+ * - More (⋮) menu shows only actions valid for entire selection
+ * - Toolbar automatically switches based on pageContext prop
+ * 
+ * FUTURE EXTENSIBILITY:
+ * ──────────────────────────────────────────────────────────────────
+ * - New pages: Automatically get Standard toolbar
+ * - Custom toolbars: Add override in getToolbarActions() in fileUtils.js
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ */
 
 /**
  * SelectionToolbar Component - Appears when items are selected
@@ -10,7 +58,7 @@ import './SelectionToolbar.css';
  * 
  * @param {Object} props
  * @param {Array} props.selectedFiles - Array of selected file objects
- * @param {string} props.pageContext - Current page context
+ * @param {string} props.pageContext - Current page context ('MyDrive', 'Shared', 'Trash', etc.)
  * @param {string} props.permissionLevel - User's permission level
  * @param {boolean} props.isOwner - Whether current user is the owner
  * @param {Function} props.onClearSelection - Callback to clear selection
@@ -32,14 +80,12 @@ const SelectionToolbar = ({
     return null;
   }
 
-  // Get toolbar actions using centralized logic
-  const toolbarActions = getToolbarActions(pageContext, selectedFiles, permissionLevel, isOwner);
+  // Get toolbar actions using centralized logic (with per-file permission handling)
+  const toolbarActions = getToolbarActions(pageContext, selectedFiles);
   
-  // Get all available actions for the "More" menu
-  // For bulk actions, we use the first file as reference but getBulkActionStatus will validate all
-  const allActions = selectedFiles.length > 0 
-    ? getAvailableActions(pageContext, selectedFiles[0], permissionLevel, isOwner)
-    : [];
+  // Get all available actions for the "More" menu using bulk intersection logic
+  // Only shows actions that ALL selected items support
+  const allActions = getBulkMenuActions(pageContext, selectedFiles);
 
   const handleActionClick = (actionId) => {
     if (onAction) {
