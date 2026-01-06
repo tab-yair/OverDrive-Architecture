@@ -50,9 +50,11 @@ Authorization: Bearer <JWT_TOKEN>
 
 | Method | Endpoint | Auth Required | Description |
 |:---:|:---|:---:|:---|
-| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 8+ char password). Fields: `username`, `password`, `firstName`, `profileImage` (required Base64 image), `lastName` (optional, defaults to `null`) |
+| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 8+ char password). Fields: `username`, `password`, `firstName`, `profileImage` (required Base64 image), `lastName` (optional, defaults to `null`). **Automatically creates default preferences** |
 | `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
 | `PATCH` | `/api/users/:id` | ✅ | **Update User Profile**: Update user details. Allowed fields: `password`, `firstName`, `lastName`, `profileImage`. Username cannot be changed. Set `lastName` or `profileImage` to `null` to remove them |
+| `GET` | `/api/users/:id/preference` | ✅ | **Get User Preferences**: Retrieve user's preferences (`theme`, `landingPage`). User can only access their own preferences |
+| `PATCH` | `/api/users/:id/preference` | ✅ | **Update User Preferences**: Update preferences. Allowed fields: `theme` (light/dark), `landingPage` (home/storage). Partial updates supported |
 | `POST` | `/api/tokens` | ❌ | **Login**: Authenticate user and retrieve JWT token. Returns: `{ token: "<JWT>" }` |
 | `GET` | `/api/storage` | ✅ | **Get Storage Info**: Retrieve current storage usage and limit for authenticated user. Returns: `{ storageUsed, storageLimit, storageAvailable, storageUsedMB, storageLimitMB, storageAvailableMB, usagePercentage }` |
 | `POST` | `/api/files` | ✅ | **Create**: Upload a new file or create a folder |
@@ -98,6 +100,85 @@ OverDrive supports four file types with different content modification behaviors
   }
   ```
 - You can still rename or move `pdf`/`image` files using PATCH with `name` or `parentId` fields
+
+---
+
+## User Preferences System
+
+OverDrive provides a personalization system that allows users to customize their experience through preferences.
+
+### Automatic Initialization
+
+**When a user registers** (POST `/api/users`), a preference record is **automatically created** with default values:
+- `theme`: `"light"`
+- `landingPage`: `"home"`
+
+This ensures every user has preferences available immediately after registration without requiring explicit setup.
+
+### Preference Schema
+
+| Field | Type | Allowed Values | Default | Description |
+|:---:|:---:|:---:|:---:|:---|
+| `userId` | String (UUID) | - | - | Links preference to its owner (1:1 relationship) |
+| `theme` | String | `"light"`, `"dark"` | `"light"` | UI color scheme preference |
+| `landingPage` | String | `"home"`, `"storage"` | `"home"` | Default page after login |
+
+### API Usage
+
+#### Get User Preferences
+```bash
+GET /api/users/:id/preference
+Authorization: Bearer <token>
+
+# Response (200 OK):
+{
+  "userId": "user-123",
+  "theme": "light",
+  "landingPage": "home"
+}
+```
+
+#### Update Preferences (Partial Update)
+```bash
+# Update only theme
+PATCH /api/users/:id/preference
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "theme": "dark"
+}
+
+# Update both fields
+PATCH /api/users/:id/preference
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "theme": "dark",
+  "landingPage": "storage"
+}
+
+# Response: 204 No Content
+```
+
+#### Validation & Security
+
+**Input Validation:**
+- Invalid theme values (e.g., `"blue"`) → `400 Bad Request`
+- Invalid landingPage values (e.g., `"dashboard"`) → `400 Bad Request`
+- Unknown fields → `400 Bad Request`
+
+**User Isolation:**
+- Users can **only** access their own preferences
+- Attempting to access another user's preferences → `403 Forbidden`
+
+**Example Error:**
+```json
+{
+  "error": "Invalid theme: blue. Must be one of: light, dark"
+}
+```
 
 ---
 

@@ -32,17 +32,18 @@ section "SECTION 1: USER MANAGEMENT"
 
 U1_EMAIL="owner${TS}@gmail.com"
 U2_EMAIL="editor${TS}@gmail.com"
+PROFILE_IMG="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
 
 info "Registering users: $U1_EMAIL and $U2_EMAIL"
 
 RESP1=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"password123\",\"firstName\":\"Owner\"}")
+  -d "{\"username\":\"$U1_EMAIL\",\"password\":\"password123\",\"firstName\":\"Owner\",\"profileImage\":\"$PROFILE_IMG\"}")
 U1=$(extract_id "$RESP1")
 
 RESP2=$(curl -s -i -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"password123\",\"firstName\":\"Editor\"}")
+  -d "{\"username\":\"$U2_EMAIL\",\"password\":\"password123\",\"firstName\":\"Editor\",\"profileImage\":\"$PROFILE_IMG\"}")
 U2=$(echo "$RESP2" | grep -i "Location:" | sed 's/.*\/users\///' | tr -d '\r\n ')
 
 if [[ -n "$U1" && -n "$U2" ]]; then 

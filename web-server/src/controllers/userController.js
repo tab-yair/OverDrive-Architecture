@@ -1,4 +1,5 @@
 const { userService } = require('../services/userService');
+const { preferenceService } = require('../services/preferenceService');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 /**
@@ -37,6 +38,9 @@ const createUser = asyncHandler(async (req, res) => {
         lastName: normalizedLastName, 
         profileImage 
     });
+
+    // Automatically create default preferences for the new user
+    await preferenceService.createDefaultPreference(user.id);
 
     // Return 201 Created with user (including password)
     res.status(201)
