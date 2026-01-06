@@ -4,7 +4,7 @@
   position: fixed;
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-elevated);
   min-width: 200px;
   max-width: 280px;
@@ -33,7 +33,7 @@
   background-color: transparent;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-normal);
   text-align: left;
 }
 
@@ -46,7 +46,7 @@
 }
 
 .file-action-menu-item.disabled {
-  opacity: 0.3;
+  opacity: var(--opacity-disabled);
   cursor: default;
   pointer-events: none;
 }
@@ -65,11 +65,11 @@
 }
 
 .file-action-menu-item.danger:hover:not(.disabled) {
-  background-color: rgba(217, 48, 37, 0.08);
+  background-color: var(--hover-overlay-danger);
 }
 
 .file-action-menu-item.danger:active:not(.disabled) {
-  background-color: rgba(217, 48, 37, 0.12);
+  background-color: var(--hover-overlay-danger-active);
 }
 
 /* Danger action icons should be red */

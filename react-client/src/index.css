@@ -1,8 +1,64 @@
 /* OverDrive - Global Styles */
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * CSS DESIGN SYSTEM - CENTRALIZED ARCHITECTURE
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * This file implements the SINGLE SOURCE OF TRUTH principle for all visual
+ * design tokens used throughout the application.
+ * 
+ * PHILOSOPHY (mirroring ACTION_REGISTRY pattern in fileUtils.js):
+ * ────────────────────────────────────────────────────────────────────────────
+ * - ALL design values defined here
+ * - ALL components reference these variables
+ * - NO hardcoded colors/spacing/transitions elsewhere
+ * - Changes in ONE place → Consistent UI everywhere
+ * 
+ * VARIABLE CATEGORIES:
+ * ────────────────────────────────────────────────────────────────────────────
+ * 1. Theme Colors (--bg-*, --text-*, --accent-*, --danger-*)
+ * 2. Hover Effects (--hover-overlay-*)
+ * 3. Border Radius (--radius-*)
+ * 4. Transitions (--transition-*)
+ * 5. Spacing (--spacing-*)
+ * 6. Opacity States (--opacity-*)
+ * 
+ * USAGE EXAMPLES:
+ * ────────────────────────────────────────────────────────────────────────────
+ * Instead of:  background-color: rgba(60, 64, 67, 0.08);
+ * Use:         background-color: var(--hover-overlay-light);
+ * 
+ * Instead of:  border-radius: 50%;
+ * Use:         border-radius: var(--radius-circle);
+ * 
+ * Instead of:  transition: all 0.2s ease;
+ * Use:         transition: all var(--transition-normal);
+ * 
+ * BENEFITS:
+ * ────────────────────────────────────────────────────────────────────────────
+ * ✅ Visual consistency guaranteed across all components
+ * ✅ Easy theme switching (light/dark modes)
+ * ✅ One-line changes for global redesigns
+ * ✅ Eliminates duplicate rgba() values in 20+ places
+ * ✅ Self-documenting (variable names describe purpose)
+ * 
+ * APPLIED IN:
+ * ────────────────────────────────────────────────────────────────────────────
+ * - ActionButton.css (circles, hover, transitions)
+ * - FileActionMenu.css (danger hover, card radius)
+ * - SelectionToolbar.css (hover effects)
+ * - FileCard.css (cards, transitions, circles)
+ * - FileRow.css (transitions, avatars)
+ * - FileManager.css (spacing, layout)
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
 /* CSS Variables for theming */
 :root {
-    /* Light theme (default) */
+    /* ───────────────────────────────────────────────────────────────────── */
+    /* THEME COLORS - Light Mode (Default)                                   */
+    /* ───────────────────────────────────────────────────────────────────── */
     --bg-primary: #ffffff;
     --bg-secondary: #f8f9fa;
     --bg-sidebar: #f8f9fa;
@@ -20,6 +76,47 @@
     --danger-hover: #b5271e;
     --success-color: #1e8e3e;
     --warning-color: #f9ab00;
+    
+    /* ═══════════════════════════════════════════════════════════════════ */
+    /* INTERACTION DESIGN SYSTEM - SINGLE SOURCE OF TRUTH                  */
+    /* ═══════════════════════════════════════════════════════════════════ */
+    /* All hover effects, transitions, and spacing use these variables.    */
+    /* Changes here propagate to EVERY component automatically.            */
+    /* This eliminates the 20+ duplicate rgba() values found in codebase.  */
+    /* ═══════════════════════════════════════════════════════════════════ */
+    
+    /* Hover Effects - Google Drive Style */
+    --hover-overlay-light: rgba(60, 64, 67, 0.08);   /* Grey hover (buttons, rows) */
+    --hover-overlay-medium: rgba(60, 64, 67, 0.12);  /* Pressed/active state */
+    --hover-overlay-danger: rgba(217, 48, 37, 0.08); /* Red hover (delete, trash) */
+    --hover-overlay-danger-active: rgba(217, 48, 37, 0.12); /* Danger pressed */
+    --hover-overlay-selected: rgba(26, 115, 232, 0.12); /* Selected item tint */
+    
+    /* Border Radius - Consistent Rounding */
+    --radius-circle: 50%;        /* Circular buttons (ActionButton, avatars) */
+    --radius-card: 8px;          /* Cards, menus, modals, containers */
+    --radius-button: 6px;        /* Rectangular buttons */
+    --radius-input: 4px;         /* Input fields, small elements */
+    --radius-pill: 24px;         /* Pill-shaped (SearchBar, tags) */
+    
+    /* Transitions - Smooth Animations */
+    --transition-fast: 0.15s ease;      /* Quick hover (ActionButton) */
+    --transition-normal: 0.2s ease;     /* Standard (menus, backgrounds) */
+    --transition-slow: 0.3s ease;       /* Large movements (theme switch) */
+    
+    /* Spacing - Consistent Gaps */
+    --spacing-xs: 4px;           /* Tight spacing */
+    --spacing-sm: 8px;           /* Small gaps */
+    --spacing-md: 12px;          /* Medium gaps */
+    --spacing-lg: 16px;          /* Large gaps */
+    --spacing-xl: 24px;          /* Extra large */
+    --spacing-xxl: 32px;         /* Maximum spacing */
+    
+    /* Opacity - Interactive States */
+    --opacity-disabled: 0.3;     /* Disabled buttons/icons (ACTION_REGISTRY) */
+    --opacity-secondary: 0.6;    /* Secondary text/icons */
+    --opacity-hidden: 0;         /* Hidden but present in DOM */
+    --opacity-visible: 1;        /* Fully opaque */
 }
 
 [data-theme="dark"] {

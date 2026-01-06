@@ -40,19 +40,19 @@
 .selection-toolbar-close {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background-color: transparent;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--transition-fast);
   color: var(--text-primary, #202124);
 }
 
 .selection-toolbar-close:hover {
-  background-color: rgba(60, 64, 67, 0.08);
+  background-color: var(--hover-overlay-light);
 }
 
 [data-theme="dark"] .selection-toolbar-close:hover {
@@ -83,7 +83,7 @@
 }
 
 .selection-toolbar-actions .danger-button:hover:not(.disabled) {
-  background-color: rgba(217, 48, 37, 0.08);
+  background-color: var(--hover-overlay-danger);
 }
 
 /* Responsive */

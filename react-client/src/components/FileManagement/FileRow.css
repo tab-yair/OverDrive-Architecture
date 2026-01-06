@@ -5,7 +5,7 @@
   align-items: center;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border-color);
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-normal);
   cursor: pointer;
   min-height: 56px;
   position: relative;
@@ -95,14 +95,14 @@
 .sharer-avatar {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   object-fit: cover;
 }
 
 .sharer-avatar-placeholder {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background-color: var(--accent-color);
   color: white;
   display: flex;
@@ -122,7 +122,7 @@
 .owner-avatar-placeholder {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background-color: var(--accent-color);
   color: white;
   display: flex;
@@ -162,7 +162,7 @@
 /* Show action buttons on hover, but keep menu button always visible */
 .file-row-actions .action-button:not(.menu-button) {
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-normal);
 }
 
 .file-row:hover .file-row-actions .action-button:not(.menu-button),

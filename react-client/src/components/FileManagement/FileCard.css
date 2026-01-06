@@ -6,10 +6,10 @@
   flex-direction: column;
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   padding: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   overflow: hidden;
   min-height: 200px;
   width: 100%;
@@ -60,7 +60,7 @@
 
 .card-menu-button {
   opacity: 1;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-normal);
 }
 
 .file-card:hover .card-menu-button,
@@ -90,7 +90,7 @@
   width: 64px;
   height: 64px;
   object-fit: contain;
-  transition: transform 0.2s ease;
+  transition: transform var(--transition-normal);
 }
 
 /* Dark mode - make icons visible */
@@ -125,7 +125,7 @@
   padding: 8px 4px 4px;
   text-align: center;
   border-top: 1px solid transparent;
-  transition: border-color 0.2s ease;
+  transition: border-color var(--transition-normal);
 }
 
 /* Folder banner: name on right, left-aligned, flex-grow */
@@ -179,7 +179,7 @@
   align-items: center;
   justify-content: center;
   background-color: var(--bg-primary);
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   box-shadow: var(--shadow);
 }
 

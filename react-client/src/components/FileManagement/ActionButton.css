@@ -33,14 +33,14 @@
 .action-button {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background-color: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   border: none;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--transition-fast);
   padding: 0;
   position: relative;
 }
@@ -52,7 +52,7 @@
 
 /* Light theme fallback */
 [data-theme="light"] .action-button:hover:not(.disabled) {
-  background-color: rgba(60, 64, 67, 0.08);
+  background-color: var(--hover-overlay-light);
 }
 
 /* Dark theme */
@@ -65,7 +65,7 @@
 }
 
 [data-theme="light"] .action-button:active:not(.disabled) {
-  background-color: rgba(60, 64, 67, 0.12);
+  background-color: var(--hover-overlay-medium);
 }
 
 [data-theme="dark"] .action-button:active:not(.disabled) {
@@ -97,15 +97,15 @@
 }
 
 .action-button.disabled .action-button-icon {
-  opacity: 0.3; /* Visual indicator of disabled state */
+  opacity: var(--opacity-disabled); /* Visual indicator of disabled state */
 }
 
 .action-button-icon {
   width: 20px;
   height: 20px;
   display: block;
-  transition: opacity 0.2s ease;
-  opacity: 1;
+  transition: opacity var(--transition-normal);
+  opacity: var(--opacity-visible);
 }
 
 /* Dark mode - make icons visible (except star and share which have currentColor) */
