@@ -1,8 +1,8 @@
 #!/bin/bash
 
 BASE_URL="http://localhost:3000"
-PASS=0
-FAIL=0
+TESTS_PASSED=0
+TESTS_FAILED=0
 # שימוש בפורמט מספרים בלבד כדי למנוע תווים אסורים
 TS=$(date +%s%N | cut -b1-13) 
 
@@ -13,9 +13,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-pass() { echo -e "${GREEN}✓${NC} $1"; ((PASS++)); }
-fail() { echo -e "${RED}✗${NC} $1"; ((FAIL++)); }
-info() { echo -e "${YELLOW}→${NC} $1"; }
+pass() { echo -e "${GREEN}✓ PASS${NC}: $1"; ((TESTS_PASSED++)); }
+fail() { echo -e "${RED}✗ FAIL${NC}: $1"; ((TESTS_FAILED++)); }
+info() { echo -e "${YELLOW}➜${NC} $1"; }
 
 section() {
     echo -e "\n${BLUE}======================================${NC}"
@@ -907,5 +907,15 @@ else
 fi
 
 section "FINAL SUMMARY"
-echo -e "Tests Passed: ${GREEN}$PASS${NC}"
-echo -e "Tests Failed: ${RED}$FAIL${NC}"
+TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+echo "Test Summary: $TESTS_PASSED/$TOTAL passed"
+echo -e "Tests Passed: ${GREEN}$TESTS_PASSED${NC}"
+echo -e "Tests Failed: ${RED}$TESTS_FAILED${NC}"
+
+if [[ $TESTS_FAILED -eq 0 ]]; then
+    echo -e "\n${GREEN}✓ All tests passed!${NC}"
+    exit 0
+else
+    echo -e "\n${RED}✗ $TESTS_FAILED test(s) failed${NC}"
+    exit 1
+fi

@@ -50,7 +50,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 | Method | Endpoint | Auth Required | Description |
 |:---:|:---|:---:|:---|
-| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 4+ char password). Fields: `username`, `password`, `firstName` (required), `lastName` (optional, defaults to `null`), `profileImage` (optional Base64, defaults to `null`) |
+| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 8+ char password). Fields: `username`, `password`, `firstName`, `profileImage` (required Base64 image), `lastName` (optional, defaults to `null`) |
 | `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details (username, firstName, lastName, profileImage) |
 | `PATCH` | `/api/users/:id` | ✅ | **Update User Profile**: Update user details. Allowed fields: `password`, `firstName`, `lastName`, `profileImage`. Username cannot be changed. Set `lastName` or `profileImage` to `null` to remove them |
 | `POST` | `/api/tokens` | ❌ | **Login**: Authenticate user and retrieve JWT token. Returns: `{ token: "<JWT>" }` |
@@ -794,10 +794,10 @@ Follow these steps to explore the system. Replace <...> values with actual IDs r
 ```Bash
 curl -i -X POST http://localhost:3000/api/users \
      -H "Content-Type: application/json" \
-     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\",\"firstName\":\"<FIRST_NAME>\",\"lastName\":\"<LAST_NAME>\"}"
+     -d "{\"username\":\"<GMAIL_ADDRESS>\",\"password\":\"<PASSWORD>\",\"firstName\":\"<FIRST_NAME>\",\"lastName\":\"<LAST_NAME>\",\"profileImage\":\"data:image/png;base64,<BASE64_IMAGE>\"}"
 ```
 Expected Response: 201 Created. Header Location contains the USER_ID.
-Note: `lastName` and `profileImage` are optional fields.
+Note: `lastName` is optional. `profileImage` is required and must be a Base64-encoded image string (e.g., "data:image/png;base64,iVBORw0KG...").
 
 1.2 User Login
 ```Bash

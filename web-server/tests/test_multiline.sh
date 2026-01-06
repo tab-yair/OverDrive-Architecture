@@ -1,9 +1,6 @@
 #!/bin/bash
 # Test multi-line file support with newline escaping
 
-echo "=== Testing Multi-Line File Support ==="
-echo ""
-
 BASE_URL="http://localhost:3000"
 
 # Colors
@@ -12,9 +9,46 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-pass() { echo -e "${GREEN}✓${NC} $1"; }
-fail() { echo -e "${RED}✗${NC} $1"; exit 1; }
-info() { echo -e "${YELLOW}→${NC} $1"; }
+# Test counters
+TESTS_PASSED=0
+TESTS_FAILED=0
+
+# Helper functions
+pass() {
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    echo -e "${GREEN}✓ PASS${NC}: $1"
+}
+
+fail() {
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    echo -e "${RED}✗ FAIL${NC}: $1"
+}
+
+info() {
+    echo -e "${YELLOW}➜${NC} $1"
+}
+
+# Print summary at exit
+print_summary() {
+    echo ""
+    echo "=========================================="
+    TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+    echo "Test Summary: $TESTS_PASSED/$TOTAL passed"
+    if [ $TESTS_FAILED -eq 0 ]; then
+        echo -e "${GREEN}All tests passed!${NC}"
+        exit 0
+    else
+        echo -e "${RED}$TESTS_FAILED test(s) failed${NC}"
+        exit 1
+    fi
+}
+
+trap print_summary EXIT
+
+echo "=========================================="
+echo "Testing Multi-Line File Support"
+echo "=========================================="
+echo ""
 
 # Helper function to extract file ID from Location header
 extract_id() {
@@ -27,7 +61,7 @@ RANDOM_ID=$(date +%s | tail -c 6)
 TEST_USER="mlt${RANDOM_ID}@gmail.com"
 CREATE_RESPONSE=$(curl -s -i -X POST $BASE_URL/api/users \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"$TEST_USER\",\"password\":\"test12345678\",\"firstName\":\"MultiTest\"}")
+    -d "{\"username\":\"$TEST_USER\",\"password\":\"test12345678\",\"firstName\":\"MultiTest\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}")
 USER_ID=$(extract_id "$CREATE_RESPONSE")
 pass "User created: $USER_ID"
 

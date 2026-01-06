@@ -2,16 +2,62 @@
 
 BASE_URL="http://localhost:3000"
 
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# Test counters
+TESTS_PASSED=0
+TESTS_FAILED=0
+
+pass() {
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    echo -e "${GREEN}✓ PASS${NC}: $1"
+}
+
+fail() {
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    echo -e "${RED}✗ FAIL${NC}: $1"
+}
+
+info() {
+    echo -e "${YELLOW}➜${NC} $1"
+}
+
+# Print summary at exit
+print_summary() {
+    echo ""
+    echo "=========================================="
+    TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+    echo "Test Summary: $TESTS_PASSED/$TOTAL passed"
+    if [ $TESTS_FAILED -eq 0 ]; then
+        echo -e "${GREEN}All tests passed!${NC}"
+        exit 0
+    else
+        echo -e "${RED}$TESTS_FAILED test(s) failed${NC}"
+        exit 1
+    fi
+}
+
+trap print_summary EXIT
+
+echo "=========================================="
+echo "Debug: Shared and Starred Files Test"
+echo "=========================================="
+echo ""
+
 # Generate unique usernames
 RANDOM_ID=$(date +%s%N)
 USER1="user1test${RANDOM_ID}@gmail.com"
 USER2="user2test${RANDOM_ID}@gmail.com"
 
 # Create users
-echo "Creating User 1..."
+info "Creating User 1..."
 curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$USER1\",\"password\":\"pass1234\",\"firstName\":\"User1\"}" > /dev/null
+  -d "{\"username\":\"$USER1\",\"password\":\"pass1234\",\"firstName\":\"User1\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}" > /dev/null
 
 TOKEN1=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "Content-Type: application/json" \
@@ -23,7 +69,7 @@ sleep 0.5
 echo "Creating User 2..."
 curl -s -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$USER2\",\"password\":\"pass1234\",\"firstName\":\"User2\"}" > /dev/null
+  -d "{\"username\":\"$USER2\",\"password\":\"pass1234\",\"firstName\":\"User2\",\"profileImage\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}" > /dev/null
 
 TOKEN2=$(curl -s -X POST "$BASE_URL/api/tokens" \
   -H "Content-Type: application/json" \

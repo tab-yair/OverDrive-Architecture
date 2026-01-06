@@ -1,17 +1,58 @@
 #!/bin/bash
 
 GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# Test counters
+TESTS_PASSED=0
+TESTS_FAILED=0
+
+# Helper functions
+pass() {
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    echo -e "${GREEN}✓ PASS${NC}: $1"
+}
+
+fail() {
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    echo -e "${RED}✗ FAIL${NC}: $1"
+}
+
+info() {
+    echo -e "${YELLOW}➜${NC} $1"
+}
+
+# Print summary at exit
+print_summary() {
+    echo ""
+    echo "=========================================="
+    TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+    echo "Test Summary: $TESTS_PASSED/$TOTAL passed"
+    if [ $TESTS_FAILED -eq 0 ]; then
+        echo -e "${GREEN}All tests passed!${NC}"
+        exit 0
+    else
+        echo -e "${RED}$TESTS_FAILED test(s) failed${NC}"
+        exit 1
+    fi
+}
+
+trap print_summary EXIT
+
 API_URL="http://localhost:3000/api"
 
-echo -e "${BLUE}=== Testing Starred and Recent Files Features ===${NC}\n"
+echo "=========================================="
+echo "Testing Starred and Recent Files Features"
+echo "=========================================="
+echo ""
 
 echo -e "${BLUE}1. Registering user...${NC}"
 curl -s -X POST "$API_URL/users" \
   -H "Content-Type: application/json" \
-  -d '{"username": "testuser@gmail.com", "password": "password12345678", "firstName": "Test"}'
+  -d '{"username": "testuser@gmail.com", "password": "password12345678", "firstName": "Test", "profileImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="}'
 
 echo -e "\n${BLUE}2. Logging in...${NC}"
 TOKEN_RESPONSE=$(curl -s -X POST "$API_URL/tokens" \

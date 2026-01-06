@@ -19,16 +19,15 @@ const createUser = asyncHandler(async (req, res) => {
         throw error;
     }
 
-    // Validate required fields (lastName and profileImage are optional)
-    if (!username || !password || !firstName) {
-        const error = new Error('Username, password, and firstName are required');
+    // Validate required fields
+    if (!username || !password || !firstName || !profileImage) {
+        const error = new Error('Username, password, firstName, and profileImage are required');
         error.status = 400;
         throw error;
     }
 
     // Normalize optional fields: set to null if not provided
     const normalizedLastName = lastName !== undefined ? lastName : null;
-    const normalizedProfileImage = profileImage !== undefined ? profileImage : null;
 
     // Call service to create user
     const user = await userService.createUser({ 
@@ -36,7 +35,7 @@ const createUser = asyncHandler(async (req, res) => {
         password, 
         firstName, 
         lastName: normalizedLastName, 
-        profileImage: normalizedProfileImage 
+        profileImage 
     });
 
     // Return 201 Created with user (including password)
