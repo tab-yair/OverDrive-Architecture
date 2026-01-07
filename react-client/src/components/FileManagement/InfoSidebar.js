@@ -84,7 +84,7 @@ const InfoSidebar = ({ file, isOpen, onClose }) => {
     >
       {/* Header */}
       <div className="info-sidebar__header">
-        <h2 className="info-sidebar__title">{file.name}</h2>
+        <h2 className="info-sidebar__title" title={file.name}>{file.name}</h2>
         <button
           className="info-sidebar__close-btn"
           onClick={onClose}
@@ -145,7 +145,7 @@ const InfoSidebar = ({ file, isOpen, onClose }) => {
               <PermissionsManager
                 currentUserRole={currentUserRole}
                 users={[
-                  { id: 'owner', name: file.owner || 'Me', username: 'your.email@gmail.com', role: 'owner', isInherited: false, avatarUrl: file.ownerAvatar || '' },
+                  { id: 'owner', name: file.owner || 'Me', username: file.ownerUsername || '', role: 'owner', isInherited: false, avatarUrl: file.ownerAvatar || '' },
                   ...((file.sharedWith && Array.isArray(file.sharedWith)) ? file.sharedWith : [])
                 ]}
                 onChange={{
@@ -192,7 +192,12 @@ const InfoSidebar = ({ file, isOpen, onClose }) => {
             {/* Location */}
             <div className="info-sidebar__detail-row">
               <div className="info-sidebar__detail-label">Location</div>
-              <div className="info-sidebar__detail-value">
+              <div className="info-sidebar__detail-value info-sidebar__location">
+                <img 
+                  src={icons.folder} 
+                  alt="folder" 
+                  className="info-sidebar__location-icon"
+                />
                 {file.location ? (file.location.isRoot ? 'My Drive' : file.location.parentName) : 'My Drive'}
               </div>
             </div>
@@ -208,7 +213,13 @@ const InfoSidebar = ({ file, isOpen, onClose }) => {
                     <span>{(file.owner || 'Me').charAt(0).toUpperCase()}</span>
                   )}
                 </div>
-                <span>{file.owner || 'Me'}</span>
+                <div className="info-sidebar__owner-info">
+                  {!file.owner ? (
+                    <div>Me</div>
+                  ) : (
+                    <div title={file.ownerUsername}>{file.ownerUsername}</div>
+                  )}
+                </div>
               </div>
             </div>
 

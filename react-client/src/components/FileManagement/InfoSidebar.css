@@ -250,6 +250,38 @@ body.info-sidebar-open {
   line-height: 1;
 }
 
+/* Location with icon */
+.info-sidebar__location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-sidebar__location-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+/* Owner info with username */
+.info-sidebar__owner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.info-sidebar__owner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-sidebar__owner-username {
+  font-size: 0.85rem;
+  color: var(--text-tertiary, #80868b);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .info-sidebar {

@@ -115,8 +115,8 @@ export default function PermissionsManager({ currentUserRole = 'owner', users = 
               )}
             </div>
             <div className="perm-user-info">
-              <div className="perm-name">{user.name}</div>
-              {user.username && <div className="perm-username">{user.username}</div>}
+              <div className="perm-name" title={user.name}>{user.name}</div>
+              {user.username && <div className="perm-username" title={user.username}>{user.username}</div>}
             </div>
             <div className="perm-actions">
               {isOwnerRow ? (

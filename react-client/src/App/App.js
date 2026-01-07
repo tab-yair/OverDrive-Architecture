@@ -4,6 +4,8 @@ import { ThemeProvider } from '../context/ThemeContext';
 import { UserPreferencesProvider } from '../context/UserPreferencesContext';
 import Layout from '../components/Layout/Layout';
 import ProtectedRoute from '../components/ProtectedRoute/ProtectedRoute';
+import { useTruncationHandler } from '../hooks/useTruncationHandler';
+import '../hooks/useTruncationHandler.css';
 
 // Page imports
 import GuestLandingPage from '../pages/GuestLandingPage';
@@ -115,12 +117,15 @@ function AppRoutes() {
  * Note: BrowserRouter is in index.js
  */
 function App() {
+    const TruncationModal = useTruncationHandler();
+
     return (
         <AuthProvider>
             <ThemeProvider>
                 <UserPreferencesProvider>
                     <div className="app">
                         <AppRoutes />
+                        {TruncationModal}
                     </div>
                 </UserPreferencesProvider>
             </ThemeProvider>
