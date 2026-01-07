@@ -24,7 +24,7 @@ const Login = () => {
       const { token, userId } = await apiService.login(username, password);
       
       // 2. Now call getUserProfile with the CORRECT ID (the one from the token)
-      const userProfile = await apiService.getUserProfile(userId, token);
+      const userProfile = await apiService.getUserProfile(token, userId);
       
       // 3. Save to global state
       login(token, userProfile);

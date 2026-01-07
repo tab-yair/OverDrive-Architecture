@@ -26,6 +26,11 @@ export const AuthProvider = ({ children }) => {
    * login function: saves token and user data to state and LocalStorage
    */
   const login = (newToken, userData) => {
+    // We create the displayName in the frontend context because the server doesn't store it
+    if (userData && !userData.displayName) {
+      userData.displayName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+    }
+
     setToken(newToken);
     setUser(userData);
     localStorage.setItem('token', newToken);
