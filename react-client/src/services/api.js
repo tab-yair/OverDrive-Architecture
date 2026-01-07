@@ -1,14 +1,16 @@
 /**
- * API Service Layer
- * Centralized API calls with JWT authentication
+ * api.js
+ * Unified API Service Layer
+ * Combines Authentication, User Profile, Storage, and File management logic.
  */
+import { jwtDecode } from "jwt-decode";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+// Base URL for the backend server
+const API_BASE_URL = 'http://localhost:3000';
 
 /**
- * Get authorization headers with Bearer token
+ * Helper to generate authorization headers with Bearer token.
  * @param {string} token - JWT token
- * @returns {Object} Headers object with Authorization
  */
 export function getAuthHeaders(token) {
     return {
@@ -18,13 +20,55 @@ export function getAuthHeaders(token) {
 }
 
 /**
- * User API endpoints
+ * Authentication API Logic
+ * Handles user registration and token-based login.
+ */
+export const authApi = {
+    /**
+     * Registers a new user with profile data.
+     */
+    register: async (userData) => {
+        const response = await fetch(`${API_BASE_URL}/api/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Registration failed');
+        }
+        return await response.json();
+    },
+
+    /**
+     * Authenticates user and decodes the JWT to return userId.
+     */
+    login: async (username, password) => {
+        const response = await fetch(`${API_BASE_URL}/api/tokens`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Invalid credentials');
+        }
+
+        const data = await response.json();
+        const token = data.token;
+        const decoded = jwtDecode(token);
+        
+        return { token, userId: decoded.userId };
+    }
+};
+
+/**
+ * User Profile & Preferences API
  */
 export const userApi = {
     /**
-     * Get user profile
-     * @param {string} token - JWT token
-     * @param {string} userId - User ID
+     * Fetches user profile data by ID.
      */
     async getUser(token, userId) {
         const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
@@ -37,10 +81,7 @@ export const userApi = {
     },
 
     /**
-     * Update user profile
-     * @param {string} token - JWT token
-     * @param {string} userId - User ID
-     * @param {Object} updates - Fields to update (password, firstName, lastName, profileImage)
+     * Updates user profile fields (password, names, image).
      */
     async updateUser(token, userId, updates) {
         const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
@@ -56,9 +97,7 @@ export const userApi = {
     },
 
     /**
-     * Get user preferences from localStorage
-     * TODO: Replace with API call when server implements GET /api/users/:id/preferences
-     * @param {string} userId - User ID
+     * Local storage fallback for user preferences.
      */
     getPreferences(userId) {
         const stored = localStorage.getItem(`preferences_${userId}`);
@@ -72,12 +111,6 @@ export const userApi = {
         return { theme: 'system', startPage: 'home' };
     },
 
-    /**
-     * Update user preferences in localStorage
-     * TODO: Replace with API call when server implements PATCH /api/users/:id/preferences
-     * @param {string} userId - User ID
-     * @param {Object} preferences - Preferences to update
-     */
     updatePreferences(userId, preferences) {
         const current = this.getPreferences(userId);
         const updated = { ...current, ...preferences };
@@ -87,13 +120,11 @@ export const userApi = {
 };
 
 /**
- * Storage API endpoints
+ * Storage & Statistics API
  */
 export const storageApi = {
     /**
-     * Get storage info
-     * @param {string} token - JWT token
-     * @returns {Object} { storageUsed, storageLimit, storageAvailable, storageUsedMB, storageLimitMB, storageAvailableMB, usagePercentage }
+     * Fetches server-side storage usage statistics.
      */
     async getStorageInfo(token) {
         const response = await fetch(`${API_BASE_URL}/api/storage`, {
@@ -107,13 +138,11 @@ export const storageApi = {
 };
 
 /**
- * Files API endpoints
+ * Files Management API
  */
 export const filesApi = {
     /**
-     * Get all files at root level
-     * @param {string} token - JWT token
-     * @param {Object} options - Query options
+     * Fetches files with optional sorting and parentId filters.
      */
     async getFiles(token, options = {}) {
         const params = new URLSearchParams();
@@ -134,9 +163,7 @@ export const filesApi = {
     },
 
     /**
-     * Create a new file or folder
-     * @param {string} token - JWT token
-     * @param {Object} data - File data { name, type: 'file'|'folder', parentId?, content? }
+     * Creates a new folder or file metadata entry.
      */
     async createFile(token, data) {
         const response = await fetch(`${API_BASE_URL}/api/files`, {
@@ -152,10 +179,7 @@ export const filesApi = {
     },
 
     /**
-     * Upload a file
-     * @param {string} token - JWT token
-     * @param {File} file - File object to upload
-     * @param {string} parentId - Parent folder ID (optional)
+     * Uploads a physical file using FormData.
      */
     async uploadFile(token, file, parentId = null) {
         const formData = new FormData();
@@ -166,10 +190,7 @@ export const filesApi = {
 
         const response = await fetch(`${API_BASE_URL}/api/files`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-                // Note: Don't set Content-Type for FormData, browser will set it with boundary
-            },
+            headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
         if (!response.ok) {
@@ -180,9 +201,7 @@ export const filesApi = {
     },
 
     /**
-     * Get file details
-     * @param {string} token - JWT token
-     * @param {string} fileId - File ID
+     * Fetches details for a specific file.
      */
     async getFile(token, fileId) {
         const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
@@ -195,9 +214,7 @@ export const filesApi = {
     },
 
     /**
-     * Search files
-     * @param {string} token - JWT token
-     * @param {string} query - Search query
+     * Searches for files by query string.
      */
     async searchFiles(token, query) {
         const response = await fetch(`${API_BASE_URL}/api/search/${encodeURIComponent(query)}`, {
@@ -211,19 +228,26 @@ export const filesApi = {
 };
 
 /**
- * Format bytes to human readable string
- * @param {number} bytes - Bytes to format
- * @param {number} decimals - Number of decimal places
- * @returns {string} Formatted string (e.g., "1.5 GB")
+ * Utility: Format bytes to human-readable format.
  */
 export function formatBytes(bytes, decimals = 1) {
     if (bytes === 0) return '0 Bytes';
-
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
+
+/**
+ * Legacy Support / Default Export
+ * Allows existing login/register components to work without changes.
+ */
+export const apiService = {
+    register: authApi.register,
+    login: authApi.login,
+    getUserProfile: userApi.getUser,
+    getFiles: filesApi.getFiles
+};
+
+export default apiService;

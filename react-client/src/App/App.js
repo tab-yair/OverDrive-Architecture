@@ -17,8 +17,8 @@ import StoragePage from '../pages/StoragePage';
 import SettingsPage from '../pages/SettingsPage';
 import GeneralSettingsPage from '../pages/GeneralSettingsPage';
 import AccountSettingsPage from '../pages/AccountSettingsPage';
-import LoginPage from '../pages/LoginPage';
-import SignupPage from '../pages/SignupPage';
+import LoginPage from '../components/RegisterAndLogin/Login';
+import SignupPage from '../components/RegisterAndLogin/Register';
 
 import './App.css';
 
