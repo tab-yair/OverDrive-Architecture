@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import ActionButton from './ActionButton';
 import FileActionMenu from './FileActionMenu';
-import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatSmartDate, getFallbackValue } from './fileUtils';
+import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatSmartDate, formatRecentActivity, getFallbackValue } from './fileUtils';
 import './FileRow.css';
 
 /**
@@ -126,8 +126,7 @@ const FileRow = ({
     if (isActions) {
       if (file.lastActions && file.lastActions.length > 0) {
         const action = file.lastActions[0]; // Show most recent action
-        const dateFormatted = formatSmartDate(action.date);
-        return `${action.action} • ${dateFormatted}`;
+        return formatRecentActivity(action);
       }
       return getFallbackValue('lastActions');
     }
@@ -159,6 +158,11 @@ const FileRow = ({
       if (file.type === 'folder') return '---';
       if (typeof value === 'number') return formatFileSize(value);
       return getFallbackValue(key);
+    }
+
+    // Handle date formatting with custom formatter
+    if (formatter && value) {
+      return formatter(value);
     }
     
     // Handle owner with avatar

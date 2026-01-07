@@ -9,13 +9,41 @@ const FileManagementExample = () => {
   const [viewMode, setViewMode] = useState('list');
 
   // Example file data - replace with your API data
+  // Includes test cases for today, yesterday, last week, last month, and older
   const exampleFiles = [
+    {
+      id: 'pdf-folder',
+      type: 'folder',
+      name: 'PDF',
+      owner: 'John Doe',
+      lastModified: new Date('2026-01-07T14:30:00'),
+      size: null,
+      starred: false,
+    },
+    {
+      id: 'images-folder',
+      type: 'folder',
+      name: 'Images',
+      owner: 'John Doe',
+      lastModified: new Date('2026-01-07T14:30:00'),
+      size: null,
+      starred: false,
+    },
+    {
+      id: 'docs-folder',
+      type: 'folder',
+      name: 'Docs',
+      owner: 'John Doe',
+      lastModified: new Date('2026-01-07T14:30:00'),
+      size: null,
+      starred: false,
+    },
     {
       id: '1',
       type: 'folder',
       name: 'Projects',
       owner: 'John Doe',
-      lastModified: new Date('2025-01-05T10:30:00'),
+      lastModified: new Date('2026-01-07T14:30:00'),
       size: null,
       starred: true,
     },
@@ -24,7 +52,7 @@ const FileManagementExample = () => {
       type: 'pdf',
       name: 'Project Report Q4 2024.pdf',
       owner: 'Jane Smith',
-      lastModified: new Date('2025-01-06T14:20:00'),
+      lastModified: new Date('2026-01-06T14:20:00'),
       size: 2048576, // 2MB
       starred: false,
     },
@@ -33,16 +61,16 @@ const FileManagementExample = () => {
       type: 'docs',
       name: 'Meeting Notes - January.docx',
       owner: 'John Doe',
-      lastModified: new Date('2025-01-04T09:15:00'),
+      lastModified: new Date('2026-01-02T09:15:00'),
       size: 45056,
       starred: false,
     },
     {
       id: '4',
       type: 'image',
-      name: 'Screenshot 2025-01-06.png',
+      name: 'Screenshot 2026-01-07.png',
       owner: 'John Doe',
-      lastModified: new Date('2025-01-06T11:45:00'),
+      lastModified: new Date('2026-01-07T11:45:00'),
       size: 1024000, // 1MB
       starred: true,
     },
@@ -51,7 +79,7 @@ const FileManagementExample = () => {
       type: 'folder',
       name: 'Documents',
       owner: 'Jane Smith',
-      lastModified: new Date('2025-01-03T16:00:00'),
+      lastModified: new Date('2025-12-24T16:00:00'),
       size: null,
       starred: false,
     },
@@ -60,8 +88,17 @@ const FileManagementExample = () => {
       type: 'pdf',
       name: 'Invoice_2024_12.pdf',
       owner: 'Accounting Dept',
-      lastModified: new Date('2024-12-31T23:59:00'),
+      lastModified: new Date('2025-12-15T23:59:00'),
       size: 512000,
+      starred: false,
+    },
+    {
+      id: '7',
+      type: 'docs',
+      name: 'Archive 2025.docx',
+      owner: 'Records Dept',
+      lastModified: new Date('2025-11-10T10:00:00'),
+      size: 127890,
       starred: false,
     },
   ];
@@ -69,15 +106,80 @@ const FileManagementExample = () => {
   // Example for Shared With Me page
   const sharedFiles = [
     {
+      id: 'shared-pdf-folder',
+      type: 'folder',
+      name: 'PDF',
+      owner: 'Finance Team',
+      size: null,
+      shareDate: new Date('2026-01-07T14:30:00'),
+      sharer: {
+        displayName: 'Jane Smith',
+        avatarUrl: null,
+      },
+      starred: false,
+    },
+    {
+      id: 'shared-images-folder',
+      type: 'folder',
+      name: 'Images',
+      owner: 'Finance Team',
+      size: null,
+      shareDate: new Date('2026-01-07T14:30:00'),
+      sharer: {
+        displayName: 'Jane Smith',
+        avatarUrl: null,
+      },
+      starred: false,
+    },
+    {
+      id: 'shared-docs-folder',
+      type: 'folder',
+      name: 'Docs',
+      owner: 'Finance Team',
+      size: null,
+      shareDate: new Date('2026-01-07T14:30:00'),
+      sharer: {
+        displayName: 'Jane Smith',
+        avatarUrl: null,
+      },
+      starred: false,
+    },
+    {
       id: '10',
       type: 'pdf',
       name: 'Q4 Financial Report.pdf',
       owner: 'Finance Team',
       size: 3145728,
-      shareDate: new Date('2025-01-03T10:00:00'),
+      shareDate: new Date('2026-01-07T10:00:00'),
       sharer: {
         displayName: 'Jane Smith',
         avatarUrl: null, // Optional
+      },
+      starred: false,
+    },
+    {
+      id: '11',
+      type: 'docs',
+      name: 'Budget Plan 2026.docx',
+      owner: 'Finance Team',
+      size: 256000,
+      shareDate: new Date('2026-01-06T14:30:00'),
+      sharer: {
+        displayName: 'Mike Johnson',
+        avatarUrl: null,
+      },
+      starred: false,
+    },
+    {
+      id: '12',
+      type: 'pdf',
+      name: 'Monthly Report Dec.pdf',
+      owner: 'HR Department',
+      size: 1024000,
+      shareDate: new Date('2025-12-24T09:00:00'),
+      sharer: {
+        displayName: 'Sarah Connor',
+        avatarUrl: null,
       },
       starred: false,
     },
@@ -86,14 +188,59 @@ const FileManagementExample = () => {
   // Example for Recently Opened page
   const recentFiles = [
     {
+      id: 'recent-pdf-folder',
+      type: 'folder',
+      name: 'PDF',
+      owner: 'John Doe',
+      size: null,
+      lastActions: [
+        { date: new Date('2026-01-07T14:30:00'), action: 'opened' },
+      ],
+      location: {
+        parentName: null,
+        isRoot: true,
+      },
+      starred: false,
+    },
+    {
+      id: 'recent-images-folder',
+      type: 'folder',
+      name: 'Images',
+      owner: 'John Doe',
+      size: null,
+      lastActions: [
+        { date: new Date('2026-01-07T14:30:00'), action: 'opened' },
+      ],
+      location: {
+        parentName: null,
+        isRoot: true,
+      },
+      starred: false,
+    },
+    {
+      id: 'recent-docs-folder',
+      type: 'folder',
+      name: 'Docs',
+      owner: 'John Doe',
+      size: null,
+      lastActions: [
+        { date: new Date('2026-01-06T10:30:00'), action: 'opened' },
+      ],
+      location: {
+        parentName: null,
+        isRoot: true,
+      },
+      starred: false,
+    },
+    {
       id: '20',
       type: 'docs',
-      name: 'Project Plan 2025.docx',
+      name: 'Project Plan 2026.docx',
       owner: 'John Doe',
       size: 67584,
       lastActions: [
-        { date: new Date('2025-01-06T10:30:00'), action: 'opened' },
-        { date: new Date('2025-01-05T14:20:00'), action: 'edited' },
+        { date: new Date('2026-01-07T14:30:00'), action: 'opened' },
+        { date: new Date('2026-01-06T10:30:00'), action: 'edited' },
       ],
       location: {
         parentName: 'Projects',
@@ -101,19 +248,114 @@ const FileManagementExample = () => {
       },
       starred: true,
     },
+    {
+      id: '21',
+      type: 'pdf',
+      name: 'Presentation.pdf',
+      owner: 'Jane Smith',
+      size: 2500000,
+      lastActions: [
+        { date: new Date('2026-01-06T09:00:00'), action: 'opened' },
+        { date: new Date('2026-01-03T16:45:00'), action: 'edited' },
+      ],
+      location: {
+        parentName: 'Work',
+        isRoot: false,
+      },
+      starred: false,
+    },
+    {
+      id: '22',
+      type: 'docs',
+      name: 'Quarterly Review.docx',
+      owner: 'John Doe',
+      size: 198765,
+      lastActions: [
+        { date: new Date('2025-12-28T11:20:00'), action: 'edited' },
+        { date: new Date('2025-12-25T14:00:00'), action: 'opened' },
+      ],
+      location: {
+        parentName: 'Performance',
+        isRoot: false,
+      },
+      starred: false,
+    },
+    {
+      id: '23',
+      type: 'image',
+      name: 'Team Photo.png',
+      owner: 'HR Dept',
+      size: 3200000,
+      lastActions: [
+        { date: new Date('2025-12-10T15:30:00'), action: 'opened' },
+        { date: new Date('2025-12-05T10:00:00'), action: 'edited' },
+      ],
+      location: {
+        parentName: 'Archives',
+        isRoot: false,
+      },
+      starred: false,
+    },
   ];
 
   // Example for Trash page
   const trashedFiles = [
+    {
+      id: 'trash-pdf-folder',
+      type: 'folder',
+      name: 'PDF',
+      owner: 'John Doe',
+      size: null,
+      originalLocation: {
+        parentName: null,
+        isRoot: true,
+      },
+      starred: false,
+    },
+    {
+      id: 'trash-images-folder',
+      type: 'folder',
+      name: 'Images',
+      owner: 'John Doe',
+      size: null,
+      originalLocation: {
+        parentName: null,
+        isRoot: true,
+      },
+      starred: false,
+    },
+    {
+      id: 'trash-docs-folder',
+      type: 'folder',
+      name: 'Docs',
+      owner: 'John Doe',
+      size: null,
+      originalLocation: {
+        parentName: null,
+        isRoot: true,
+      },
+      starred: false,
+    },
     {
       id: '30',
       type: 'image',
       name: 'Old Screenshot.png',
       owner: 'John Doe',
       size: 1024000,
-      deletionDate: new Date('2025-01-05T12:00:00'),
       originalLocation: {
         parentName: 'Screenshots',
+        isRoot: false,
+      },
+      starred: false,
+    },
+    {
+      id: '31',
+      type: 'docs',
+      name: 'Draft Notes.docx',
+      owner: 'Jane Smith',
+      size: 45000,
+      originalLocation: {
+        parentName: 'Drafts',
         isRoot: false,
       },
       starred: false,
@@ -123,14 +365,66 @@ const FileManagementExample = () => {
   // Example for Starred page
   const starredFiles = [
     {
+      id: 'starred-pdf-folder',
+      type: 'folder',
+      name: 'PDF',
+      owner: 'John Doe',
+      lastModified: new Date('2026-01-07T14:30:00'),
+      size: null,
+      location: {
+        parentName: null,
+        isRoot: true,
+      },
+      starred: true,
+    },
+    {
+      id: 'starred-images-folder',
+      type: 'folder',
+      name: 'Images',
+      owner: 'John Doe',
+      lastModified: new Date('2026-01-07T14:30:00'),
+      size: null,
+      location: {
+        parentName: null,
+        isRoot: true,
+      },
+      starred: true,
+    },
+    {
+      id: 'starred-docs-folder',
+      type: 'folder',
+      name: 'Docs',
+      owner: 'John Doe',
+      lastModified: new Date('2026-01-07T14:30:00'),
+      size: null,
+      location: {
+        parentName: null,
+        isRoot: true,
+      },
+      starred: true,
+    },
+    {
       id: '40',
       type: 'pdf',
       name: 'Important Document.pdf',
       owner: 'John Doe',
-      lastModified: new Date('2025-01-04T15:30:00'),
+      lastModified: new Date('2026-01-07T15:30:00'),
       size: 512000,
       location: {
         parentName: 'Work',
+        isRoot: false,
+      },
+      starred: true,
+    },
+    {
+      id: '41',
+      type: 'folder',
+      name: 'Key Projects',
+      owner: 'John Doe',
+      lastModified: new Date('2026-01-04T12:00:00'),
+      size: null,
+      location: {
+        parentName: 'Projects',
         isRoot: false,
       },
       starred: true,

@@ -138,6 +138,29 @@
   margin-top: 16px; /* Same as gap between rows */
 }
 
+/* Time Group Headers (for Recent/Shared grouping) */
+.time-group-header {
+  padding: 12px 24px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Group Section */
+.time-group-section {
+  margin-bottom: 0;
+}
+
+.time-group-section:last-child {
+  margin-bottom: 0;
+}
+
 /* Empty State */
 .file-manager-empty {
   display: flex;

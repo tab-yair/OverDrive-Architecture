@@ -254,6 +254,59 @@ export const formatDate = (date) => {
 };
 
 /**
+ * Helper: Check if two dates are on the same calendar day
+ */
+const isSameCalendarDay = (a, b) => {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+};
+
+/**
+ * Helper: Normalize recent action label to "Open" or "Edit"
+ */
+const normalizeRecentActionLabel = (rawAction) => {
+  const action = String(rawAction || '').trim().toLowerCase();
+  if (!action) return 'Open';
+
+  if (
+    action === 'open' ||
+    action === 'opened' ||
+    action === 'view' ||
+    action === 'viewed' ||
+    action.includes('open') ||
+    action.includes('view')
+  ) {
+    return 'Open';
+  }
+
+  return 'Edit';
+};
+
+/**
+ * Format Recent Activity for display
+ * - Today: "HH:mm · Open"
+ * - Before today: "Jan 6, 2026 · Edit" (always includes year)
+ */
+export const formatRecentActivity = (actionObj) => {
+  if (!actionObj || !actionObj.date) return '---';
+
+  const dateObj = new Date(actionObj.date);
+  if (isNaN(dateObj.getTime())) return '---';
+
+  const now = new Date();
+  const actionLabel = normalizeRecentActionLabel(actionObj.action);
+
+  const datePart = isSameCalendarDay(dateObj, now)
+    ? dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  return `${datePart} · ${actionLabel}`;
+};
+
+/**
  * ═══════════════════════════════════════════════════════════════════
  * ARCHITECTURAL REFACTOR: "ACTION REGISTRY" PATTERN
  * ═══════════════════════════════════════════════════════════════════
@@ -317,7 +370,7 @@ export const formatDate = (date) => {
  *     Metadata: [Shared By, Share Date]
  *   
  *   Recent:
- *     Metadata: [Owner, Last Activity, Size, Location]
+ *     Metadata: [Owner, RECENT Activity, Size, Location]
  *   
  *   Trash:
  *     Metadata: [Original Location, Owner, Size]
@@ -349,7 +402,7 @@ const METADATA_OVERRIDES = {
   ],
   Recent: [
     { key: 'owner', label: 'Owner', width: '12%', cssVar: '--col-width-1' },
-    { key: 'lastActions', label: 'Last Activity', width: '22%', cssVar: '--col-width-2', isActions: true },
+    { key: 'lastActions', label: 'Recent Activity', width: '22%', cssVar: '--col-width-2', isActions: true },
     { key: 'size', label: 'Size', width: '10%', cssVar: '--col-width-3' },
     { key: 'location', label: 'Location', width: '15%', cssVar: '--col-width-4', isLocation: true },
   ],
@@ -427,6 +480,99 @@ export const getFallbackValue = (key) => {
   };
   
   return fallbacks[key] || '---';
+};
+
+/**
+ * Categorize files into time-based groups for Recent/Shared views
+ * 
+ * Groups:
+ * - Today: Same calendar day
+ * - Yesterday: Previous calendar day
+ * - Earlier this week: 2-6 days ago
+ * - Last week: 7-14 days ago
+ * - Last month: 15-30 days ago
+ * - Older: More than 30 days ago
+ * 
+ * @param {Array} files - Array of file objects
+ * @param {string} dateField - Which date field to use ('lastModified', 'shareDate', 'lastActions')
+ * @returns {Object} Grouped files: { Today: [...], Yesterday: [...], ... }
+ */
+export const groupFilesByTime = (files, dateField = 'lastModified') => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const oneWeekAgo = new Date(today);
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const twoWeeksAgo = new Date(today);
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const groups = {
+    Today: [],
+    Yesterday: [],
+    'Earlier this week': [],
+    'Last week': [],
+    'Last month': [],
+    Older: [],
+  };
+
+  files.forEach(file => {
+    // Get the date to use for grouping
+    let fileDate = null;
+    if (dateField === 'lastActions' && file.lastActions && file.lastActions.length > 0) {
+      fileDate = new Date(file.lastActions[0].date);
+    } else if (dateField === 'shareDate' && file.shareDate) {
+      fileDate = new Date(file.shareDate);
+    } else if (dateField === 'lastModified' && file.lastModified) {
+      fileDate = new Date(file.lastModified);
+    }
+
+    if (!fileDate) {
+      groups.Older.push(file);
+      return;
+    }
+
+    const fileDateStart = new Date(fileDate.getFullYear(), fileDate.getMonth(), fileDate.getDate());
+
+    if (fileDateStart.getTime() === today.getTime()) {
+      groups.Today.push(file);
+    } else if (fileDateStart.getTime() === yesterday.getTime()) {
+      groups.Yesterday.push(file);
+    } else if (fileDateStart > oneWeekAgo && fileDateStart < today) {
+      groups['Earlier this week'].push(file);
+    } else if (fileDateStart > twoWeeksAgo && fileDateStart <= oneWeekAgo) {
+      groups['Last week'].push(file);
+    } else if (fileDateStart > thirtyDaysAgo && fileDateStart <= twoWeeksAgo) {
+      groups['Last month'].push(file);
+    } else {
+      groups.Older.push(file);
+    }
+  });
+
+  // Sort files within each group by date (most recent first)
+  Object.keys(groups).forEach(groupKey => {
+    groups[groupKey].sort((a, b) => {
+      let dateA = null;
+      let dateB = null;
+
+      if (dateField === 'lastActions') {
+        dateA = a.lastActions && a.lastActions.length > 0 ? new Date(a.lastActions[0].date) : new Date(0);
+        dateB = b.lastActions && b.lastActions.length > 0 ? new Date(b.lastActions[0].date) : new Date(0);
+      } else if (dateField === 'shareDate') {
+        dateA = a.shareDate ? new Date(a.shareDate) : new Date(0);
+        dateB = b.shareDate ? new Date(b.shareDate) : new Date(0);
+      } else {
+        dateA = a.lastModified ? new Date(a.lastModified) : new Date(0);
+        dateB = b.lastModified ? new Date(b.lastModified) : new Date(0);
+      }
+
+      return dateB.getTime() - dateA.getTime(); // Newest first
+    });
+  });
+
+  return groups;
 };
 
 /**

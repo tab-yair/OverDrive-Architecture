@@ -3,7 +3,7 @@ import FileRow from './FileRow';
 import FileCard from './FileCard';
 import ActionButton from './ActionButton';
 import SelectionToolbar from './SelectionToolbar';
-import { getMetadataConfig, applyColumnWidths } from './fileUtils';
+import { getMetadataConfig, applyColumnWidths, groupFilesByTime } from './fileUtils';
 import './FileManager.css';
 
 /**
@@ -75,18 +75,18 @@ const FileManager = ({
    * FILE SORTING AND GROUPING LOGIC
    * ═══════════════════════════════════════════════════════════════
    * 
-   * Default View (MyDrive):
-   * - Folders always appear first
+   * DEFAULT: Folders and files always separate
+   * - Folders appear first
    * - Files appear after folders
    * - In Grid view: folders and files never share the same row
    * 
-   * Recent/Shared Views:
-   * - Mixed layout: folders and files intermixed based on metadata
+   * EXCEPTIONS - Recent/Shared Views:
+   * - Mixed layout: folders and files intermixed based on time grouping
    * ═══════════════════════════════════════════════════════════════
    */
   
-  // Determine if we should group folders separately
-  const shouldGroupFolders = pageContext === 'MyDrive';
+  // Default: separate folders and files (except in Recent/Shared where they're mixed)
+  const shouldGroupFolders = pageContext !== 'Recent' && pageContext !== 'Shared';
   
   // Sort and group files
   let sortedFiles = [...files];
@@ -306,20 +306,49 @@ const FileManager = ({
                 ))}
               </>
             ) : (
-              /* Mixed layout for Recent/Shared */
-              regularFiles.map((file) => (
-                <FileRow
-                  key={file.id}
-                  file={file}
-                  pageContext={pageContext}
-                  permissionLevel={permissionLevel}
-                  isOwner={isOwner}
-                  isSelected={isFileSelected(file)}
-                  onSelect={handleFileSelect}
-                  onAction={onAction}
-                  onClick={handleFileClick}
-                />
-              ))
+              /* Mixed layout for Recent/Shared - with time grouping */
+              (() => {
+                if (pageContext === 'Recent' || pageContext === 'Shared') {
+                  const dateField = pageContext === 'Recent' ? 'lastActions' : 'shareDate';
+                  const timeGroups = groupFilesByTime(regularFiles, dateField);
+                  
+                  return Object.entries(timeGroups).map(([groupName, groupFiles]) =>
+                    groupFiles.length > 0 ? (
+                      <div key={groupName} className="time-group-section">
+                        <div className="time-group-header">{groupName}</div>
+                        {groupFiles.map((file) => (
+                          <FileRow
+                            key={file.id}
+                            file={file}
+                            pageContext={pageContext}
+                            permissionLevel={permissionLevel}
+                            isOwner={isOwner}
+                            isSelected={isFileSelected(file)}
+                            onSelect={handleFileSelect}
+                            onAction={onAction}
+                            onClick={handleFileClick}
+                          />
+                        ))}
+                      </div>
+                    ) : null
+                  );
+                } else {
+                  // Default mixed layout for other pages
+                  return regularFiles.map((file) => (
+                    <FileRow
+                      key={file.id}
+                      file={file}
+                      pageContext={pageContext}
+                      permissionLevel={permissionLevel}
+                      isOwner={isOwner}
+                      isSelected={isFileSelected(file)}
+                      onSelect={handleFileSelect}
+                      onAction={onAction}
+                      onClick={handleFileClick}
+                    />
+                  ));
+                }
+              })()
             )}
           </div>
         </div>
@@ -369,22 +398,55 @@ const FileManager = ({
               )}
             </>
           ) : (
-            /* Mixed layout for Recent/Shared - Single grid */
-            <div className="file-grid">
-              {regularFiles.map((file) => (
-                <FileCard
-                  key={file.id}
-                  file={file}
-                  pageContext={pageContext}
-                  permissionLevel={permissionLevel}
-                  isOwner={isOwner}
-                  isSelected={isFileSelected(file)}
-                  onSelect={handleFileSelect}
-                  onAction={onAction}
-                  onClick={handleFileClick}
-                />
-              ))}
-            </div>
+            /* Mixed layout for Recent/Shared - with time grouping in grid */
+            (() => {
+              if (pageContext === 'Recent' || pageContext === 'Shared') {
+                const dateField = pageContext === 'Recent' ? 'lastActions' : 'shareDate';
+                const timeGroups = groupFilesByTime(regularFiles, dateField);
+                
+                return Object.entries(timeGroups).map(([groupName, groupFiles]) =>
+                  groupFiles.length > 0 ? (
+                    <div key={groupName} className="time-group-section">
+                      <div className="time-group-header">{groupName}</div>
+                      <div className="file-grid">
+                        {groupFiles.map((file) => (
+                          <FileCard
+                            key={file.id}
+                            file={file}
+                            pageContext={pageContext}
+                            permissionLevel={permissionLevel}
+                            isOwner={isOwner}
+                            isSelected={isFileSelected(file)}
+                            onSelect={handleFileSelect}
+                            onAction={onAction}
+                            onClick={handleFileClick}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : null
+                );
+              } else {
+                // Default mixed layout for other pages
+                return (
+                  <div className="file-grid">
+                    {regularFiles.map((file) => (
+                      <FileCard
+                        key={file.id}
+                        file={file}
+                        pageContext={pageContext}
+                        permissionLevel={permissionLevel}
+                        isOwner={isOwner}
+                        isSelected={isFileSelected(file)}
+                        onSelect={handleFileSelect}
+                        onAction={onAction}
+                        onClick={handleFileClick}
+                      />
+                    ))}
+                  </div>
+                );
+              }
+            })()
           )}
         </div>
       )}
