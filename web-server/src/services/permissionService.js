@@ -54,6 +54,68 @@ class PermissionService {
         return newPermission;
     }
 
+    /**
+     * Synchronize permissions when a file/folder is moved to a new parent.
+     * - Remove all inherited permissions in the moved subtree (preserve direct permissions)
+     * - Rebuild inherited permissions based on the new parent folder's permissions
+     * - Do not propagate OWNER permissions
+     *
+     * @param {string} fileId - ID of the moved file/folder (new location already applied)
+     * @param {string|null} oldParentId - Previous parent ID (may be null)
+     * @param {string|null} newParentId - New parent ID (may be null for root)
+     */
+    async syncPermissionsOnMove(fileId, oldParentId, newParentId) {
+        const root = await filesStore.getById(fileId);
+        if (!root) return;
+
+        // 1) Collect subtree (include root)
+        const descendants = await filesStore.getAllDescendants(fileId);
+        const subtree = [root, ...descendants];
+
+        // 2) Remove all inherited permissions within the subtree
+        for (const node of subtree) {
+            const perms = await permissionStore.getByFileId(node.id);
+            for (const perm of perms) {
+                if (perm.isInherited) {
+                    await permissionStore.delete(perm.pid);
+                }
+            }
+        }
+
+        // 3) If newParentId is null, no inheritance to rebuild
+        if (newParentId === null || newParentId === undefined) {
+            return;
+        }
+
+        // 4) Get permissions on the new parent (direct or inherited)
+        const parentPerms = await permissionStore.getByFileId(newParentId);
+
+        // 5) For each user with VIEWER/EDITOR on the new parent, grant inherited on subtree
+        for (const parentPerm of parentPerms) {
+            if (parentPerm.isHiddenForUser) continue;
+            if (parentPerm.level !== 'VIEWER' && parentPerm.level !== 'EDITOR') continue; // skip OWNER
+
+            for (const node of subtree) {
+                // Skip if a direct permission exists on this node for the same user
+                const existing = await permissionStore.getUserPermissionForFile(parentPerm.userId, node.id);
+                if (existing && !existing.isInherited) {
+                    continue; // preserve direct permission
+                }
+
+                const pid = generateId();
+                await permissionStore.create(
+                    pid,
+                    node.id,
+                    parentPerm.userId,
+                    parentPerm.level,
+                    true, // isInherited
+                    newParentId, // inheritedFrom
+                    false,
+                    null
+                );
+            }
+        }
+    }
     // Add VIEWER permission
     async addViewer({ fileId, userId, requestingUserId }) {
         return await this.addPermission({ fileId, userId, level: 'VIEWER', requestingUserId });
