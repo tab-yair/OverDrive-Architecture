@@ -320,7 +320,7 @@ export const formatDate = (date) => {
  *     Metadata: [Owner, Last Activity, Size, Location]
  *   
  *   Trash:
- *     Metadata: [Original Location, Owner, Date Deleted, Size]
+ *     Metadata: [Original Location, Owner, Size]
  *     Menu: [Restore, Delete Permanently] (same for files & folders)
  *     Quick Actions: [Restore, Delete Permanently]
  * 
@@ -354,10 +354,9 @@ const METADATA_OVERRIDES = {
     { key: 'location', label: 'Location', width: '15%', cssVar: '--col-width-4', isLocation: true },
   ],
   Trash: [
-    { key: 'originalLocation', label: 'Original Location', width: '15%', cssVar: '--col-width-1', isLocation: true },
     { key: 'owner', label: 'Owner', width: '12%', cssVar: '--col-width-2' },
-    { key: 'deletionDate', label: 'Date Deleted', width: '18%', cssVar: '--col-width-3', formatter: formatSmartDate },
     { key: 'size', label: 'Size', width: '10%', cssVar: '--col-width-4' },
+    { key: 'originalLocation', label: 'Original Location', width: '15%', cssVar: '--col-width-1', isLocation: true },
   ],
 };
 
