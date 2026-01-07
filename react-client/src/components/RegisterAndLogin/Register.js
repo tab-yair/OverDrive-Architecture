@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { validatePassword, convertToBase64, DEFAULT_IMAGE } from '../../utils/authUtils';
 import apiService from '../../services/api';
+import Logo from '../Logo/Logo';
 import './Auth.css';
 
 /**
@@ -67,7 +68,7 @@ const Register = () => {
     try {
       // Remove confirmPassword before sending to server
       const { confirmPassword, ...dataToSend } = formData;
-      
+
       // 4. Send request to server (POST /api/users)
       await apiService.register(dataToSend);
       
@@ -82,8 +83,8 @@ const Register = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <div className="google-logo">
-           <span className="blue">O</span><span className="red">v</span><span className="yellow">e</span><span className="blue">r</span><span className="green">D</span><span className="red">rive</span>
+        <div className="auth-logo-container">
+          <Logo size="lg" />
         </div>
         <h2>Create account</h2>
         <p>Enter your details to join OverDrive</p>

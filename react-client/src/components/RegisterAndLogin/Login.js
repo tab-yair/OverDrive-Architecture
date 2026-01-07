@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import apiService from '../../services/api';
+import Logo from '../Logo/Logo';
 import './Auth.css';
 
 /**
@@ -37,8 +38,8 @@ const Login = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <div className="google-logo">
-           <span className="blue">O</span><span className="red">v</span><span className="yellow">e</span><span className="blue">r</span><span className="green">D</span><span className="red">rive</span>
+        <div className="auth-logo-container">
+          <Logo size="lg" />
         </div>
         <h2>Sign in</h2>
         <p>Use your OverDrive Account</p>
@@ -66,7 +67,7 @@ const Login = () => {
           </div>
           
           <div className="auth-footer">
-            <Link to="/register" className="link-btn">Create account</Link>
+            <Link to="/signup" className="link-btn">Create account</Link>
             <button type="submit" className="next-btn">Next</button>
           </div>
         </form>

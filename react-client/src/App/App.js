@@ -37,34 +37,27 @@ function AppRoutes() {
 
     return (
         <Routes>
+            {/* Public auth routes - OUTSIDE of Layout */}
+            <Route 
+                path="/login" 
+                element={
+                    isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />
+                } 
+            />
+            <Route 
+                path="/signup" 
+                element={
+                    isAuthenticated ? <Navigate to="/home" replace /> : <SignupPage />
+                } 
+            />
+
             {/* Layout wrapper - all routes render inside Layout */}
             <Route element={<Layout />}>
-
                 {/* Root route - redirect based on auth status */}
                 <Route
                     path="/"
                     element={
-                        isAuthenticated
-                            ? <Navigate to="/home" replace />
-                            : <GuestLandingPage />
-                    }
-                />
-
-                {/* Public auth routes - redirect to home if already authenticated */}
-                <Route
-                    path="/login"
-                    element={
-                        isAuthenticated
-                            ? <Navigate to="/home" replace />
-                            : <LoginPage />
-                    }
-                />
-                <Route
-                    path="/signup"
-                    element={
-                        isAuthenticated
-                            ? <Navigate to="/home" replace />
-                            : <SignupPage />
+                        isAuthenticated ? <Navigate to="/home" replace /> : <GuestLandingPage />
                     }
                 />
 

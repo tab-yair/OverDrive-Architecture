@@ -1,26 +1,55 @@
 /* Shared styles for Login and Register pages */
 
+.auth-card {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    
+    background: var(--bg-secondary) !important;
+    padding: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    width: 450px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: var(--shadow-elevated);
+    z-index: 99999 !important;
+}
+
 .auth-container {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    
+    background: var(--bg-secondary) !important;
+    padding: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    width: 300px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: var(--shadow-elevated);
+    z-index: 99999 !important;
+}
+
+.auth-logo-container {
+    margin-bottom: 24px;
     display: flex;
     justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f8f9fa;
-    font-family: 'Roboto', sans-serif;
 }
 
-.auth-card {
-    background: white;
-    padding: 48px 40px 36px;
-    border-radius: 8px;
-    border: 1px solid #dadce0;
-    width: 450px;
-    text-align: center;
-    box-shadow: none;
+.auth-title {
+    font-size: 24px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
 }
 
-.google-logo { font-size: 24px; margin-bottom: 10px; font-weight: 500; }
-.blue { color: #4285F4; } .red { color: #EA4335; } .yellow { color: #FBBC05; } .green { color: #34A853; }
+.auth-subtitle {
+    margin-bottom: 24px;
+    color: var(--text-secondary);
+}
 
 .auth-card h2 { font-size: 24px; font-weight: 400; margin-bottom: 10px; }
 .auth-card p { font-size: 16px; margin-bottom: 40px; color: #202124; }
