@@ -91,13 +91,13 @@ const FileCard = ({
   return (
     <>
       <div
-        className={`file-card ${file.type === 'folder' ? 'folder-card' : ''} ${isSelected ? 'selected' : ''}`}
+        className={`file-card ${file.type === 'folder' ? 'folder-card' : ''} ${pageContext === 'Recent' || pageContext === 'Shared' ? 'uniform-square' : ''} ${isSelected ? 'selected' : ''}`}
         onClick={handleCardClick}
         role="button"
         tabIndex={0}
       >
-        {/* Card Header with Menu Button - Only for regular files */}
-        {file.type !== 'folder' && (
+        {/* Card Header with Menu Button - For regular files and uniform-square folders */}
+        {(file.type !== 'folder' || pageContext === 'Recent' || pageContext === 'Shared') && (
           <div className="file-card-header" onClick={(e) => e.stopPropagation()}>
             <div ref={menuButtonRef}>
               <ActionButton
@@ -126,8 +126,8 @@ const FileCard = ({
           </span>
         </div>
 
-        {/* Folder Menu Button (on right side of banner) */}
-        {file.type === 'folder' && (
+        {/* Folder Menu Button (on right side of banner) - Only for banner-style folders */}
+        {file.type === 'folder' && pageContext !== 'Recent' && pageContext !== 'Shared' && (
           <div className="folder-menu-button" onClick={(e) => e.stopPropagation()}>
             <div ref={menuButtonRef}>
               <ActionButton

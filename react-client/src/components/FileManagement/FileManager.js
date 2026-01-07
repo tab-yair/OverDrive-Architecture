@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import FileRow from './FileRow';
 import FileCard from './FileCard';
 import ActionButton from './ActionButton';
 import SelectionToolbar from './SelectionToolbar';
-import { getMetadataConfig } from './fileUtils';
+import { getMetadataConfig, applyColumnWidths } from './fileUtils';
 import './FileManager.css';
 
 /**
@@ -62,7 +62,45 @@ const FileManager = ({
   onFileClick,
 }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const containerRef = useRef(null);
   const metadataConfig = getMetadataConfig(pageContext);
+
+  // Apply column widths as CSS variables when pageContext changes
+  useEffect(() => {
+    applyColumnWidths(pageContext, containerRef.current);
+  }, [pageContext]);
+
+  /**
+   * ═══════════════════════════════════════════════════════════════
+   * FILE SORTING AND GROUPING LOGIC
+   * ═══════════════════════════════════════════════════════════════
+   * 
+   * Default View (MyDrive):
+   * - Folders always appear first
+   * - Files appear after folders
+   * - In Grid view: folders and files never share the same row
+   * 
+   * Recent/Shared Views:
+   * - Mixed layout: folders and files intermixed based on metadata
+   * ═══════════════════════════════════════════════════════════════
+   */
+  
+  // Determine if we should group folders separately
+  const shouldGroupFolders = pageContext === 'MyDrive';
+  
+  // Sort and group files
+  let sortedFiles = [...files];
+  let folders = [];
+  let regularFiles = [];
+  
+  if (shouldGroupFolders) {
+    // Separate folders and files
+    folders = sortedFiles.filter(f => f.type === 'folder');
+    regularFiles = sortedFiles.filter(f => f.type !== 'folder');
+  } else {
+    // Keep mixed for Recent/Shared views
+    regularFiles = sortedFiles;
+  }
 
   const handleViewToggle = (mode) => {
     if (onViewModeChange) {
@@ -159,6 +197,7 @@ const FileManager = ({
       'file-list-container', // List view - outer container
       'file-list-header',    // List view - header row
       'file-grid',           // Grid view - cards container
+      'file-grid-container', // Grid view - wrapper container
       'file-manager'         // Root container
     ];
     
@@ -182,7 +221,7 @@ const FileManager = ({
   }
 
   return (
-    <div className="file-manager" onClick={handleBackgroundClick}>
+    <div ref={containerRef} className="file-manager" onClick={handleBackgroundClick}>
       {/* Selection Toolbar */}
       {selectedFiles.length > 0 && (
         <SelectionToolbar
@@ -225,49 +264,128 @@ const FileManager = ({
               <div
                 key={config.key}
                 className="file-list-header-cell"
-                style={{ width: config.width }}
               >
                 {config.label}
               </div>
             ))}
-            <div className="file-list-header-actions">Actions</div>
+            <div className="file-list-header-actions"></div>
           </div>
 
           {/* File Rows */}
           <div className="file-list">
-            {files.map((file) => (
-              <FileRow
-                key={file.id}
-                file={file}
-                pageContext={pageContext}
-                permissionLevel={permissionLevel}
-                isOwner={isOwner}
-                isSelected={isFileSelected(file)}
-                onSelect={handleFileSelect}
-                onAction={onAction}
-                onClick={handleFileClick}
-              />
-            ))}
+            {shouldGroupFolders ? (
+              <>
+                {/* Folders Section */}
+                {folders.map((file) => (
+                  <FileRow
+                    key={file.id}
+                    file={file}
+                    pageContext={pageContext}
+                    permissionLevel={permissionLevel}
+                    isOwner={isOwner}
+                    isSelected={isFileSelected(file)}
+                    onSelect={handleFileSelect}
+                    onAction={onAction}
+                    onClick={handleFileClick}
+                  />
+                ))}
+                
+                {/* Files Section */}
+                {regularFiles.map((file) => (
+                  <FileRow
+                    key={file.id}
+                    file={file}
+                    pageContext={pageContext}
+                    permissionLevel={permissionLevel}
+                    isOwner={isOwner}
+                    isSelected={isFileSelected(file)}
+                    onSelect={handleFileSelect}
+                    onAction={onAction}
+                    onClick={handleFileClick}
+                  />
+                ))}
+              </>
+            ) : (
+              /* Mixed layout for Recent/Shared */
+              regularFiles.map((file) => (
+                <FileRow
+                  key={file.id}
+                  file={file}
+                  pageContext={pageContext}
+                  permissionLevel={permissionLevel}
+                  isOwner={isOwner}
+                  isSelected={isFileSelected(file)}
+                  onSelect={handleFileSelect}
+                  onAction={onAction}
+                  onClick={handleFileClick}
+                />
+              ))
+            )}
           </div>
         </div>
       )}
 
       {/* Grid View */}
       {viewMode === 'grid' && (
-        <div className="file-grid">
-          {files.map((file) => (
-            <FileCard
-              key={file.id}
-              file={file}
-              pageContext={pageContext}
-              permissionLevel={permissionLevel}
-              isOwner={isOwner}
-              isSelected={isFileSelected(file)}
-              onSelect={handleFileSelect}
-              onAction={onAction}
-              onClick={handleFileClick}
-            />
-          ))}
+        <div className="file-grid-container" onClick={handleBackgroundClick}>
+          {shouldGroupFolders ? (
+            <>
+              {/* Folders Grid - Separate container */}
+              {folders.length > 0 && (
+                <div className="file-grid">
+                  {folders.map((file) => (
+                    <FileCard
+                      key={file.id}
+                      file={file}
+                      pageContext={pageContext}
+                      permissionLevel={permissionLevel}
+                      isOwner={isOwner}
+                      isSelected={isFileSelected(file)}
+                      onSelect={handleFileSelect}
+                      onAction={onAction}
+                      onClick={handleFileClick}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {/* Files Grid - Separate container (starts on new row) */}
+              {regularFiles.length > 0 && (
+                <div className="file-grid">
+                  {regularFiles.map((file) => (
+                    <FileCard
+                      key={file.id}
+                      file={file}
+                      pageContext={pageContext}
+                      permissionLevel={permissionLevel}
+                      isOwner={isOwner}
+                      isSelected={isFileSelected(file)}
+                      onSelect={handleFileSelect}
+                      onAction={onAction}
+                      onClick={handleFileClick}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            /* Mixed layout for Recent/Shared - Single grid */
+            <div className="file-grid">
+              {regularFiles.map((file) => (
+                <FileCard
+                  key={file.id}
+                  file={file}
+                  pageContext={pageContext}
+                  permissionLevel={permissionLevel}
+                  isOwner={isOwner}
+                  isSelected={isFileSelected(file)}
+                  onSelect={handleFileSelect}
+                  onAction={onAction}
+                  onClick={handleFileClick}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

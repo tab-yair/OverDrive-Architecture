@@ -2,10 +2,9 @@
 
 .file-manager {
   width: 100%;
-  min-height: 100vh;
   background-color: var(--bg-primary);
-  padding: 0 24px 24px 24px;
-  /* Creates clickable gaps on left, right, and bottom for deselection */
+  padding: 0;
+  /* No padding here - each section handles its own spacing */
 }
 
 /* Header with View Toggle */
@@ -13,7 +12,7 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding: 12px 0;
+  padding: 12px 24px;
   margin-bottom: 16px;
   /* Creates clickable gap between toolbar and list */
   border-bottom: 1px solid var(--border-color);
@@ -57,18 +56,26 @@
 
 /* List View Container */
 .file-list-container {
-  width: 100%;
+  width: 98%;
   max-width: 100%;
-  min-height: calc(100vh - 250px);
-  /* Ensure empty space below rows is clickable for deselection */
-  /* Parent padding creates clickable side gaps */
+  margin: 0 auto;
+  /* 98% width creates clean gutters on both sides */
 }
 
 /* List Header */
 .file-list-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(
+    --file-grid-template,
+    minmax(250px, 1fr)
+      minmax(120px, 180px)
+      minmax(120px, 180px)
+      minmax(120px, 180px)
+      minmax(120px, 180px)
+      var(--actions-col-width, 208px)
+  );
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px 32px 12px 24px; /* Right buffer: 32px */
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   font-size: 12px;
@@ -77,26 +84,30 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: default;
+  gap: 32px; /* Generous gap for readability */
+  text-align: left;
+  height: 48px; /* Fixed header height */
   /* Header clicks trigger deselection via handleBackgroundClick */
 }
 
 .file-list-header-name {
-  flex: 1;
-  min-width: 200px;
-  max-width: 400px;
+  /* First column - flexible width */
+  min-width: 0;
 }
 
 .file-list-header-cell {
-  padding: 0 12px;
+  /* Metadata columns - inherit from grid */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .file-list-header-actions {
-  width: 160px;
-  text-align: right;
-  margin-left: auto;
+  /* Last column - empty header, just for More button alignment */
+  text-align: left;
+  opacity: 0; /* Hide the "Actions" text but keep the column */
+  pointer-events: none;
 }
 
 /* File List */
@@ -106,14 +117,25 @@
   /* Ensure there's clickable space below rows for deselection */
 }
 
+/* Grid View Container */
+.file-grid-container {
+  width: 100%;
+}
+
 /* Grid View */
 .file-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, var(--card-size));
   gap: 16px;
-  min-height: calc(100vh - 250px);
+  justify-content: start;
+  padding: 16px 24px;
   /* Ensure empty space is clickable for deselection */
   /* Note: Parent container (.file-manager) already has padding */
+}
+
+/* Multiple grids (folders + files): seamless spacing */
+.file-grid + .file-grid {
+  margin-top: 16px; /* Same as gap between rows */
 }
 
 /* Empty State */
@@ -156,29 +178,32 @@
 /* Responsive Design */
 @media (max-width: 1200px) {
   .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 12px;
+  }
+  
+  .file-grid + .file-grid {
+    margin-top: 12px;
   }
 }
 
 @media (max-width: 1024px) {
-  .file-list-header-name {
-    max-width: 300px;
-  }
+  /* Medium screens - keep grid layout */
 }
 
 @media (max-width: 768px) {
   .file-manager {
-    padding: 0 12px 12px 12px;
-    /* Reduce padding on mobile for more screen space */
+    padding: 0;
   }
   
   .file-manager-header {
-    padding: 8px 0;
+    padding: 8px 16px;
   }
   
   .file-list-header {
-    padding: 8px 12px;
+    /* Simplify grid on mobile - match FileRow mobile grid */
+    grid-template-columns: 1fr auto 100px;
+    padding: 12px 24px 12px 16px;
+    min-height: 48px;
   }
   
   .file-list-header-cell {
@@ -194,8 +219,12 @@
   }
   
   .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 10px;
+    padding: 12px 16px;
+  }
+  
+  .file-grid + .file-grid {
+    margin-top: 10px;
   }
 }
 
@@ -203,10 +232,6 @@
   .file-manager {
     padding: 0 8px 8px 8px;
     /* Minimal padding on very small screens */
-  }
-  
-  .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
   
   .empty-icon {

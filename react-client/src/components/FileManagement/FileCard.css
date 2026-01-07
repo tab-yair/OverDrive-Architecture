@@ -1,5 +1,10 @@
 /* FileCard Component Styles */
 
+:root {
+  --card-size: 200px;
+  --folder-banner-height: 64px;
+}
+
 .file-card {
   position: relative;
   display: flex;
@@ -11,8 +16,9 @@
   cursor: pointer;
   transition: all var(--transition-normal);
   overflow: hidden;
-  min-height: 200px;
-  width: 100%;
+  /* Fixed size - square (1:1 aspect ratio) */
+  width: var(--card-size);
+  height: var(--card-size);
   box-shadow: var(--shadow);
 }
 
@@ -34,15 +40,18 @@
   box-shadow: 0 2px 8px rgba(138, 180, 248, 0.24);
 }
 
-/* Folder cards are horizontal banners */
-.file-card.folder-card {
+/* Folder cards in Default view - horizontal banner (short rectangle) */
+.file-card.folder-card:not(.uniform-square) {
   flex-direction: row;
   align-items: center;
-  min-height: 64px;
-  max-height: 72px;
+  width: var(--card-size);
+  height: var(--folder-banner-height);
   padding: 12px 16px;
   background: var(--bg-secondary);
 }
+
+/* Uniform square folders in Recent/Shared - inherit default square styling */
+/* No overrides needed - they're just regular squares! */
 
 /* Card Header */
 .file-card-header {
@@ -53,8 +62,8 @@
   margin-bottom: 8px;
 }
 
-/* Hide header in folder cards (menu will be at the end) */
-.file-card.folder-card .file-card-header {
+/* Hide header only in banner-style folder cards */
+.file-card.folder-card:not(.uniform-square) .file-card-header {
   display: none;
 }
 
@@ -78,8 +87,8 @@
   min-height: 80px;
 }
 
-/* Folder banner: icon on left, small */
-.file-card.folder-card .file-card-icon-container {
+/* Banner folders only: icon on left, small */
+.file-card.folder-card:not(.uniform-square) .file-card-icon-container {
   flex: 0;
   padding: 0;
   margin-right: 12px;
@@ -102,15 +111,15 @@
   transform: scale(1.05);
 }
 
-/* Folder icon: smaller size, gray color */
-.file-card-icon.folder-icon {
+/* Banner folders only: smaller icon, gray color */
+.file-card.folder-card:not(.uniform-square) .file-card-icon.folder-icon {
   width: 28px;
   height: 28px;
   filter: grayscale(1) brightness(0.5);
   transform: none;
 }
 
-.file-card:hover .file-card-icon.folder-icon {
+.file-card.folder-card:not(.uniform-square):hover .file-card-icon.folder-icon {
   transform: none;
 }
 
@@ -128,8 +137,8 @@
   transition: border-color var(--transition-normal);
 }
 
-/* Folder banner: name on right, left-aligned, flex-grow */
-.file-card.folder-card .file-card-name {
+/* Banner folders only: name on right, left-aligned, flex-grow */
+.file-card.folder-card:not(.uniform-square) .file-card-name {
   flex: 1;
   padding: 0;
   text-align: left;
@@ -140,7 +149,7 @@
   border-top-color: var(--border-color);
 }
 
-.file-card.folder-card:hover .file-card-name {
+.file-card.folder-card:not(.uniform-square):hover .file-card-name {
   border-top-color: transparent;
 }
 
@@ -158,8 +167,8 @@
   line-height: 1.4;
 }
 
-/* Folder banner: single line, no clamp */
-.file-card.folder-card .file-card-name-text {
+/* Banner folders only: single line, no clamp */
+.file-card.folder-card:not(.uniform-square) .file-card-name-text {
   display: block;
   -webkit-line-clamp: unset;
   line-clamp: unset;
@@ -188,8 +197,8 @@
   height: 16px;
 }
 
-/* Folder Menu Button (shows on right side of banner) */
-.file-card.folder-card .folder-menu-button {
+/* Folder Menu Button - only for banner folders */
+.file-card.folder-card:not(.uniform-square) .folder-menu-button {
   display: flex;
   align-items: center;
   margin-left: auto;
@@ -198,31 +207,30 @@
 /* Grid Layout Container (usage example) */
 .file-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, var(--card-size));
   gap: 16px;
   padding: 16px;
 }
 
 /* Responsive grid */
 @media (max-width: 1200px) {
+  :root {
+    --card-size: 180px;
+  }
+  
   .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 12px;
   }
 }
 
 @media (max-width: 768px) {
+  :root {
+    --card-size: 150px;
+    --folder-banner-height: 56px;
+  }
+  
   .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 10px;
-  }
-  
-  .file-card {
-    min-height: 160px;
-  }
-  
-  .file-card.folder-card {
-    min-height: 140px;
   }
   
   .file-card-icon {
@@ -230,9 +238,9 @@
     height: 48px;
   }
   
-  .file-card-icon.folder-icon {
-    width: 56px;
-    height: 56px;
+  .file-card.folder-card:not(.uniform-square) .file-card-icon.folder-icon {
+    width: 24px;
+    height: 24px;
   }
   
   .card-menu-button {
@@ -241,7 +249,8 @@
 }
 
 @media (max-width: 480px) {
-  .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  :root {
+    --card-size: 120px;
+    --folder-banner-height: 48px;
   }
 }

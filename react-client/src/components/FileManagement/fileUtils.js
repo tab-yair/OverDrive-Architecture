@@ -316,7 +316,7 @@ export const formatDate = (date) => {
  *   Shared:
  *     Metadata: [Shared By, Share Date]
  *   
- *   Recently:
+ *   Recent:
  *     Metadata: [Owner, Last Activity, Size, Location]
  *   
  *   Trash:
@@ -332,10 +332,10 @@ export const formatDate = (date) => {
  * Used by: MyDrive, Starred, and any future views unless overridden
  */
 const DEFAULT_METADATA = [
-  { key: 'owner', label: 'Owner', width: '15%' },
-  { key: 'lastModified', label: 'Last Modified', width: '20%', formatter: formatSmartDate },
-  { key: 'location', label: 'Location', width: '18%', isLocation: true },
-  { key: 'size', label: 'Size', width: '15%' },
+  { key: 'owner', label: 'Owner', width: '12%', cssVar: '--col-width-1' },
+  { key: 'lastModified', label: 'Last Modified', width: '18%', cssVar: '--col-width-2', formatter: formatSmartDate },
+  { key: 'location', label: 'Location', width: '15%', cssVar: '--col-width-3', isLocation: true },
+  { key: 'size', label: 'Size', width: '12%', cssVar: '--col-width-4' },
 ];
 
 /**
@@ -344,20 +344,20 @@ const DEFAULT_METADATA = [
  */
 const METADATA_OVERRIDES = {
   Shared: [
-    { key: 'sharer', label: 'Shared By', width: '20%', isSharer: true },
-    { key: 'shareDate', label: 'Share Date', width: '20%', formatter: formatSmartDate },
+    { key: 'sharer', label: 'Shared By', width: '18%', cssVar: '--col-width-1', isSharer: true },
+    { key: 'shareDate', label: 'Share Date', width: '18%', cssVar: '--col-width-2', formatter: formatSmartDate },
   ],
-  Recently: [
-    { key: 'owner', label: 'Owner', width: '15%' },
-    { key: 'lastActions', label: 'Last Activity', width: '25%', isActions: true },
-    { key: 'size', label: 'Size', width: '12%' },
-    { key: 'location', label: 'Location', width: '18%', isLocation: true },
+  Recent: [
+    { key: 'owner', label: 'Owner', width: '12%', cssVar: '--col-width-1' },
+    { key: 'lastActions', label: 'Last Activity', width: '22%', cssVar: '--col-width-2', isActions: true },
+    { key: 'size', label: 'Size', width: '10%', cssVar: '--col-width-3' },
+    { key: 'location', label: 'Location', width: '15%', cssVar: '--col-width-4', isLocation: true },
   ],
   Trash: [
-    { key: 'originalLocation', label: 'Original Location', width: '18%', isLocation: true },
-    { key: 'owner', label: 'Owner', width: '15%' },
-    { key: 'deletionDate', label: 'Date Deleted', width: '20%', formatter: formatSmartDate },
-    { key: 'size', label: 'Size', width: '12%' },
+    { key: 'originalLocation', label: 'Original Location', width: '15%', cssVar: '--col-width-1', isLocation: true },
+    { key: 'owner', label: 'Owner', width: '12%', cssVar: '--col-width-2' },
+    { key: 'deletionDate', label: 'Date Deleted', width: '18%', cssVar: '--col-width-3', formatter: formatSmartDate },
+    { key: 'size', label: 'Size', width: '10%', cssVar: '--col-width-4' },
   ],
 };
 
@@ -365,12 +365,69 @@ const METADATA_OVERRIDES = {
  * Get metadata configuration based on page context
  * Falls back to DEFAULT if no override exists
  * 
- * @param {string} pageContext - Page context: 'MyDrive', 'Shared', 'Recently', 'Trash', 'Starred'
+ * @param {string} pageContext - Page context: 'MyDrive', 'Shared', 'Recent', 'Trash', 'Starred'
  * @returns {Array} Array of metadata field configurations
  */
 export const getMetadataConfig = (pageContext) => {
   // Return override if it exists, otherwise return default
   return METADATA_OVERRIDES[pageContext] || DEFAULT_METADATA;
+};
+
+/**
+ * Apply metadata column widths as CSS variables
+ * This ensures perfect alignment between headers and rows
+ * 
+ * @param {string} pageContext - Page context to determine which metadata config to use
+ */
+export const applyColumnWidths = (pageContext, targetElement) => {
+  const config = getMetadataConfig(pageContext);
+  const root = (targetElement && targetElement.style) ? targetElement : document.documentElement;
+
+  // Actions column must fit ALL row action buttons + the menu button.
+  // ActionButton is 36px wide; gap is 4px.
+  // Typical row: 4 quick actions + 1 menu => ~196px.
+  // Use a stable width so alignment is identical across rows/pages.
+  root.style.setProperty('--actions-col-width', '208px');
+
+  // Build Grid Template Dynamically based on active columns
+  // Structure: Name (Flexible) | Metadata (Fixed Range) | Actions (Fixed)
+  // Name is flexible (1fr) so the Actions column always reaches the far right.
+  let template = 'minmax(250px, 1fr)';
+  config.forEach(() => {
+    template += ' minmax(120px, 180px)';
+  });
+  template += ' var(--actions-col-width, 208px)';
+
+  root.style.setProperty('--file-grid-template', template);
+
+  // Still set individual widths (legacy/mobile usage)
+  config.forEach((field, index) => {
+    if (field.cssVar) {
+      root.style.setProperty(field.cssVar, field.width);
+    }
+  });
+};
+
+/**
+ * Get fallback value for missing metadata
+ * 
+ * @param {string} key - Metadata key
+ * @returns {string} Fallback value
+ */
+export const getFallbackValue = (key) => {
+  const fallbacks = {
+    owner: 'Me',
+    lastModified: '---',
+    location: 'My Drive',
+    size: '---',
+    sharer: '---',
+    shareDate: '---',
+    lastActions: '---',
+    deletionDate: '---',
+    originalLocation: '---',
+  };
+  
+  return fallbacks[key] || '---';
 };
 
 /**

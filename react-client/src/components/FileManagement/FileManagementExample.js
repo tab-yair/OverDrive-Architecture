@@ -219,106 +219,206 @@ const FileManagementExample = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ 
+      maxWidth: '1400px', 
+      margin: '0 auto', 
+      padding: '24px',
+    }}>
       <h1 style={{ marginBottom: '24px', color: 'var(--text-primary)' }}>
         File Management Component Examples
       </h1>
 
       {/* My Drive Example */}
-      <section style={{ marginBottom: '48px' }}>
-        <h2 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>
+      <section style={{ 
+        marginBottom: '64px',
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}>
+        <h2 style={{ 
+          margin: 0,
+          padding: '16px 24px', 
+          color: 'var(--text-primary)',
+          backgroundColor: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-color)',
+        }}>
           My Drive
         </h2>
-        <FileManager
-          files={exampleFiles}
-          pageContext="MyDrive"
-          permissionLevel="owner"
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onAction={handleAction}
-          onFileClick={handleFileClick}
-        />
+        <div style={{ 
+          minHeight: '400px',
+          backgroundColor: 'var(--bg-primary)',
+        }}>
+          <FileManager
+            files={exampleFiles}
+            pageContext="MyDrive"
+            permissionLevel="owner"
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onAction={handleAction}
+            onFileClick={handleFileClick}
+          />
+        </div>
       </section>
 
       {/* Shared With Me Example (Not Owner) */}
-      <section style={{ marginBottom: '48px' }}>
-        <h2 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>
-          Shared With Me (Not Owner - Shows "Remove" instead of "Move to Trash")
+      <section style={{ 
+        marginBottom: '64px',
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}>
+        <h2 style={{ 
+          margin: 0,
+          padding: '16px 24px', 
+          color: 'var(--text-primary)',
+          backgroundColor: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-color)',
+        }}>
+          Shared with me
         </h2>
-        <FileManager
-          files={sharedFiles}
-          pageContext="Shared"
-          permissionLevel="viewer"
-          isOwner={false}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onAction={handleAction}
-          onFileClick={handleFileClick}
-        />
+        <div style={{ 
+          minHeight: '400px',
+          backgroundColor: 'var(--bg-primary)',
+        }}>
+          <FileManager
+            files={sharedFiles}
+            pageContext="Shared"
+            permissionLevel="viewer"
+            isOwner={false}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onAction={handleAction}
+            onFileClick={handleFileClick}
+          />
+        </div>
       </section>
 
       {/* Recently Opened Example */}
-      <section style={{ marginBottom: '48px' }}>
-        <h2 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>
-          Recently Opened
+      <section style={{ 
+        marginBottom: '64px',
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}>
+        <h2 style={{ 
+          margin: 0,
+          padding: '16px 24px', 
+          color: 'var(--text-primary)',
+          backgroundColor: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-color)',
+        }}>
+          Recent
         </h2>
-        <FileManager
-          files={recentFiles}
-          pageContext="Recently"
-          permissionLevel="editor"
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onAction={handleAction}
-          onFileClick={handleFileClick}
-        />
+        <div style={{ 
+          minHeight: '400px',
+          backgroundColor: 'var(--bg-primary)',
+        }}>
+          <FileManager
+            files={recentFiles}
+            pageContext="Recent"
+            permissionLevel="editor"
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onAction={handleAction}
+            onFileClick={handleFileClick}
+          />
+        </div>
       </section>
 
       {/* Trash Example */}
-      <section style={{ marginBottom: '48px' }}>
-        <h2 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>
+      <section style={{ 
+        marginBottom: '64px',
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}>
+        <h2 style={{ 
+          margin: 0,
+          padding: '16px 24px', 
+          color: 'var(--text-primary)',
+          backgroundColor: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-color)',
+        }}>
           Trash
         </h2>
-        <FileManager
-          files={trashedFiles}
-          pageContext="Trash"
-          permissionLevel="owner"
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onAction={handleAction}
-          onFileClick={handleFileClick}
-        />
+        <div style={{ 
+          minHeight: '400px',
+          backgroundColor: 'var(--bg-primary)',
+        }}>
+          <FileManager
+            files={trashedFiles}
+            pageContext="Trash"
+            permissionLevel="owner"
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onAction={handleAction}
+            onFileClick={handleFileClick}
+          />
+        </div>
       </section>
 
       {/* Starred Example */}
-      <section style={{ marginBottom: '48px' }}>
-        <h2 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>
+      <section style={{ 
+        marginBottom: '64px',
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}>
+        <h2 style={{ 
+          margin: 0,
+          padding: '16px 24px', 
+          color: 'var(--text-primary)',
+          backgroundColor: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-color)',
+        }}>
           Starred
         </h2>
-        <FileManager
-          files={starredFiles}
-          pageContext="Starred"
-          permissionLevel="owner"
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onAction={handleAction}
-          onFileClick={handleFileClick}
-        />
+        <div style={{ 
+          minHeight: '400px',
+          backgroundColor: 'var(--bg-primary)',
+        }}>
+          <FileManager
+            files={starredFiles}
+            pageContext="Starred"
+            permissionLevel="owner"
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onAction={handleAction}
+            onFileClick={handleFileClick}
+          />
+        </div>
       </section>
 
       {/* Empty State Example */}
-      <section style={{ marginBottom: '48px' }}>
-        <h2 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>
+      <section style={{ 
+        marginBottom: '64px',
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}>
+        <h2 style={{ 
+          margin: 0,
+          padding: '16px 24px', 
+          color: 'var(--text-primary)',
+          backgroundColor: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-color)',
+        }}>
           Empty State
         </h2>
-        <FileManager
-          files={[]}
-          pageContext="MyDrive"
-          permissionLevel="owner"
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onAction={handleAction}
-          onFileClick={handleFileClick}
-        />
+        <div style={{ 
+          minHeight: '400px',
+          backgroundColor: 'var(--bg-primary)',
+        }}>
+          <FileManager
+            files={[]}
+            pageContext="MyDrive"
+            permissionLevel="owner"
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onAction={handleAction}
+            onFileClick={handleFileClick}
+          />
+        </div>
       </section>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import ActionButton from './ActionButton';
 import FileActionMenu from './FileActionMenu';
-import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatSmartDate } from './fileUtils';
+import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatSmartDate, getFallbackValue } from './fileUtils';
 import './FileRow.css';
 
 /**
@@ -119,7 +119,7 @@ const FileRow = ({
           </div>
         );
       }
-      return '-';
+      return getFallbackValue('sharer');
     }
 
     // Handle actions metadata
@@ -129,7 +129,7 @@ const FileRow = ({
         const dateFormatted = formatSmartDate(action.date);
         return `${action.action} • ${dateFormatted}`;
       }
-      return '-';
+      return getFallbackValue('lastActions');
     }
 
     // Handle location metadata
@@ -143,16 +143,22 @@ const FileRow = ({
           </div>
         );
       }
-      return '-';
+      return getFallbackValue('location');
     }
 
     // Handle regular metadata
     const value = file[key];
-    if (!value && value !== 0) return '-';
     
-    // Handle size formatting
-    if (key === 'size' && typeof value === 'number') {
-      return formatFileSize(value);
+    // Use fallback if value is missing
+    if (!value && value !== 0) {
+      return getFallbackValue(key);
+    }
+    
+    // Handle size formatting (folders show "---")
+    if (key === 'size') {
+      if (file.type === 'folder') return '---';
+      if (typeof value === 'number') return formatFileSize(value);
+      return getFallbackValue(key);
     }
     
     // Handle owner with avatar
@@ -169,7 +175,7 @@ const FileRow = ({
     
     // Handle objects (shouldn't happen, but safety check)
     if (typeof value === 'object') {
-      return '-';
+      return getFallbackValue(key);
     }
     
     return formatter ? formatter(value) : value;
@@ -193,7 +199,6 @@ const FileRow = ({
           <div
             key={config.key}
             className="file-row-metadata"
-            style={{ width: config.width }}
           >
             {renderMetadataValue(config)}
           </div>
