@@ -12,7 +12,7 @@ const ProtectedRoute = () => {
 
     if (loading) return null; // wait until the token check is complete
 
-    return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+    return isAuthenticated ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 export default ProtectedRoute;
