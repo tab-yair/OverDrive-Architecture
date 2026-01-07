@@ -73,6 +73,12 @@ const FileManagementExample = () => {
       starred: false,
       currentUserRole: 'owner',
       location: { parentName: 'Projects', isRoot: false },
+      sharedWith: [
+        { id: 'u2', name: 'Sarah Johnson', username: 'sarah.johnson@gmail.com', role: 'editor', isInherited: false },
+        { id: 'u3', name: 'Mike Chen', username: 'mike.chen@gmail.com', role: 'editor', isInherited: true },
+        { id: 'u4', name: 'Emma Davis', username: 'emma.davis@gmail.com', role: 'viewer', isInherited: false },
+        { id: 'u5', name: 'Alex Wilson', username: 'alex.wilson@gmail.com', role: 'viewer', isInherited: true },
+      ],
     },
     {
       id: '3',

@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import './InfoSidebar.css';
 import { formatFileSize, formatSmartDate, icons } from './fileUtils';
+import PermissionsManager from '../PermissionsManager/PermissionsManager';
 
 /**
  * InfoSidebar - Google Drive style information sidebar
@@ -12,6 +13,7 @@ import { formatFileSize, formatSmartDate, icons } from './fileUtils';
  */
 const InfoSidebar = ({ file, isOpen, onClose }) => {
   const sidebarRef = useRef(null);
+  const [showManageAccess, setShowManageAccess] = useState(false);
 
   // Add body class when sidebar is open to adjust page layout
   useEffect(() => {
@@ -19,6 +21,8 @@ const InfoSidebar = ({ file, isOpen, onClose }) => {
       document.body.classList.add('info-sidebar-open');
     } else {
       document.body.classList.remove('info-sidebar-open');
+      // Close manage access modal when sidebar closes
+      setShowManageAccess(false);
     }
 
     return () => {
@@ -115,12 +119,53 @@ const InfoSidebar = ({ file, isOpen, onClose }) => {
           ) : (
             <button 
               className="info-sidebar__manage-access-btn"
-              onClick={() => console.log('Manage access clicked')}
+              onClick={() => setShowManageAccess(true)}
             >
               Manage Access
             </button>
           )}
         </div>
+
+        {showManageAccess && (
+          <div className="info-sidebar__modal-overlay" role="dialog" aria-label="Manage access">
+            <div className="info-sidebar__modal-header">
+              <h3 className="info-sidebar__modal-title">Manage Access</h3>
+              <button
+                className="info-sidebar__modal-close-btn"
+                onClick={() => setShowManageAccess(false)}
+                aria-label="Close manage access"
+                title="Close"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="info-sidebar__modal-content">
+              <PermissionsManager
+                currentUserRole={currentUserRole}
+                users={[
+                  { id: 'owner', name: file.owner || 'Me', username: 'your.email@gmail.com', role: 'owner', isInherited: false, avatarUrl: file.ownerAvatar || '' },
+                  ...((file.sharedWith && Array.isArray(file.sharedWith)) ? file.sharedWith : [])
+                ]}
+                onChange={{
+                  setRole: (userId, role) => {
+                    console.log('✅ Permission changed:', userId, 'to', role);
+                    alert(`Updated permissions for user ${userId} to ${role}`);
+                  },
+                  removeAccess: (userId) => {
+                    console.log('✅ Access removed:', userId);
+                    alert(`Removed access for user ${userId}`);
+                  },
+                  transferOwnership: (userId) => {
+                    console.log('✅ Ownership transferred to:', userId);
+                    alert(`Transferred ownership to user ${userId}`);
+                  },
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* File Details */}
         <div className="info-sidebar__section">

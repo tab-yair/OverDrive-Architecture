@@ -22,6 +22,7 @@ import SignupPage from '../pages/SignupPage';
 
 // --- הייבוא החדש עבור הדמו ---
 import FileManagementExample from '../components/FileManagement/FileManagementExample';
+import PermissionsDemo from '../components/PermissionsManager/PermissionsDemo';
 
 import './App.css';
 
@@ -46,6 +47,8 @@ function AppRoutes() {
             {/* נתיב זמני לבדיקת הרכיבים החדשים */}
             {/* גש בדפדפן לכתובת: http://localhost:3000/test */}
             <Route path="/test" element={<FileManagementExample />} />
+            {/* דמו לניהול הרשאות: http://localhost:3000/permissions-demo */}
+            <Route path="/permissions-demo" element={<PermissionsDemo />} />
 
                 {/* Root route - redirect based on auth status */}
                 <Route

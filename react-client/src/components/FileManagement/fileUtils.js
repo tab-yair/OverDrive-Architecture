@@ -804,7 +804,8 @@ const ACTION_REGISTRY = {
      * Disabled for multiple selection (can only view details of one item at a time)
      */
     isEnabled: (file, pageContext, selectedCount = 1) => {
-      return selectedCount === 1;
+      // Enable when zero or one item is selected; disable only for multi-selection
+      return selectedCount <= 1;
     },
   },
   
