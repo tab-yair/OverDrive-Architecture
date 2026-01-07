@@ -28,6 +28,11 @@ function AccountSettingsPage() {
     const [passwordSaving, setPasswordSaving] = useState(false);
     const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+    // Password visibility state
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
     // Get user initials
     const getUserInitials = () => {
         if (!user?.displayName) return 'U';
@@ -142,6 +147,11 @@ function AccountSettingsPage() {
             setNewPassword('');
             setConfirmPassword('');
             setShowPasswordFields(false);
+
+            // Reset visibility states
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
 
             // Clear success message after 3 seconds
             setTimeout(() => setPasswordSuccess(false), 3000);
@@ -305,35 +315,71 @@ function AccountSettingsPage() {
                         <div className="password-change-form">
                             <div className="profile-field">
                                 <label className="profile-field-label">Current password</label>
-                                <input
-                                    type="password"
-                                    className="profile-field-input"
-                                    value={currentPassword}
-                                    onChange={(e) => setCurrentPassword(e.target.value)}
-                                    placeholder="Enter current password"
-                                />
+                                <div className="password-input-wrapper">
+                                    <input
+                                        type={showCurrentPassword ? 'text' : 'password'}
+                                        className="profile-field-input password-input"
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        placeholder="Enter current password"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="password-toggle-btn"
+                                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                        aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        <span className="material-symbols-outlined">
+                                            {showCurrentPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="profile-field">
                                 <label className="profile-field-label">New password</label>
-                                <input
-                                    type="password"
-                                    className="profile-field-input"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    placeholder="Enter new password"
-                                />
+                                <div className="password-input-wrapper">
+                                    <input
+                                        type={showNewPassword ? 'text' : 'password'}
+                                        className="profile-field-input password-input"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        placeholder="Enter new password"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="password-toggle-btn"
+                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                        aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        <span className="material-symbols-outlined">
+                                            {showNewPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="profile-field">
                                 <label className="profile-field-label">Confirm new password</label>
-                                <input
-                                    type="password"
-                                    className="profile-field-input"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    placeholder="Confirm new password"
-                                />
+                                <div className="password-input-wrapper">
+                                    <input
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        className="profile-field-input password-input"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        placeholder="Confirm new password"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="password-toggle-btn"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        <span className="material-symbols-outlined">
+                                            {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
 
                             {passwordError && (
@@ -352,6 +398,9 @@ function AccountSettingsPage() {
                                         setNewPassword('');
                                         setConfirmPassword('');
                                         setPasswordError(null);
+                                        setShowCurrentPassword(false);
+                                        setShowNewPassword(false);
+                                        setShowConfirmPassword(false);
                                     }}
                                     disabled={passwordSaving}
                                 >
