@@ -63,23 +63,7 @@ function Navbar() {
                         {/* User profile dropdown */}
                         <ProfileDropdown />
                     </>
-                ) : (
-                    /* Guest mode: Login/Register and Mock Login buttons */
-                    <div className="navbar-guest-actions">
-                        {/* Mock login for testing */}
-                        <button
-                            className="btn btn-secondary"
-                            onClick={mockLogin}
-                            title="Development: Login with mock user"
-                        >
-                            Mock Login
-                        </button>
-
-                        <Link to="/login" className="btn btn-primary">
-                            Login / Register
-                        </Link>
-                    </div>
-                )}
+                ) : null}
             </div>
         </nav>
     );
