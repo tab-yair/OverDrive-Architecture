@@ -89,10 +89,17 @@ export const userApi = {
             headers: getAuthHeaders(token),
             body: JSON.stringify(updates)
         });
+        
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.message || 'Failed to update user profile');
         }
+
+        // No content returned on success
+        if (response.status === 204) {
+            return { success: true };
+        }
+
         return response.json();
     },
 
