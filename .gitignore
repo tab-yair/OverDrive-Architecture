@@ -45,6 +45,7 @@
 
 # Ignore all modules_node directories anywhere
 **/modules_node/
+**/node_modules/
 
 # Ignore node_modules directory
 react-client/node_modules/
