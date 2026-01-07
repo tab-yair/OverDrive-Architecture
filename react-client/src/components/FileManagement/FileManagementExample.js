@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileManager } from '../FileManagement';
+import InfoSidebar from './InfoSidebar';
 
 /**
  * Example usage of FileManager component
@@ -7,6 +8,8 @@ import { FileManager } from '../FileManagement';
  */
 const FileManagementExample = () => {
   const [viewMode, setViewMode] = useState('list');
+  const [sidebarFile, setSidebarFile] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Example file data - replace with your API data
   // Includes test cases for today, yesterday, last week, last month, and older
@@ -17,8 +20,11 @@ const FileManagementExample = () => {
       name: 'PDF',
       owner: 'John Doe',
       lastModified: new Date('2026-01-07T14:30:00'),
+      created: new Date('2025-06-15T10:00:00'),
       size: null,
       starred: false,
+      location: { parentName: null, isRoot: true },
+      currentUserRole: 'owner',
     },
     {
       id: 'images-folder',
@@ -26,8 +32,11 @@ const FileManagementExample = () => {
       name: 'Images',
       owner: 'John Doe',
       lastModified: new Date('2026-01-07T14:30:00'),
+      created: new Date('2025-08-20T09:30:00'),
       size: null,
       starred: false,
+      location: { parentName: null, isRoot: true },
+      currentUserRole: 'editor',
     },
     {
       id: 'docs-folder',
@@ -35,8 +44,11 @@ const FileManagementExample = () => {
       name: 'Docs',
       owner: 'John Doe',
       lastModified: new Date('2026-01-07T14:30:00'),
+      created: new Date('2025-05-10T14:15:00'),
       size: null,
       starred: false,
+      currentUserRole: 'viewer',
+      location: { parentName: null, isRoot: true },
     },
     {
       id: '1',
@@ -44,8 +56,10 @@ const FileManagementExample = () => {
       name: 'Projects',
       owner: 'John Doe',
       lastModified: new Date('2026-01-07T14:30:00'),
+      created: new Date('2025-03-01T08:00:00'),
       size: null,
       starred: true,
+      location: { parentName: null, isRoot: true },
     },
     {
       id: '2',
@@ -53,8 +67,12 @@ const FileManagementExample = () => {
       name: 'Project Report Q4 2024.pdf',
       owner: 'Jane Smith',
       lastModified: new Date('2026-01-06T14:20:00'),
+      created: new Date('2025-12-20T11:30:00'),
+      lastOpened: new Date('2026-01-06T14:20:00'),
       size: 2048576, // 2MB
       starred: false,
+      currentUserRole: 'owner',
+      location: { parentName: 'Projects', isRoot: false },
     },
     {
       id: '3',
@@ -485,8 +503,11 @@ const FileManagementExample = () => {
         break;
         
       case 'view':
+      case 'details':
         console.log('Viewing file details:', file.name);
         // Open file details panel
+        setSidebarFile(file);
+        setIsSidebarOpen(true);
         break;
         
       case 'copy':
@@ -714,6 +735,13 @@ const FileManagementExample = () => {
           />
         </div>
       </section>
+
+      {/* Info Sidebar */}
+      <InfoSidebar
+        file={sidebarFile}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
     </div>
   );
 };

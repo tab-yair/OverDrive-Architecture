@@ -171,7 +171,7 @@ export const formatFileSize = (bytes) => {
  * 
  * Logic:
  * - Today: Display time only in HH:mm format (e.g., "14:06")
- * - Older: Display in "D MMM" format (e.g., "21 Jan", "6 Jan")
+ * - Older: Display in "MMM D, YYYY" format (e.g., "Jan 6, 2025")
  * 
  * @param {string|Date|number} dateString - Date to format (ISO string, Date object, or timestamp)
  * @returns {string} Formatted date string
@@ -212,10 +212,11 @@ export const formatSmartDate = (dateString) => {
     const minutes = dateObj.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   } else {
-    // Older than today: Show "D MMM" format
+    // Older than today: Show "MMM D, YYYY" format
     const day = dateObj.getDate();
     const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
-    return `${day} ${month}`;
+    const year = dateObj.getFullYear();
+    return `${month} ${day}, ${year}`;
   }
 };
 
@@ -251,6 +252,43 @@ export const formatDate = (date) => {
       year: dateObj.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
   }
+};
+
+/**
+ * Format date to full format for details view
+ * Always shows full date with year
+ * Format: "D MMM YYYY" (e.g., "7 Jan 2026")
+ * 
+ * @param {string|Date|number} dateString - Date to format
+ * @returns {string} Formatted date string with year
+ */
+export const formatFullDate = (dateString) => {
+  if (!dateString) return '-';
+  
+  // Handle different input formats
+  let dateObj;
+  try {
+    if (dateString instanceof Date) {
+      dateObj = dateString;
+    } else if (typeof dateString === 'number') {
+      dateObj = new Date(dateString);
+    } else {
+      dateObj = new Date(dateString);
+    }
+    
+    // Validate the date
+    if (isNaN(dateObj.getTime())) {
+      return '-';
+    }
+  } catch (error) {
+    return '-';
+  }
+  
+  // Always show full date with year
+  const day = dateObj.getDate();
+  const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+  const year = dateObj.getFullYear();
+  return `${day} ${month} ${year}`;
 };
 
 /**
@@ -763,9 +801,10 @@ const ACTION_REGISTRY = {
     },
     /**
      * Permission: Everyone can view details
+     * Disabled for multiple selection (can only view details of one item at a time)
      */
-    isEnabled: (file, pageContext) => {
-      return true;
+    isEnabled: (file, pageContext, selectedCount = 1) => {
+      return selectedCount === 1;
     },
   },
   
@@ -837,9 +876,10 @@ const ACTION_REGISTRY = {
  * @param {string} actionId - Action identifier (e.g., 'share', 'download')
  * @param {Object} file - File object with type, permissionLevel, isOwner, starred
  * @param {string} pageContext - Page context ('MyDrive', 'Shared', 'Trash', etc.)
+ * @param {number} selectedCount - Number of selected items (default: 1)
  * @returns {Object} { isVisible: boolean, isEnabled: boolean, label: string, iconSrc: string, isDanger: boolean }
  */
-export const evaluateAction = (actionId, file, pageContext) => {
+export const evaluateAction = (actionId, file, pageContext, selectedCount = 1) => {
   const action = ACTION_REGISTRY[actionId];
   
   if (!action) {
@@ -847,7 +887,7 @@ export const evaluateAction = (actionId, file, pageContext) => {
   }
   
   const isVisible = action.isVisible(file, pageContext);
-  const isEnabled = action.isEnabled(file, pageContext);
+  const isEnabled = action.isEnabled(file, pageContext, selectedCount);
   const label = typeof action.label === 'function' ? action.label(file) : action.label;
   
   return {
@@ -951,7 +991,16 @@ const QUICK_ACTIONS_OVERRIDES = {
  * @param {Object} file - File object
  * @returns {Array} Array of action objects with complete status
  */
-export const getAvailableActions = (pageContext, file) => {
+/**
+ * Get available actions for a file based on page context
+ * Returns actions for the More (⋮) menu
+ * 
+ * @param {string} pageContext - Page context
+ * @param {Object} file - File object
+ * @param {number} selectedCount - Number of selected items (default: 1)
+ * @returns {Array} Array of action objects
+ */
+export const getAvailableActions = (pageContext, file, selectedCount = 1) => {
   const isFolder = file.type === 'folder';
   
   // Check for context menu override (e.g., Trash)
@@ -970,7 +1019,7 @@ export const getAvailableActions = (pageContext, file) => {
   // Build the action list using ACTION_REGISTRY
   return actionOrder
     .map(actionId => {
-      const status = evaluateAction(actionId, file, pageContext);
+      const status = evaluateAction(actionId, file, pageContext, selectedCount);
       return {
         id: actionId,
         label: status.label,

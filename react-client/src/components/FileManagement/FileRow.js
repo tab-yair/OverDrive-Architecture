@@ -12,6 +12,7 @@ import './FileRow.css';
  * @param {string} props.permissionLevel - User's permission level
  * @param {boolean} props.isOwner - Whether current user is the owner
  * @param {boolean} props.isSelected - Whether this file is selected
+ * @param {number} props.selectedCount - Number of selected files
  * @param {Function} props.onSelect - Callback when selection changes
  * @param {Function} props.onAction - Callback for action events
  * @param {Function} props.onClick - Callback when row is clicked
@@ -22,6 +23,7 @@ const FileRow = ({
   permissionLevel = 'viewer', 
   isOwner = true, 
   isSelected = false,
+  selectedCount = 0,
   onSelect,
   onAction, 
   onClick 
@@ -45,7 +47,8 @@ const FileRow = ({
   const metadataConfig = getMetadataConfig(pageContext);
   
   // Get actions using the single source of truth (ACTION_REGISTRY)
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred });
+  // Pass selectedCount to determine if actions should be enabled/disabled for multi-selection
+  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, selectedCount);
   
   // Get row buttons using the ACTION_REGISTRY
   const rowButtons = getRowActionButtons(pageContext, { ...file, starred: isStarred });

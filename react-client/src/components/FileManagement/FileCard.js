@@ -12,6 +12,7 @@ import './FileCard.css';
  * @param {string} props.permissionLevel - User's permission level
  * @param {boolean} props.isOwner - Whether current user is the owner
  * @param {boolean} props.isSelected - Whether this file is selected
+ * @param {number} props.selectedCount - Number of selected files
  * @param {Function} props.onSelect - Callback when selection changes
  * @param {Function} props.onAction - Callback for action events
  * @param {Function} props.onClick - Callback when card is clicked
@@ -22,6 +23,7 @@ const FileCard = ({
   permissionLevel = 'viewer', 
   isOwner = true, 
   isSelected = false,
+  selectedCount = 0,
   onSelect,
   onAction, 
   onClick 
@@ -42,7 +44,7 @@ const FileCard = ({
     return `${process.env.PUBLIC_URL}/assets/${iconMap[type] || 'Docs.svg'}`;
   };
 
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred });
+  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, selectedCount);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();
