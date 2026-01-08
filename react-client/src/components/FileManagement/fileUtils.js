@@ -421,10 +421,15 @@ export const formatRecentActivity = (actionObj) => {
 /**
  * DEFAULT METADATA CONFIGURATION
  * Used by: MyDrive, Starred, and any future views unless overridden
+ * 
+ * NOTE: Field keys MUST match the FilesContext schema (from backend API):
+ * - modifiedAt (not lastModified)
+ * - createdAt (not created)
+ * - ownerId (not owner - but we display owner name)
  */
 const DEFAULT_METADATA = [
   { key: 'owner', label: 'Owner', width: '12%', cssVar: '--col-width-1' },
-  { key: 'lastModified', label: 'Last Modified', width: '18%', cssVar: '--col-width-2', formatter: formatSmartDate },
+  { key: 'modifiedAt', label: 'Last Modified', width: '18%', cssVar: '--col-width-2', formatter: formatSmartDate },
   { key: 'location', label: 'Location', width: '15%', cssVar: '--col-width-3', isLocation: true },
   { key: 'size', label: 'Size', width: '12%', cssVar: '--col-width-4' },
 ];
@@ -432,6 +437,8 @@ const DEFAULT_METADATA = [
 /**
  * METADATA OVERRIDES
  * Only specify what's different from the default
+ * 
+ * NOTE: All field keys aligned with FilesContext/API schema
  */
 const METADATA_OVERRIDES = {
   Shared: [
@@ -501,13 +508,16 @@ export const applyColumnWidths = (pageContext, targetElement) => {
 /**
  * Get fallback value for missing metadata
  * 
+ * NOTE: Keys aligned with FilesContext schema
+ * 
  * @param {string} key - Metadata key
  * @returns {string} Fallback value
  */
 export const getFallbackValue = (key) => {
   const fallbacks = {
     owner: 'Me',
-    lastModified: '---',
+    modifiedAt: '---',
+    createdAt: '---',
     location: 'My Drive',
     size: '---',
     sharer: '---',

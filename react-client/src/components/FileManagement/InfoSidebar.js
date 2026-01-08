@@ -2,18 +2,32 @@ import React, { useRef, useEffect, useState } from 'react';
 import './InfoSidebar.css';
 import { formatFileSize, formatSmartDate, icons } from './fileUtils';
 import PermissionsManager from '../PermissionsManager/PermissionsManager';
+import { useFilesContext } from '../../context/FilesContext';
 
 /**
  * InfoSidebar - Google Drive style information sidebar
  * 
+ * IMPORTANT: Connected to FilesContext (SSOT) for real-time synchronization
+ * - Receives fileId instead of static file object
+ * - Always displays fresh data from central store
+ * - Automatically updates when file metadata changes (star, rename, etc.)
+ * - Same data source as FileRow/FileCard - perfect synchronization
+ * 
  * @param {Object} props
- * @param {Object} props.file - The file object to display info for
+ * @param {string} props.fileId - The file ID to display info for
  * @param {boolean} props.isOpen - Whether the sidebar is open
  * @param {Function} props.onClose - Callback to close the sidebar
  */
-const InfoSidebar = ({ file, isOpen, onClose }) => {
+const InfoSidebar = ({ fileId, isOpen, onClose }) => {
+  const filesContext = useFilesContext();
   const sidebarRef = useRef(null);
   const [showManageAccess, setShowManageAccess] = useState(false);
+
+  // Get file from SSOT - always fresh, synchronized data
+  const file = fileId ? filesContext.getFile(fileId) : null;
+
+  // Debug logging
+  console.log('[InfoSidebar] Props:', { fileId, isOpen, hasFile: !!file });
 
   // Add body class when sidebar is open to adjust page layout
   useEffect(() => {
@@ -64,6 +78,14 @@ const InfoSidebar = ({ file, isOpen, onClose }) => {
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
+
+  // Auto-update when file changes in store (star, rename, permissions, etc.)
+  // This effect re-runs whenever filesMap updates, ensuring InfoSidebar always shows fresh data
+  useEffect(() => {
+    if (!isOpen || !fileId) return;
+    // File is already fresh from filesContext.getFile(fileId) above
+    // This effect just ensures re-render when filesMap changes
+  }, [filesContext.filesMap, fileId, isOpen]);
 
   if (!isOpen || !file) return null;
 
@@ -145,7 +167,14 @@ const InfoSidebar = ({ file, isOpen, onClose }) => {
               <PermissionsManager
                 currentUserRole={currentUserRole}
                 users={[
-                  { id: 'owner', name: file.owner || 'Me', username: file.ownerUsername || '', role: 'owner', isInherited: false, avatarUrl: file.ownerAvatar || '' },
+                  { 
+                    id: 'owner', 
+                    name: file.owner || 'Me', 
+                    username: file.ownerId || '', // Schema-aligned: ownerId from FilesContext
+                    role: 'owner', 
+                    isInherited: false, 
+                    avatarUrl: file.ownerAvatar || '' 
+                  },
                   ...((file.sharedWith && Array.isArray(file.sharedWith)) ? file.sharedWith : [])
                 ]}
                 onChange={{
@@ -223,27 +252,32 @@ const InfoSidebar = ({ file, isOpen, onClose }) => {
               </div>
             </div>
 
-            {/* Last Opened */}
-            <div className="info-sidebar__detail-row">
-              <div className="info-sidebar__detail-label">Opened</div>
-              <div className="info-sidebar__detail-value">
-                {file.lastOpened ? formatSmartDate(file.lastOpened) : '-'}
-              </div>
-            </div>
-
-            {/* Last Modified */}
+            {/* Modified (Schema-aligned: modifiedAt from FilesContext) */}
             <div className="info-sidebar__detail-row">
               <div className="info-sidebar__detail-label">Modified</div>
               <div className="info-sidebar__detail-value">
-                {file.lastModified ? formatSmartDate(file.lastModified) : '-'}
+                {file.modifiedAt ? formatSmartDate(new Date(file.modifiedAt)) : 'Unknown'}
               </div>
             </div>
 
-            {/* Created */}
+            {/* Opened/Viewed (Schema-aligned: lastViewedAt from FilesContext) */}
+            {file.lastViewedAt && (
+              <div className="info-sidebar__detail-row">
+                <div className="info-sidebar__detail-label">Opened</div>
+                <div className="info-sidebar__detail-value">
+                  {formatSmartDate(new Date(file.lastViewedAt))}
+                </div>
+              </div>
+            )}
+
+            {/* Created (Schema-aligned: createdAt from FilesContext) */}
             <div className="info-sidebar__detail-row">
               <div className="info-sidebar__detail-label">Created</div>
               <div className="info-sidebar__detail-value">
-                {file.created ? formatSmartDate(file.created) : '-'}
+                {file.createdAt ? formatSmartDate(new Date(file.createdAt)) : 'Unknown'}
+              </div>
+            </div>
+            
               </div>
             </div>
           </div>

@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileManager } from '../FileManagement';
 import InfoSidebar from './InfoSidebar';
+import { FilesProvider } from '../../context/FilesContext';
 
 /**
  * Example usage of FileManager component
  * This demonstrates how to use the file management components in your pages
+ * 
+ * NOTE: Wrapped in FilesProvider for SSOT demonstration
  */
 const FileManagementExample = () => {
   const [viewMode, setViewMode] = useState('list');
-  const [sidebarFile, setSidebarFile] = useState(null);
+  const [selectedFileId, setSelectedFileId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Example file data - replace with your API data
@@ -530,8 +533,8 @@ const FileManagementExample = () => {
       case 'view':
       case 'details':
         console.log('Viewing file details:', file.name);
-        // Open file details panel
-        setSidebarFile(file);
+        // Open file details panel with fileId (SSOT pattern)
+        setSelectedFileId(file.id);
         setIsSidebarOpen(true);
         break;
         
@@ -761,9 +764,9 @@ const FileManagementExample = () => {
         </div>
       </section>
 
-      {/* Info Sidebar */}
+      {/* Info Sidebar - Uses FilesContext (SSOT) via fileId */}
       <InfoSidebar
-        file={sidebarFile}
+        fileId={selectedFileId}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />

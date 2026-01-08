@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import useFiles from '../../hooks/useFiles';
-import { FileManager } from '../FileManagement';
+import { FileManager, InfoSidebar } from '../FileManagement';
 import './FilePageWrapper.css';
 
 /**
@@ -30,14 +30,64 @@ function FilePageWrapper({
 }) {
     const { files, loading, refetch } = useFiles(endpoint);
     const [viewMode, setViewMode] = useState('grid');
+    const [selectedFileId, setSelectedFileId] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [selectedCount, setSelectedCount] = useState(0);
 
     const defaultFileClick = (file) => {
         console.log(`${pageContext} file clicked:`, file);
         // TODO: Navigate to file details or open file
     };
 
-    const defaultAction = (action, fileIds) => {
-        console.log(`${pageContext} action:`, action, 'Files:', fileIds);
+    /**
+     * Default action handler
+     * @param {string} action - The action type (e.g., 'details', 'delete', 'share', etc.)
+     * @param {Object|Array} fileOrFiles - Single file object or array of file objects
+     * 
+     * Uses selectedCount (from FileManager's onSelectionChange) to determine:
+     * - Details: Only open sidebar if selectedCount <= 1
+     * - Future: Permission checks based on all selected files (most restrictive)
+     */
+    const defaultAction = (action, fileOrFiles) => {
+        console.log(`[FilePageWrapper] ${pageContext} action:`, action, 'Files:', fileOrFiles, 'Selected count:', selectedCount);
+        
+        // Handle details action - open InfoSidebar
+        // Rule: Only allow details sidebar when 0 or 1 files are selected
+        if (action === 'details') {
+            console.log('[FilePageWrapper] Details action - selectedCount:', selectedCount);
+            
+            if (selectedCount <= 1) {
+                console.log('[FilePageWrapper] Opening InfoSidebar for file:', fileOrFiles);
+                // Extract file ID from either object or array
+                const fileId = Array.isArray(fileOrFiles) 
+                    ? (fileOrFiles.length > 0 ? fileOrFiles[0].id : null)
+                    : (fileOrFiles ? fileOrFiles.id : null);
+                
+                if (fileId) {
+                    setSelectedFileId(fileId);
+                    setIsSidebarOpen(true);
+                    console.log('[FilePageWrapper] Sidebar opened - fileId:', fileId);
+                }
+            } else {
+                console.log('[FilePageWrapper] Details blocked - multiple files selected:', selectedCount);
+            }
+            return;
+        }
+        
+        // TODO: Future - Handle permission checks for multi-selection
+        // When selectedCount > 1:
+        // - Check permissions for ALL selected files
+        // - Allow action only if ALL files permit it (most restrictive approach)
+        // Example:
+        // if (selectedCount > 1 && ['delete', 'share', 'move'].includes(action)) {
+        //     const allFiles = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+        //     const canPerformAction = allFiles.every(file => hasPermission(file, action));
+        //     if (!canPerformAction) {
+        //         console.log('Action blocked - insufficient permissions on some files');
+        //         return;
+        //     }
+        // }
+        
         // Refetch after actions that modify data
         const refetchActions = ['delete', 'restore', 'star', 'unstar', 'move', 'rename'];
         if (refetchActions.includes(action)) {
@@ -67,6 +117,14 @@ function FilePageWrapper({
                 onAction={onAction || defaultAction}
                 isOwner={isOwner}
                 permissionLevel={permissionLevel}
+                onSelectionChange={setSelectedCount}
+            />
+            
+            {/* InfoSidebar - Connected to FilesContext (SSOT) */}
+            <InfoSidebar
+                fileId={selectedFileId}
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
             />
         </div>
     );

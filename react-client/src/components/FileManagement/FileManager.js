@@ -50,6 +50,7 @@ import './FileManager.css';
  * @param {Function} props.onViewModeChange - Callback when view mode changes
  * @param {Function} props.onAction - Callback for file actions
  * @param {Function} props.onFileClick - Callback when file is clicked
+ * @param {Function} props.onSelectionChange - Callback when selection changes (receives count)
  */
 const FileManager = ({
   files = [],
@@ -60,6 +61,7 @@ const FileManager = ({
   onViewModeChange,
   onAction,
   onFileClick,
+  onSelectionChange,
 }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const containerRef = useRef(null);
@@ -69,6 +71,13 @@ const FileManager = ({
   useEffect(() => {
     applyColumnWidths(pageContext, containerRef.current);
   }, [pageContext]);
+
+  // Notify parent component when selection changes
+  useEffect(() => {
+    if (onSelectionChange) {
+      onSelectionChange(selectedFiles.length);
+    }
+  }, [selectedFiles, onSelectionChange]);
 
   /**
    * ═══════════════════════════════════════════════════════════════
