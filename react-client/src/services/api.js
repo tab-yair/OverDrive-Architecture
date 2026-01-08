@@ -174,67 +174,48 @@ export const filesApi = {
     },
 
     /**
-     * Fetches shared files (where user has direct VIEWER/EDITOR permission, not owner)
+     * Generic file fetcher for endpoints that support filter headers
+     * @private
      */
-    async getSharedFiles(token, options = {}) {
+    async _fetchWithFilters(token, endpoint, errorMessage, options = {}) {
         const headers = {
             ...getAuthHeaders(token),
             ...(options.headers || {})
         };
 
-        const response = await fetch(`${API_BASE_URL}/api/files/shared`, { headers });
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
         if (!response.ok) {
-            throw new Error('Failed to fetch shared files');
+            throw new Error(errorMessage);
         }
         return response.json();
+    },
+
+    /**
+     * Fetches shared files (where user has direct VIEWER/EDITOR permission, not owner)
+     */
+    async getSharedFiles(token, options = {}) {
+        return this._fetchWithFilters(token, '/api/files/shared', 'Failed to fetch shared files', options);
     },
 
     /**
      * Fetches recently accessed files
      */
     async getRecentFiles(token, options = {}) {
-        const headers = {
-            ...getAuthHeaders(token),
-            ...(options.headers || {})
-        };
-
-        const response = await fetch(`${API_BASE_URL}/api/files/recent`, { headers });
-        if (!response.ok) {
-            throw new Error('Failed to fetch recent files');
-        }
-        return response.json();
+        return this._fetchWithFilters(token, '/api/files/recent', 'Failed to fetch recent files', options);
     },
 
     /**
      * Fetches starred files
      */
     async getStarredFiles(token, options = {}) {
-        const headers = {
-            ...getAuthHeaders(token),
-            ...(options.headers || {})
-        };
-
-        const response = await fetch(`${API_BASE_URL}/api/files/starred`, { headers });
-        if (!response.ok) {
-            throw new Error('Failed to fetch starred files');
-        }
-        return response.json();
+        return this._fetchWithFilters(token, '/api/files/starred', 'Failed to fetch starred files', options);
     },
 
     /**
      * Fetches trash items
      */
     async getTrashFiles(token, options = {}) {
-        const headers = {
-            ...getAuthHeaders(token),
-            ...(options.headers || {})
-        };
-
-        const response = await fetch(`${API_BASE_URL}/api/files/trash`, { headers });
-        if (!response.ok) {
-            throw new Error('Failed to fetch trash');
-        }
-        return response.json();
+        return this._fetchWithFilters(token, '/api/files/trash', 'Failed to fetch trash', options);
     },
 
     /**
