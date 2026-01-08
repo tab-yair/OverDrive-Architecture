@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { UserPreferencesProvider } from '../context/UserPreferencesContext';
+import { FilesProvider } from '../context/FilesContext';
 import Layout from '../components/Layout/Layout';
 import ProtectedRoute from '../components/ProtectedRoute/ProtectedRoute';
 
@@ -105,15 +106,23 @@ function AppRoutes() {
  * App Component
  * Root component - sets up providers
  * Note: BrowserRouter is in index.js
+ * 
+ * Provider hierarchy:
+ * - AuthProvider: Authentication state
+ * - ThemeProvider: UI theme (light/dark)
+ * - UserPreferencesProvider: User preferences
+ * - FilesProvider: SSOT for all file metadata (synchronized across app)
  */
 function App() {
     return (
         <AuthProvider>
             <ThemeProvider>
                 <UserPreferencesProvider>
-                    <div className="app">
-                        <AppRoutes />
-                    </div>
+                    <FilesProvider>
+                        <div className="app">
+                            <AppRoutes />
+                        </div>
+                    </FilesProvider>
                 </UserPreferencesProvider>
             </ThemeProvider>
         </AuthProvider>

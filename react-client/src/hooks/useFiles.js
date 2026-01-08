@@ -1,95 +1,70 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { filesApi } from '../services/api';
+import { useFilesContext } from '../context/FilesContext';
 import { getFilterHeaders, getDefaultFilters } from '../utils/filterUtils';
 
 /**
- * Unified hook for fetching files from different OverDrive endpoints
+ * Hook for accessing files from the SSOT (FilesContext)
  * Provides scalable filtering architecture that works across all sidebar pages
+ * 
+ * This hook:
+ * 1. Fetches data from centralized FilesContext (SSOT)
+ * 2. Applies header-based filtering
+ * 3. Returns synchronized data that updates across all components
+ * 4. Distinguishes between metadata display and content interaction
  * 
  * @param {string} endpoint - API endpoint type: 'mydrive', 'shared', 'recent', 'trash', 'starred'
  * @param {Object} initialFilters - Optional initial filter state
  * @returns {Object} - { files, loading, error, refetch, filters, setFilters, clearFilters }
  */
 export const useFiles = (endpoint, initialFilters = null) => {
-    const { token } = useAuth();
+    const filesContext = useFilesContext();
     const [files, setFiles] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [filters, setFilters] = useState(
         initialFilters || getDefaultFilters(endpoint)
     );
 
+    const cacheKey = `${endpoint}:${JSON.stringify(filters)}`;
+    const loading = filesContext.loading[cacheKey] || false;
+    const error = filesContext.errors[cacheKey] || null;
+
     /**
-     * Fetches files from the appropriate API endpoint with current filters
+     * Fetch files from context and update local state
      */
     const fetchFiles = useCallback(async () => {
-        if (!token) {
-            setFiles([]);
-            setLoading(false);
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-
-        try {
-            let result;
-            const filterHeaders = getFilterHeaders(filters);
-
-            switch (endpoint) {
-                case 'mydrive':
-                    result = await filesApi.getFiles(token, { headers: filterHeaders });
-                    break;
-
-                case 'shared':
-                    result = await filesApi.getSharedFiles(token, { headers: filterHeaders });
-                    break;
-
-                case 'recent':
-                    result = await filesApi.getRecentFiles(token, { headers: filterHeaders });
-                    break;
-
-                case 'trash':
-                    result = await filesApi.getTrashFiles(token, { headers: filterHeaders });
-                    break;
-
-                case 'starred':
-                    result = await filesApi.getStarredFiles(token, { headers: filterHeaders });
-                    break;
-
-                default:
-                    throw new Error(`Unknown endpoint: ${endpoint}`);
-            }
-
-            setFiles(result || []);
-        } catch (err) {
-            console.error(`Failed to fetch ${endpoint} files:`, err);
-            setError(err.message || `Failed to load ${endpoint} files`);
-            setFiles([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [token, endpoint, filters]);
+        const filterHeaders = getFilterHeaders(filters);
+        const { files: fetchedFiles } = await filesContext.fetchFiles(endpoint, { headers: filterHeaders });
+        
+        // Get files from store (synchronized with all components)
+        const storeFiles = filesContext.getFilesFromStore(endpoint);
+        setFiles(storeFiles);
+    }, [filesContext, endpoint, filters]);
 
     /**
-     * Fetch files on mount and when dependencies change
+     * Fetch on mount and when dependencies change
      */
     useEffect(() => {
-        fetchFiles();
-    }, [fetchFiles]);
-
-    /**
-     * Listen for file updates from other components (e.g., NewButton, file operations)
-     */
-    useEffect(() => {
-        const handleFilesUpdated = () => {
+        // Check if endpoint already loaded, if not fetch
+        if (!filesContext.loadedEndpoints.has(endpoint)) {
             fetchFiles();
+        } else {
+            // Get from store without refetching
+            const storeFiles = filesContext.getFilesFromStore(endpoint);
+            setFiles(storeFiles);
+        }
+    }, [filesContext, endpoint, fetchFiles]);
+
+    /**
+     * Subscribe to store updates
+     */
+    useEffect(() => {
+        const updateFromStore = () => {
+            const storeFiles = filesContext.getFilesFromStore(endpoint);
+            setFiles(storeFiles);
         };
 
-        window.addEventListener('files-updated', handleFilesUpdated);
-        return () => window.removeEventListener('files-updated', handleFilesUpdated);
-    }, [fetchFiles]);
+        // Update whenever filesMap changes
+        updateFromStore();
+    }, [filesContext.filesMap, endpoint, filesContext]);
 
     /**
      * Update filters and trigger refetch
@@ -99,14 +74,16 @@ export const useFiles = (endpoint, initialFilters = null) => {
             ...prevFilters,
             ...newFilters
         }));
-    }, []);
+        filesContext.invalidateEndpoint(endpoint);
+    }, [filesContext, endpoint]);
 
     /**
      * Clear all filters to defaults
      */
     const resetFilters = useCallback(() => {
         setFilters(getDefaultFilters(endpoint));
-    }, [endpoint]);
+        filesContext.invalidateEndpoint(endpoint);
+    }, [endpoint, filesContext]);
 
     return {
         files,

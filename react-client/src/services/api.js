@@ -191,6 +191,21 @@ export const filesApi = {
     },
 
     /**
+     * Fetches a single file by ID (triggers VIEW interaction)
+     * Use this ONLY when user explicitly opens/previews file content
+     * For metadata display (Details Panel), use data from FilesContext
+     */
+    async getFile(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch file');
+        }
+        return response.json();
+    },
+
+    /**
      * Fetches shared files (where user has direct VIEWER/EDITOR permission, not owner)
      */
     async getSharedFiles(token, options = {}) {
@@ -356,6 +371,8 @@ export const filesApi = {
 
     /**
      * Fetches details for a specific file.
+     * IMPORTANT: This triggers VIEW interaction and updates lastViewedAt
+     * Use only when user explicitly opens/previews file content
      */
     async getFile(token, fileId) {
         const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
@@ -365,6 +382,38 @@ export const filesApi = {
             throw new Error('Failed to fetch file');
         }
         return response.json();
+    },
+
+    /**
+     * Updates file metadata (name, parentId) or content (docs only)
+     * Automatically records EDIT interaction for content changes
+     */
+    async updateFile(token, fileId, updates) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(token),
+            body: JSON.stringify(updates)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to update file');
+        }
+        return response.json();
+    },
+
+    /**
+     * Deletes a file (moves to trash for owners, hides for viewers/editors)
+     */
+    async deleteFile(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to delete file');
+        }
+        // 204 No Content
+        return { success: true };
     },
 
     /**
