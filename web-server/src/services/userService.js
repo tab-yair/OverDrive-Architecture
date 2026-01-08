@@ -82,7 +82,7 @@ class UserService {
             throw new Error("User not found");
         }
 
-        // Return user with password
+        // Return user without password (safe object)
         return user;
     }
 
@@ -94,14 +94,14 @@ class UserService {
             throw new Error("User not found");
         }
 
-        // Return user with password
+        // Return user without password (safe object)
         return user;
     }
     // Get all users
     async getAllUsers() {
         const users = await usersStore.getAll();
         
-        // Return users with passwords
+        // Return users without passwords (safe objects)
         return users;
     }
 
@@ -146,13 +146,16 @@ class UserService {
         // Execute update
         const updatedUser = await usersStore.update(userId, updates);
 
-        // Return user with password
+        // Return user without password (safe object)
         return updatedUser;
     }
 
     // Change password
     async changePassword({ userId, oldPassword, newPassword }) {
-        const user = await usersStore.getById(userId);
+        // Need to get user WITH password for verification
+        const user = await usersStore.getByUsernameWithPassword(
+            (await usersStore.getById(userId))?.username
+        );
         
         if (!user) {
             throw new Error("User not found");

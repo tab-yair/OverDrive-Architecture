@@ -1,0 +1,272 @@
+/* FileManager Container Styles */
+
+.file-manager {
+  width: 100%;
+  background-color: var(--bg-primary);
+  padding: 0;
+  /* No padding here - each section handles its own spacing */
+}
+
+/* Header with View Toggle */
+.file-manager-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 24px;
+  margin-bottom: 16px;
+  /* Creates clickable gap between toolbar and list */
+  border-bottom: 1px solid var(--border-color);
+}
+
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.view-toggle-button {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.view-toggle-button:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.view-toggle-button.active {
+  background-color: var(--accent-light);
+  color: var(--accent-color);
+}
+
+.view-toggle-button .material-symbols-outlined {
+  font-size: 20px;
+}
+
+/* List View Container */
+.file-list-container {
+  width: 98%;
+  max-width: 100%;
+  margin: 0 auto;
+  /* 98% width creates clean gutters on both sides */
+}
+
+/* List Header */
+.file-list-header {
+  display: grid;
+  grid-template-columns: var(
+    --file-grid-template,
+    minmax(250px, 1fr)
+      minmax(120px, 180px)
+      minmax(120px, 180px)
+      minmax(120px, 180px)
+      minmax(120px, 180px)
+      var(--actions-col-width, 208px)
+  );
+  align-items: center;
+  padding: 12px 32px 12px 24px; /* Right buffer: 32px */
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: default;
+  gap: 32px; /* Generous gap for readability */
+  text-align: left;
+  height: 48px; /* Fixed header height */
+  /* Header clicks trigger deselection via handleBackgroundClick */
+}
+
+.file-list-header-name {
+  /* First column - flexible width */
+  min-width: 0;
+}
+
+.file-list-header-cell {
+  /* Metadata columns - inherit from grid */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.file-list-header-actions {
+  /* Last column - empty header, just for More button alignment */
+  text-align: left;
+  opacity: 0; /* Hide the "Actions" text but keep the column */
+  pointer-events: none;
+}
+
+/* File List */
+.file-list {
+  width: 100%;
+  min-height: 400px;
+  /* Ensure there's clickable space below rows for deselection */
+}
+
+/* Grid View Container */
+.file-grid-container {
+  width: 100%;
+}
+
+/* Grid View */
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--card-size));
+  gap: 16px;
+  justify-content: start;
+  padding: 16px 24px;
+  /* Ensure empty space is clickable for deselection */
+  /* Note: Parent container (.file-manager) already has padding */
+}
+
+/* Multiple grids (folders + files): seamless spacing */
+.file-grid + .file-grid {
+  margin-top: 16px; /* Same as gap between rows */
+}
+
+/* Time Group Headers (for Recent/Shared grouping) */
+.time-group-header {
+  padding: 12px 24px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Group Section */
+.time-group-section {
+  margin-bottom: 0;
+}
+
+.time-group-section:last-child {
+  margin-bottom: 0;
+}
+
+/* Empty State */
+.file-manager-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  min-height: 400px;
+}
+
+.empty-icon {
+  width: 120px;
+  height: 120px;
+  opacity: 0.3;
+  margin-bottom: 24px;
+}
+
+/* Dark mode - make empty icon visible */
+[data-theme="dark"] .empty-icon {
+  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+  opacity: 0.2;
+}
+
+.empty-message {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-submessage {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 400px;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .file-grid {
+    gap: 12px;
+  }
+  
+  .file-grid + .file-grid {
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* Medium screens - keep grid layout */
+}
+
+@media (max-width: 768px) {
+  .file-manager {
+    padding: 0;
+  }
+  
+  .file-manager-header {
+    padding: 8px 16px;
+  }
+  
+  .file-list-header {
+    /* Simplify grid on mobile - match FileRow mobile grid */
+    grid-template-columns: 1fr auto 100px;
+    padding: 12px 24px 12px 16px;
+    min-height: 48px;
+  }
+  
+  .file-list-header-cell {
+    display: none;
+  }
+  
+  .file-list-header-cell:first-of-type {
+    display: block;
+  }
+  
+  .file-list-header-actions {
+    display: none;
+  }
+  
+  .file-grid {
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  
+  .file-grid + .file-grid {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .file-manager {
+    padding: 0 8px 8px 8px;
+    /* Minimal padding on very small screens */
+  }
+  
+  .empty-icon {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .empty-message {
+    font-size: 18px;
+  }
+  
+  .empty-submessage {
+    font-size: 13px;
+  }
+}

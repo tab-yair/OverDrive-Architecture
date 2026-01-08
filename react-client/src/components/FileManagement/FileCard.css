@@ -1,0 +1,256 @@
+/* FileCard Component Styles */
+
+:root {
+  --card-size: 200px;
+  --folder-banner-height: 64px;
+}
+
+.file-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  padding: 12px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  overflow: hidden;
+  /* Fixed size - square (1:1 aspect ratio) */
+  width: var(--card-size);
+  height: var(--card-size);
+  box-shadow: var(--shadow);
+}
+
+.file-card:hover {
+  box-shadow: var(--shadow-elevated);
+  border-color: var(--accent-color, #1a73e8);
+}
+
+/* Selected state */
+.file-card.selected {
+  background-color: rgba(26, 115, 232, 0.08);
+  border: 2px solid #1a73e8;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.24);
+}
+
+[data-theme="dark"] .file-card.selected {
+  background-color: rgba(138, 180, 248, 0.12);
+  border-color: #8ab4f8;
+  box-shadow: 0 2px 8px rgba(138, 180, 248, 0.24);
+}
+
+/* Folder cards in Default view - horizontal banner (short rectangle) */
+.file-card.folder-card:not(.uniform-square) {
+  flex-direction: row;
+  align-items: center;
+  width: var(--card-size);
+  height: var(--folder-banner-height);
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+}
+
+/* Uniform square folders in Recent/Shared - inherit default square styling */
+/* No overrides needed - they're just regular squares! */
+
+/* Card Header */
+.file-card-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 36px;
+  margin-bottom: 8px;
+}
+
+/* Hide header only in banner-style folder cards */
+.file-card.folder-card:not(.uniform-square) .file-card-header {
+  display: none;
+}
+
+.card-menu-button {
+  opacity: 1;
+  transition: opacity var(--transition-normal);
+}
+
+.file-card:hover .card-menu-button,
+.file-card:focus-within .card-menu-button {
+  opacity: 1;
+}
+
+/* Icon Container */
+.file-card-icon-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding: 16px 0;
+  min-height: 80px;
+}
+
+/* Banner folders only: icon on left, small */
+.file-card.folder-card:not(.uniform-square) .file-card-icon-container {
+  flex: 0;
+  padding: 0;
+  margin-right: 12px;
+  min-height: auto;
+}
+
+.file-card-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  transition: transform var(--transition-normal);
+}
+
+/* Dark mode - make icons visible */
+[data-theme="dark"] .file-card-icon:not(.folder-icon) {
+  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+}
+
+.file-card:hover .file-card-icon {
+  transform: scale(1.05);
+}
+
+/* Banner folders only: smaller icon, gray color */
+.file-card.folder-card:not(.uniform-square) .file-card-icon.folder-icon {
+  width: 28px;
+  height: 28px;
+  filter: grayscale(1) brightness(0.5);
+  transform: none;
+}
+
+.file-card.folder-card:not(.uniform-square):hover .file-card-icon.folder-icon {
+  transform: none;
+}
+
+/* Regular file cards keep larger icons */
+.file-card:not(.folder-card) .file-card-icon {
+  width: 64px;
+  height: 64px;
+}
+
+/* File Name */
+.file-card-name {
+  padding: 8px 4px 4px;
+  text-align: center;
+  border-top: 1px solid transparent;
+  transition: border-color var(--transition-normal);
+}
+
+/* Banner folders only: name on right, left-aligned, flex-grow */
+.file-card.folder-card:not(.uniform-square) .file-card-name {
+  flex: 1;
+  padding: 0;
+  text-align: left;
+  border-top: none;
+}
+
+.file-card:hover .file-card-name {
+  border-top-color: var(--border-color);
+}
+
+.file-card.folder-card:not(.uniform-square):hover .file-card-name {
+  border-top-color: transparent;
+}
+
+.file-card-name-text {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+/* Banner folders only: single line, no clamp */
+.file-card.folder-card:not(.uniform-square) .file-card-name-text {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Star Indicator */
+.file-card-star-indicator {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-primary);
+  border-radius: var(--radius-circle);
+  box-shadow: var(--shadow);
+}
+
+.star-indicator-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Folder Menu Button - only for banner folders */
+.file-card.folder-card:not(.uniform-square) .folder-menu-button {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* Grid Layout Container (usage example) */
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--card-size));
+  gap: 16px;
+  padding: 16px;
+}
+
+/* Responsive grid */
+@media (max-width: 1200px) {
+  :root {
+    --card-size: 180px;
+  }
+  
+  .file-grid {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --card-size: 150px;
+    --folder-banner-height: 56px;
+  }
+  
+  .file-grid {
+    gap: 10px;
+  }
+  
+  .file-card-icon {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .file-card.folder-card:not(.uniform-square) .file-card-icon.folder-icon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .card-menu-button {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --card-size: 120px;
+    --folder-banner-height: 48px;
+  }
+}
