@@ -277,9 +277,6 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                 {file.createdAt ? formatSmartDate(new Date(file.createdAt)) : 'Unknown'}
               </div>
             </div>
-            
-              </div>
-            </div>
           </div>
         </div>
       </div>

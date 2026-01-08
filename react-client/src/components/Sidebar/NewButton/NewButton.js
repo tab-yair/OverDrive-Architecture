@@ -65,32 +65,52 @@ function NewButton() {
         const file = e.target.files?.[0];
         if (!file || !token) return;
 
+        // Determine file type
         const isPdf = file.type === 'application/pdf';
         const isImage = file.type.startsWith('image/');
-        if (!isPdf && !isImage) {
-            alert('Only PDF or image files can be uploaded.');
+        const isTxt = file.name.endsWith('.txt') || file.type === 'text/plain';
+        
+        if (!isPdf && !isImage && !isTxt) {
+            alert('Only PDF, image, or .txt files can be uploaded.');
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
         setIsLoading(true);
         try {
-            // Convert file to Base64
-            const base64Content = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
+            let fileData;
+            
+            if (isTxt) {
+                // For .txt files: Read as plain text and send as docs type
+                const textContent = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsText(file); // Read as text (preserves \n)
+                });
+                
+                fileData = {
+                    name: file.name,
+                    type: 'docs',
+                    content: textContent // Plain text with newlines
+                };
+            } else {
+                // For PDF/Image: Convert to Base64
+                const base64Content = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                
+                fileData = {
+                    name: file.name,
+                    type: isPdf ? 'pdf' : 'image',
+                    content: base64Content
+                };
+            }
 
-            // Create file with Base64 content
-            const data = {
-                name: file.name,
-                type: isPdf ? 'pdf' : 'image',
-                content: base64Content
-            };
-
-            await filesApi.createFile(token, data);
+            await filesApi.createFile(token, fileData);
             // Emit event so file lists can refresh
             window.dispatchEvent(new CustomEvent('files-updated'));
             setIsOpen(false);
