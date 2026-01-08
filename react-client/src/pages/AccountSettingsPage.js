@@ -8,7 +8,7 @@ import './SettingsPage.css';
  * Account settings: profile, password
  */
 function AccountSettingsPage() {
-    const { user, token, login } = useAuth();
+    const { user, token, refreshUser, notifyUserUpdate } = useAuth();
     const fileInputRef = useRef(null);
 
     // Profile editing state
@@ -90,18 +90,12 @@ function AccountSettingsPage() {
 
             await userApi.updateUser(token, user.id, updates);
 
-            // Update local user data
-            const newDisplayName = lastName.trim()
-                ? `${firstName.trim()} ${lastName.trim()}`
-                : firstName.trim();
-
-            const updatedUser = {
-                ...user,
-                displayName: newDisplayName,
-                profileImage: profileImage
-            };
-
-            login(token, updatedUser);
+            // Refresh user data from server to get latest state
+            await refreshUser();
+            
+            // Notify other tabs about the update
+            notifyUserUpdate();
+            
             setIsEditing(false);
         } catch (err) {
             console.error('Failed to update profile:', err);
