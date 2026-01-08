@@ -927,16 +927,19 @@ export const evaluateBulkAction = (actionId, files, pageContext) => {
     return { isVisible: false, isEnabled: false, label: '', iconSrc: '', isDanger: false };
   }
   
+  // CRITICAL: Pass selectedCount to properly evaluate multi-selection rules
+  const selectedCount = files.length;
+  
   // Get the base properties from the first file
   const firstFile = files[0];
-  const baseEval = evaluateAction(actionId, firstFile, pageContext);
+  const baseEval = evaluateAction(actionId, firstFile, pageContext, selectedCount);
   
   // Check if action is visible and enabled for ALL files
   let isVisibleForAll = baseEval.isVisible;
   let isEnabledForAll = baseEval.isEnabled;
   
   for (let i = 1; i < files.length; i++) {
-    const fileEval = evaluateAction(actionId, files[i], pageContext);
+    const fileEval = evaluateAction(actionId, files[i], pageContext, selectedCount);
     
     if (!fileEval.isVisible) {
       isVisibleForAll = false;
