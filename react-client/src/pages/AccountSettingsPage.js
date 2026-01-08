@@ -101,7 +101,7 @@ function AccountSettingsPage() {
                 profileImage: profileImage
             };
 
-            login(updatedUser, token);
+            login(token, updatedUser);
             setIsEditing(false);
         } catch (err) {
             console.error('Failed to update profile:', err);

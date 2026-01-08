@@ -14,20 +14,6 @@ function GuestLandingPage() {
     // Dev mode detection
     const isDevelopment = process.env.NODE_ENV === 'development';
 
-    // Hidden keyboard shortcut for dev mock login (Ctrl+Shift+M)
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (isDevelopment && e.ctrlKey && e.shiftKey && e.key === 'M') {
-                e.preventDefault();
-                mockLogin();
-                console.log('Dev mock login activated');
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [mockLogin, isDevelopment]);
-
     return (
         <div className="page guest-landing-page">
             <div className="landing-hero">
@@ -71,13 +57,6 @@ function GuestLandingPage() {
                     </div>
                 </div>
             </div>
-
-            {/* Dev mode indicator - only visible in development */}
-            {isDevelopment && (
-                <div className="dev-indicator">
-                    Dev Mode: Press Ctrl+Shift+M for mock login
-                </div>
-            )}
         </div>
     );
 }

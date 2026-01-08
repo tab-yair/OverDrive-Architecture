@@ -1,0 +1,79 @@
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import apiService from '../../services/api';
+import Logo from '../Logo/Logo';
+import './Auth.css';
+
+/**
+ * Login Component
+ * Handles user authentication, validates input, and persists the JWT.
+ */
+const Login = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    try {
+      // 1. Get token and the extracted userId
+      const { token, userId } = await apiService.login(username, password);
+      
+      // 2. Now call getUserProfile with the CORRECT ID (the one from the token)
+      const userProfile = await apiService.getUserProfile(token, userId);
+      
+      // 3. Save to global state
+      login(token, userProfile);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  
+  return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-logo-container">
+          <Logo size="lg" />
+        </div>
+        <h2>Sign in</h2>
+        <p>Use your OverDrive Account</p>
+        
+        {error && <div className="error-alert">{error}</div>}
+
+        <form onSubmit={handleSubmit}>
+          <div className="input-group">
+            <input 
+              type="text" 
+              placeholder="Username" 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required 
+            />
+          </div>
+          <div className="input-group">
+            <input 
+              type="password" 
+              placeholder="Password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required 
+            />
+          </div>
+          
+          <div className="auth-footer">
+            <Link to="/signup" className="link-btn">Create account</Link>
+            <button type="submit" className="next-btn">Next</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default Login;

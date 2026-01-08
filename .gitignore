@@ -44,6 +44,7 @@
 .vscode/
 
 # Ignore all modules_node directories anywhere
+
 **/node_modules/
 
 # Ignore node_modules directory
