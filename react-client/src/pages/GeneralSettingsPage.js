@@ -46,7 +46,10 @@ function GeneralSettingsPage() {
                             {formatBytes(storageUsed)} of {formatBytes(storageLimit)} used
                         </p>
                         <div className="storage-settings-actions">
-                            <button className="btn btn-secondary" disabled>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => navigate('/settings/storage')}
+                            >
                                 Get more storage
                             </button>
                             <button

@@ -17,8 +17,12 @@ import StoragePage from '../pages/StoragePage';
 import SettingsPage from '../pages/SettingsPage';
 import GeneralSettingsPage from '../pages/GeneralSettingsPage';
 import AccountSettingsPage from '../pages/AccountSettingsPage';
-import LoginPage from '../components/RegisterAndLogin/Login';
-import SignupPage from '../components/RegisterAndLogin/Register';
+import GetMoreStoragePage from '../pages/GetMoreStoragePage';
+import LoginPage from '../pages/LoginPage';
+import SignupPage from '../pages/SignupPage';
+
+// --- הייבוא החדש עבור הדמו ---
+import FileManagementExample from '../components/FileManagement/FileManagementExample';
 
 import './App.css';
 
@@ -53,6 +57,10 @@ function AppRoutes() {
 
             {/* Layout wrapper - all routes render inside Layout */}
             <Route element={<Layout />}>
+
+            <Route path="/test" element={<FileManagementExample />} />
+
+
                 {/* Root route - redirect based on auth status */}
                 <Route
                     path="/"
@@ -75,6 +83,7 @@ function AppRoutes() {
                     <Route path="/settings" element={<SettingsPage />}>
                         <Route path="general" element={<GeneralSettingsPage />} />
                         <Route path="account" element={<AccountSettingsPage />} />
+                        <Route path="storage" element={<GetMoreStoragePage />} />
                     </Route>
                 </Route>
 

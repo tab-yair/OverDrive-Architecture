@@ -44,10 +44,13 @@
 .vscode/
 
 # Ignore all modules_node directories anywhere
-**/modules_node/
+
 **/node_modules/
 
 # Ignore node_modules directory
 react-client/node_modules/
 web-server/node_modules/
 .claude/
+
+# Runtime server storage (anywhere)
+**/server_data/

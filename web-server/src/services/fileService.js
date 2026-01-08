@@ -42,7 +42,7 @@ class FileService {
 
         // Add OWNER permission to creator
         const permissionId = generateId();
-        await permissionStore.create(permissionId, fileId, ownerId, 'OWNER');
+        await permissionStore.create(permissionId, fileId, ownerId, 'OWNER', false, null, false, ownerId);
 
         return newFile;
     }

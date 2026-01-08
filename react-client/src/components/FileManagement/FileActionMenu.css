@@ -1,0 +1,113 @@
+/* FileActionMenu Component Styles */
+
+.file-action-menu {
+  position: fixed;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-elevated);
+  min-width: 200px;
+  max-width: 280px;
+  padding: 8px 0;
+  z-index: 1000;
+  animation: menuFadeIn 0.15s ease-out;
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.file-action-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-normal);
+  text-align: left;
+}
+
+.file-action-menu-item:hover:not(.disabled) {
+  background-color: var(--bg-hover);
+}
+
+.file-action-menu-item:active:not(.disabled) {
+  background-color: var(--bg-input);
+}
+
+.file-action-menu-item.disabled {
+  opacity: var(--opacity-disabled);
+  cursor: default;
+  pointer-events: none;
+}
+
+.file-action-menu-item.disabled:hover {
+  background-color: transparent;
+}
+
+/* Danger actions (Move to Trash, Remove, Delete Permanently) */
+.file-action-menu-item.danger {
+  color: #d93025;
+}
+
+.file-action-menu-item.danger .file-action-menu-label {
+  color: #d93025;
+}
+
+.file-action-menu-item.danger:hover:not(.disabled) {
+  background-color: var(--hover-overlay-danger);
+}
+
+.file-action-menu-item.danger:active:not(.disabled) {
+  background-color: var(--hover-overlay-danger-active);
+}
+
+/* Danger action icons should be red */
+.file-action-menu-item.danger .file-action-menu-icon {
+  filter: brightness(0) saturate(100%) invert(27%) sepia(93%) saturate(3181%) hue-rotate(349deg) brightness(92%) contrast(92%);
+}
+
+[data-theme="dark"] .file-action-menu-item.danger .file-action-menu-icon {
+  filter: brightness(0) saturate(100%) invert(42%) sepia(73%) saturate(2719%) hue-rotate(345deg) brightness(98%) contrast(91%);
+}
+
+.file-action-menu-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Dark mode - make icons visible (except star and share which have currentColor) */
+[data-theme="dark"] .file-action-menu-icon:not(.star-icon):not(.share-icon) {
+  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+}
+
+/* Star and share icons should maintain their natural color - no filter */
+.file-action-menu-icon.star-icon,
+.file-action-menu-icon.share-icon {
+  filter: none;
+}
+
+.file-action-menu-label {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Separator (if needed in future) */
+.file-action-menu-separator {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 8px 0;
+}

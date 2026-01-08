@@ -44,7 +44,7 @@ class PermissionService {
         
         // Create permission (will auto-delete existing one if present)
         const permissionId = generateId();
-        const newPermission = await permissionStore.create(permissionId, fileId, userId, level);
+        const newPermission = await permissionStore.create(permissionId, fileId, userId, level, false, null, false, requestingUserId);
 
         // If this is a folder, recursively grant permission to all children
         if (file.type === 'folder') {
@@ -93,7 +93,7 @@ class PermissionService {
         } else if (!oldOwnerPermission) {
             // Create EDITOR permission for old owner if they don't have any permission yet
             const oldOwnerPermId = generateId();
-            await permissionStore.create(oldOwnerPermId, fileId, requestingUserId, 'EDITOR');
+            await permissionStore.create(oldOwnerPermId, fileId, requestingUserId, 'EDITOR', false, null, false, requestingUserId);
         }
 
         // Remove new owner's existing permission (if exists) to replace it with OWNER
@@ -107,7 +107,7 @@ class PermissionService {
 
         // Create OWNER permission for new owner
         const permissionId = generateId();
-        const newOwnerPermission = await permissionStore.create(permissionId, fileId, newOwnerId, 'OWNER', null);
+        const newOwnerPermission = await permissionStore.create(permissionId, fileId, newOwnerId, 'OWNER', false, null, false, requestingUserId);
 
         return {
             success: true,
@@ -251,10 +251,11 @@ class PermissionService {
 
         const permissions = await permissionStore.getByFileId(fileId);
         
-        // Enrich data with user details
+        // Enrich data with user details and creator details
         const enrichedPermissions = await Promise.all(
             permissions.map(async (perm) => {
                 const user = await usersStore.getById(perm.userId);
+                const creator = perm.createdBy ? await usersStore.getById(perm.createdBy) : null;
                 return {
                     ...perm,
                     user: user ? {
@@ -262,6 +263,12 @@ class PermissionService {
                         username: user.username,
                         firstName: user.firstName,
                         lastName: user.lastName
+                    } : null,
+                    sharedBy: creator ? {
+                        id: creator.id,
+                        username: creator.username,
+                        firstName: creator.firstName,
+                        lastName: creator.lastName
                     } : null
                 };
             })
@@ -402,7 +409,9 @@ class PermissionService {
                 userId, 
                 level, 
                 true, // isInherited
-                folderId // inheritedFrom
+                folderId, // inheritedFrom
+                false, // isHiddenForUser
+                null // createdBy is null for inherited permissions
             );
             
             // If child is also a folder, recurse

@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install production dependencies
-RUN npm install
+RUN npm install --production
 
 # Copy all web server source files
 COPY . .

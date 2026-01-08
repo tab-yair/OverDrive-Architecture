@@ -1,6 +1,6 @@
 // Permission for user on file
 class Permission {
-    constructor(pid, fileId, userId, level, isInherited = false, inheritedFrom = null, isHiddenForUser = false) {
+    constructor(pid, fileId, userId, level, isInherited = false, inheritedFrom = null, isHiddenForUser = false, createdBy = null) {
         this.pid = pid;
         this.fileId = fileId;
         this.userId = userId;
@@ -8,6 +8,7 @@ class Permission {
         this.isInherited = isInherited; // Whether permission was inherited from parent folder
         this.inheritedFrom = inheritedFrom; // Which folder this permission was inherited from (if isInherited=true)
         this.isHiddenForUser = isHiddenForUser; // Local hide flag for Editor/Viewer (non-recursive)
+        this.createdBy = createdBy; // User ID of the person who created this permission
         const now = new Date().toISOString();
         this.createdAt = now;
         this.modifiedAt = now;
