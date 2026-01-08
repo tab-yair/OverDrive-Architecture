@@ -90,7 +90,7 @@ function NewButton() {
                 });
                 
                 fileData = {
-                    name: file.name,
+                    name: file.name, // Keep original .txt extension
                     type: 'docs',
                     content: textContent // Plain text with newlines
                 };
@@ -104,15 +104,16 @@ function NewButton() {
                 });
                 
                 fileData = {
-                    name: file.name,
+                    name: file.name, // Keep original extension (.pdf, .jpg, etc)
                     type: isPdf ? 'pdf' : 'image',
                     content: base64Content
                 };
             }
 
             await filesApi.createFile(token, fileData);
-            // Emit event so file lists can refresh
+            // Emit events so file lists and storage can refresh
             window.dispatchEvent(new CustomEvent('files-updated'));
+            window.dispatchEvent(new CustomEvent('storage-updated'));
             setIsOpen(false);
         } catch (error) {
             console.error('Failed to upload file:', error);
@@ -132,9 +133,8 @@ function NewButton() {
 
         setIsLoading(true);
         try {
-            const fileName = showNamePrompt === 'file' && !newName.includes('.')
-                ? `${newName.trim()}.txt`
-                : newName.trim();
+            // Use name as-is - server uses type metadata, not extension
+            const fileName = newName.trim();
 
             const data = {
                 name: fileName,
@@ -147,8 +147,9 @@ function NewButton() {
             }
 
             await filesApi.createFile(token, data);
-            // Emit event so file lists can refresh
+            // Emit events so file lists and storage can refresh
             window.dispatchEvent(new CustomEvent('files-updated'));
+            window.dispatchEvent(new CustomEvent('storage-updated'));
             setIsOpen(false);
             setShowNamePrompt(null);
             setNewName('');
@@ -212,7 +213,7 @@ function NewButton() {
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder={showNamePrompt === 'folder' ? 'Untitled folder' : 'Untitled.txt'}
+                                placeholder={showNamePrompt === 'folder' ? 'Untitled folder' : 'Untitled'}
                             />
                             <div className="new-button-prompt-actions">
                                 <button

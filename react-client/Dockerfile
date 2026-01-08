@@ -12,6 +12,9 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Clean webpack cache to ensure fresh build
+RUN rm -rf node_modules/.cache
+
 # Build the React app
 RUN npm run build
 

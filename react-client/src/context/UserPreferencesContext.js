@@ -77,6 +77,17 @@ export function UserPreferencesProvider({ children }) {
         }
     }, [isAuthenticated, token, refreshStorage]);
 
+    // Listen for storage-updated events (triggered by file upload/delete)
+    useEffect(() => {
+        const handleStorageUpdate = () => {
+            console.log('[UserPreferences] Storage update event received - refreshing');
+            refreshStorage();
+        };
+
+        window.addEventListener('storage-updated', handleStorageUpdate);
+        return () => window.removeEventListener('storage-updated', handleStorageUpdate);
+    }, [refreshStorage]);
+
     /**
      * Update a preference
      * @param {string} key - Preference key

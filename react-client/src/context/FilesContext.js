@@ -176,6 +176,11 @@ export function FilesProvider({ children }) {
                 updateFilesInStore([result]);
             }
             
+            // If content was updated, storage may have changed
+            if (updates.content !== undefined) {
+                window.dispatchEvent(new CustomEvent('storage-updated'));
+            }
+            
             return { success: true, error: null };
         } catch (error) {
             // Rollback on failure
@@ -235,6 +240,9 @@ export function FilesProvider({ children }) {
 
         try {
             await filesApi.deleteFile(token, fileId);
+            
+            // Emit storage-updated event (delete affects storage)
+            window.dispatchEvent(new CustomEvent('storage-updated'));
             
             return { success: true, error: null };
         } catch (error) {
