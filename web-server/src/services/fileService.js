@@ -212,12 +212,14 @@ class FileService {
             }
 
             // 2. Update parent (move)
+            let parentChange = null;
             if (updates.parentId !== undefined) {
+                parentChange = { oldParentId: file.parentId, newParentId: updates.parentId };
                 const parentUpdates = await this._validateAndUpdateParent(
-                    fileId, 
-                    file, 
-                    updates.parentId, 
-                    updates.name, 
+                    fileId,
+                    file,
+                    updates.parentId,
+                    updates.name,
                     userId
                 );
                 Object.assign(metadataUpdates, parentUpdates);
@@ -230,6 +232,12 @@ class FileService {
 
             // 4. Update metadata in store with optimistic locking
             const updatedFile = await filesStore.update(fileId, metadataUpdates, expectedModifiedAt);
+
+            // After final update, synchronize permissions if parent changed
+            if (parentChange) {
+                const { permissionService } = require('./permissionService');
+                await permissionService.syncPermissionsOnMove(fileId, parentChange.oldParentId, parentChange.newParentId);
+            }
 
             // Record edit interaction
             await userFileMetadataStore.recordEdit(userId, fileId);

@@ -12,6 +12,7 @@ import './FileRow.css';
  * @param {string} props.permissionLevel - User's permission level
  * @param {boolean} props.isOwner - Whether current user is the owner
  * @param {boolean} props.isSelected - Whether this file is selected
+ * @param {number} props.selectedCount - Number of selected files
  * @param {Function} props.onSelect - Callback when selection changes
  * @param {Function} props.onAction - Callback for action events
  * @param {Function} props.onClick - Callback when row is clicked
@@ -22,6 +23,7 @@ const FileRow = ({
   permissionLevel = 'viewer', 
   isOwner = true, 
   isSelected = false,
+  selectedCount = 0,
   onSelect,
   onAction, 
   onClick 
@@ -45,7 +47,8 @@ const FileRow = ({
   const metadataConfig = getMetadataConfig(pageContext);
   
   // Get actions using the single source of truth (ACTION_REGISTRY)
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred });
+  // Pass selectedCount to determine if actions should be enabled/disabled for multi-selection
+  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, selectedCount);
   
   // Get row buttons using the ACTION_REGISTRY
   const rowButtons = getRowActionButtons(pageContext, { ...file, starred: isStarred });
@@ -107,7 +110,7 @@ const FileRow = ({
     if (isSharer) {
       if (file.sharer) {
         return (
-          <div className="metadata-sharer">
+          <div className="metadata-sharer" title={file.sharer.displayName}>
             {file.sharer.avatarUrl ? (
               <img src={file.sharer.avatarUrl} alt="" className="sharer-avatar" />
             ) : (
@@ -135,10 +138,11 @@ const FileRow = ({
     if (isLocation) {
       const locationData = file.location || file.originalLocation;
       if (locationData) {
+        const locationName = locationData.isRoot ? 'My Drive' : locationData.parentName;
         return (
-          <div className="metadata-location">
+          <div className="metadata-location" title={locationName}>
             <img src={`${process.env.PUBLIC_URL}/assets/folder.svg`} alt="" className="location-icon" />
-            <span>{locationData.isRoot ? 'My Drive' : locationData.parentName}</span>
+            <span>{locationName}</span>
           </div>
         );
       }
@@ -168,7 +172,7 @@ const FileRow = ({
     // Handle owner with avatar
     if (key === 'owner' && value) {
       return (
-        <div className="metadata-owner">
+        <div className="metadata-owner" title={value}>
           <div className="owner-avatar-placeholder">
             {value.charAt(0).toUpperCase()}
           </div>
@@ -195,7 +199,7 @@ const FileRow = ({
             alt=""
             className={`file-row-icon ${file.type === 'folder' ? 'folder-icon' : ''}`}
           />
-          <span className="file-name-text">{file.name}</span>
+          <span className="file-name-text" title={file.name}>{file.name}</span>
         </div>
 
         {/* Dynamic Metadata Columns */}
