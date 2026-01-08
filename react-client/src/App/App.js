@@ -17,6 +17,7 @@ import StoragePage from '../pages/StoragePage';
 import SettingsPage from '../pages/SettingsPage';
 import GeneralSettingsPage from '../pages/GeneralSettingsPage';
 import AccountSettingsPage from '../pages/AccountSettingsPage';
+import GetMoreStoragePage from '../pages/GetMoreStoragePage';
 import LoginPage from '../pages/LoginPage';
 import SignupPage from '../pages/SignupPage';
 
@@ -89,6 +90,7 @@ function AppRoutes() {
                     <Route path="/settings" element={<SettingsPage />}>
                         <Route path="general" element={<GeneralSettingsPage />} />
                         <Route path="account" element={<AccountSettingsPage />} />
+                        <Route path="storage" element={<GetMoreStoragePage />} />
                     </Route>
                 </Route>
 
