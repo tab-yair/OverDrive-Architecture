@@ -149,7 +149,7 @@ export const storageApi = {
  */
 export const filesApi = {
     /**
-     * Fetches files with optional sorting and parentId filters.
+     * Fetches files with optional sorting, parentId filters, and custom headers.
      */
     async getFiles(token, options = {}) {
         const params = new URLSearchParams();
@@ -160,13 +160,155 @@ export const filesApi = {
         const queryString = params.toString();
         const url = `${API_BASE_URL}/api/files${queryString ? `?${queryString}` : ''}`;
 
-        const response = await fetch(url, {
-            headers: getAuthHeaders(token)
-        });
+        // Merge auth headers with custom filter headers
+        const headers = {
+            ...getAuthHeaders(token),
+            ...(options.headers || {})
+        };
+
+        const response = await fetch(url, { headers });
         if (!response.ok) {
             throw new Error('Failed to fetch files');
         }
         return response.json();
+    },
+
+    /**
+     * Fetches shared files (where user has direct VIEWER/EDITOR permission, not owner)
+     */
+    async getSharedFiles(token, options = {}) {
+        const headers = {
+            ...getAuthHeaders(token),
+            ...(options.headers || {})
+        };
+
+        const response = await fetch(`${API_BASE_URL}/api/files/shared`, { headers });
+        if (!response.ok) {
+            throw new Error('Failed to fetch shared files');
+        }
+        return response.json();
+    },
+
+    /**
+     * Fetches recently accessed files
+     */
+    async getRecentFiles(token, options = {}) {
+        const headers = {
+            ...getAuthHeaders(token),
+            ...(options.headers || {})
+        };
+
+        const response = await fetch(`${API_BASE_URL}/api/files/recent`, { headers });
+        if (!response.ok) {
+            throw new Error('Failed to fetch recent files');
+        }
+        return response.json();
+    },
+
+    /**
+     * Fetches starred files
+     */
+    async getStarredFiles(token, options = {}) {
+        const headers = {
+            ...getAuthHeaders(token),
+            ...(options.headers || {})
+        };
+
+        const response = await fetch(`${API_BASE_URL}/api/files/starred`, { headers });
+        if (!response.ok) {
+            throw new Error('Failed to fetch starred files');
+        }
+        return response.json();
+    },
+
+    /**
+     * Fetches trash items
+     */
+    async getTrashFiles(token, options = {}) {
+        const headers = {
+            ...getAuthHeaders(token),
+            ...(options.headers || {})
+        };
+
+        const response = await fetch(`${API_BASE_URL}/api/files/trash`, { headers });
+        if (!response.ok) {
+            throw new Error('Failed to fetch trash');
+        }
+        return response.json();
+    },
+
+    /**
+     * Toggles star status for a file
+     */
+    async toggleStar(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/star`, {
+            method: 'POST',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to toggle star');
+        }
+        return response.json();
+    },
+
+    /**
+     * Restores a file from trash
+     */
+    async restoreFromTrash(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/trash/${fileId}/restore`, {
+            method: 'POST',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to restore file');
+        }
+        // 204 No Content
+        return { success: true };
+    },
+
+    /**
+     * Permanently deletes a file from trash
+     */
+    async permanentDelete(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/trash/${fileId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to permanently delete file');
+        }
+        // 204 No Content
+        return { success: true };
+    },
+
+    /**
+     * Empties all trash
+     */
+    async emptyTrash(token) {
+        const response = await fetch(`${API_BASE_URL}/api/files/trash`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to empty trash');
+        }
+        // 204 No Content
+        return { success: true };
+    },
+
+    /**
+     * Restores all items from trash
+     */
+    async restoreAllTrash(token) {
+        const response = await fetch(`${API_BASE_URL}/api/files/trash/restore`, {
+            method: 'POST',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to restore all trash');
+        }
+        // 204 No Content
+        return { success: true };
     },
 
     /**
@@ -182,7 +324,19 @@ export const filesApi = {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.message || 'Failed to create file');
         }
-        return response.json();
+        
+        // Server returns 201 with empty body - extract file ID from Location header
+        if (response.status === 201) {
+            const location = response.headers.get('Location');
+            if (location) {
+                const fileId = location.split('/').pop();
+                return { id: fileId, success: true };
+            }
+        }
+        
+        // Fallback: try to parse JSON (for backwards compatibility)
+        const text = await response.text();
+        return text ? JSON.parse(text) : { success: true };
     },
 
     /**
@@ -204,7 +358,19 @@ export const filesApi = {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.message || 'Failed to upload file');
         }
-        return response.json();
+        
+        // Server returns 201 with empty body - extract file ID from Location header
+        if (response.status === 201) {
+            const location = response.headers.get('Location');
+            if (location) {
+                const fileId = location.split('/').pop();
+                return { id: fileId, success: true };
+            }
+        }
+        
+        // Fallback: try to parse JSON (for backwards compatibility)
+        const text = await response.text();
+        return text ? JSON.parse(text) : { success: true };
     },
 
     /**

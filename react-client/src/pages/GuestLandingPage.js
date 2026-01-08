@@ -9,11 +9,6 @@ import './Pages.css';
  * Landing page shown to non-authenticated users
  */
 function GuestLandingPage() {
-    const { mockLogin } = useAuth();
-
-    // Dev mode detection
-    const isDevelopment = process.env.NODE_ENV === 'development';
-
     return (
         <div className="page guest-landing-page">
             <div className="landing-hero">

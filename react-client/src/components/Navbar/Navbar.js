@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import Logo from '../Logo/Logo';
 import SearchBar from '../SearchBar/SearchBar';
 import ProfileDropdown from '../ProfileDropdown/ProfileDropdown';
+import NewButton from '../Sidebar/NewButton/NewButton';
 import './Navbar.css';
 
 /**
@@ -13,7 +14,7 @@ import './Navbar.css';
  * - Authenticated: Logo + SearchBar + Theme toggle + Settings + User profile dropdown
  */
 function Navbar() {
-    const { isAuthenticated, mockLogin } = useAuth();
+    const { isAuthenticated } = useAuth();
     const { isDarkMode, toggleTheme } = useTheme();
     const navigate = useNavigate();
 
@@ -38,6 +39,10 @@ function Navbar() {
             <div className="navbar-right">
                 {isAuthenticated ? (
                     <>
+                        {/* New button (top bar) */}
+                        <div className="navbar-new-btn-wrapper">
+                            <NewButton />
+                        </div>
                         {/* Theme toggle button */}
                         <button
                             className="navbar-icon-btn"

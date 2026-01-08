@@ -65,9 +65,32 @@ function NewButton() {
         const file = e.target.files?.[0];
         if (!file || !token) return;
 
+        const isPdf = file.type === 'application/pdf';
+        const isImage = file.type.startsWith('image/');
+        if (!isPdf && !isImage) {
+            alert('Only PDF or image files can be uploaded.');
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
         setIsLoading(true);
         try {
-            await filesApi.uploadFile(token, file);
+            // Convert file to Base64
+            const base64Content = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            // Create file with Base64 content
+            const data = {
+                name: file.name,
+                type: isPdf ? 'pdf' : 'image',
+                content: base64Content
+            };
+
+            await filesApi.createFile(token, data);
             // Emit event so file lists can refresh
             window.dispatchEvent(new CustomEvent('files-updated'));
             setIsOpen(false);
@@ -89,13 +112,16 @@ function NewButton() {
 
         setIsLoading(true);
         try {
+            const fileName = showNamePrompt === 'file' && !newName.includes('.')
+                ? `${newName.trim()}.txt`
+                : newName.trim();
+
             const data = {
-                name: showNamePrompt === 'file' && !newName.includes('.')
-                    ? `${newName.trim()}.txt`
-                    : newName.trim(),
-                type: showNamePrompt === 'folder' ? 'folder' : 'file'
+                name: fileName,
+                type: showNamePrompt === 'folder' ? 'folder' : 'docs'
             };
 
+            // For docs files, include empty content
             if (showNamePrompt === 'file') {
                 data.content = '';
             }
