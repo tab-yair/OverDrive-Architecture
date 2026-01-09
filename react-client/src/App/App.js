@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { UserPreferencesProvider } from '../context/UserPreferencesContext';
 import { FilesProvider } from '../context/FilesContext';
+import { NavigationProvider } from '../context/NavigationContext';
 import Layout from '../components/Layout/Layout';
 import ProtectedRoute from '../components/ProtectedRoute/ProtectedRoute';
 
@@ -10,6 +11,7 @@ import ProtectedRoute from '../components/ProtectedRoute/ProtectedRoute';
 import GuestLandingPage from '../pages/GuestLandingPage';
 import HomePage from '../pages/HomePage';
 import MyDrivePage from '../pages/MyDrivePage';
+import FolderPage from '../pages/FolderPage';
 import SharedPage from '../pages/SharedPage';
 import RecentPage from '../pages/RecentPage';
 import StarredPage from '../pages/StarredPage';
@@ -74,6 +76,7 @@ function AppRoutes() {
                 <Route element={<ProtectedRoute />}>
                     <Route path="/home" element={<HomePage />} />
                     <Route path="/mydrive" element={<MyDrivePage />} />
+                    <Route path="/folders/:folderId" element={<FolderPage />} />
                     <Route path="/shared" element={<SharedPage />} />
                     <Route path="/recent" element={<RecentPage />} />
                     <Route path="/starred" element={<StarredPage />} />
@@ -111,7 +114,7 @@ function AppRoutes() {
  * - AuthProvider: Authentication state
  * - ThemeProvider: UI theme (light/dark)
  * - UserPreferencesProvider: User preferences
- * - FilesProvider: SSOT for all file metadata (synchronized across app)
+ * - NavigationProvider: File/folder navigation and open actions
  */
 function App() {
     return (
@@ -119,9 +122,11 @@ function App() {
             <ThemeProvider>
                 <UserPreferencesProvider>
                     <FilesProvider>
-                        <div className="app">
-                            <AppRoutes />
-                        </div>
+                        <NavigationProvider>
+                            <div className="app">
+                                <AppRoutes />
+                            </div>
+                        </NavigationProvider>
                     </FilesProvider>
                 </UserPreferencesProvider>
             </ThemeProvider>

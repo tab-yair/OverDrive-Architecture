@@ -1,14 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { useNavigation } from '../../../context/NavigationContext';
 import { filesApi } from '../../../services/api';
 import './NewButton.css';
 
 /**
  * NewButton Component
  * Dropdown menu for creating new files/folders and uploading
+ * @param {string} parentId - Optional parent folder ID (null for root)
  */
-function NewButton() {
+function NewButton({ parentId = null }) {
     const { token } = useAuth();
+    const { currentFolderId } = useNavigation();
+    
+    // Use currentFolderId from context if no explicit parentId provided
+    const effectiveParentId = parentId || currentFolderId;
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [showNamePrompt, setShowNamePrompt] = useState(null); // 'folder' | 'file' | null
@@ -94,6 +100,11 @@ function NewButton() {
                     type: 'docs',
                     content: textContent // Plain text with newlines
                 };
+                
+                // Add parentId if provided
+                if (effectiveParentId) {
+                    fileData.parentId = effectiveParentId;
+                }
             } else {
                 // For PDF/Image: Convert to Base64
                 const base64Content = await new Promise((resolve, reject) => {
@@ -108,6 +119,11 @@ function NewButton() {
                     type: isPdf ? 'pdf' : 'image',
                     content: base64Content
                 };
+                
+                // Add parentId if provided
+                if (effectiveParentId) {
+                    fileData.parentId = effectiveParentId;
+                }
             }
 
             await filesApi.createFile(token, fileData);
@@ -144,6 +160,11 @@ function NewButton() {
             // For docs files, include empty content
             if (showNamePrompt === 'file') {
                 data.content = '';
+            }
+            
+            // Add parentId if provided
+            if (effectiveParentId) {
+                data.parentId = effectiveParentId;
             }
 
             await filesApi.createFile(token, data);

@@ -1,13 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { FilePageWrapper } from '../components/FilePageWrapper';
+import { useNavigation } from '../context/NavigationContext';
 import './Pages.css';
 
 /**
  * SharedPage Component
- * Displays files shared with the current user by others
+ * Displays files/folders shared with the current user
  * Endpoint: GET /api/files/shared
  */
 function SharedPage() {
+    const { setCurrentFolderId } = useNavigation();
+    
+    // Reset current folder when entering Shared (root level)
+    useEffect(() => {
+        setCurrentFolderId(null);
+    }, [setCurrentFolderId]);
+    
     return (
         <FilePageWrapper
             endpoint="shared"

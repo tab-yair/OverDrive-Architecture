@@ -26,7 +26,8 @@ const FileCard = ({
   selectedCount = 0,
   onSelect,
   onAction, 
-  onClick 
+  onClick,
+  onDoubleClick
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -82,9 +83,18 @@ const FileCard = ({
       onSelect(file, event);
     }
     
-    // If it's a normal click (not Ctrl/Cmd), also open the file
+    // If it's a normal click (not Ctrl/Cmd), also call onClick if provided
     if (!event.ctrlKey && !event.metaKey && onClick) {
       onClick(file);
+    }
+  };
+
+  const handleCardDoubleClick = (event) => {
+    event.stopPropagation();
+    
+    // Double-click opens the file/folder
+    if (onDoubleClick) {
+      onDoubleClick(file);
     }
   };
 
@@ -95,12 +105,13 @@ const FileCard = ({
       <div
         className={`file-card ${file.type === 'folder' ? 'folder-card' : ''} ${pageContext === 'Recent' || pageContext === 'Shared' ? 'uniform-square' : ''} ${isSelected ? 'selected' : ''}`}
         onClick={handleCardClick}
+        onDoubleClick={handleCardDoubleClick}
         role="button"
         tabIndex={0}
       >
         {/* Card Header with Menu Button - For regular files and uniform-square folders */}
         {(file.type !== 'folder' || pageContext === 'Recent' || pageContext === 'Shared') && (
-          <div className="file-card-header" onClick={(e) => e.stopPropagation()}>
+          <div className="file-card-header" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
             <div ref={menuButtonRef}>
               <ActionButton
                 iconSrc={`${process.env.PUBLIC_URL}/assets/more_vert.svg`}
@@ -130,7 +141,7 @@ const FileCard = ({
 
         {/* Folder Menu Button (on right side of banner) - Only for banner-style folders */}
         {file.type === 'folder' && pageContext !== 'Recent' && pageContext !== 'Shared' && (
-          <div className="folder-menu-button" onClick={(e) => e.stopPropagation()}>
+          <div className="folder-menu-button" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
             <div ref={menuButtonRef}>
               <ActionButton
                 iconSrc={`${process.env.PUBLIC_URL}/assets/more_vert.svg`}

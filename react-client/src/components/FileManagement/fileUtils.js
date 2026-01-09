@@ -642,7 +642,7 @@ const ACTION_REGISTRY = {
     iconSrc: icons.info,
     isDanger: false,
     /**
-     * Visibility: Only files can be opened (folders cannot)
+     * Visibility: Only files (folders open via double-click only)
      * Available in: Standard pages only (not Trash)
      */
     isVisible: (file, pageContext) => {

@@ -50,6 +50,7 @@ import './FileManager.css';
  * @param {Function} props.onViewModeChange - Callback when view mode changes
  * @param {Function} props.onAction - Callback for file actions
  * @param {Function} props.onFileClick - Callback when file is clicked
+ * @param {Function} props.onFileDoubleClick - Callback when file is double-clicked
  * @param {Function} props.onSelectionChange - Callback when selection changes (receives count)
  */
 const FileManager = ({
@@ -61,6 +62,7 @@ const FileManager = ({
   onViewModeChange,
   onAction,
   onFileClick,
+  onFileDoubleClick,
   onSelectionChange,
 }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -297,6 +299,7 @@ const FileManager = ({
                     onSelect={handleFileSelect}
                     onAction={onAction}
                     onClick={handleFileClick}
+                    onDoubleClick={onFileDoubleClick}
                   />
                 ))}
                 
@@ -313,6 +316,7 @@ const FileManager = ({
                     onSelect={handleFileSelect}
                     onAction={onAction}
                     onClick={handleFileClick}
+                    onDoubleClick={onFileDoubleClick}
                   />
                 ))}
               </>
@@ -339,6 +343,7 @@ const FileManager = ({
                             onSelect={handleFileSelect}
                             onAction={onAction}
                             onClick={handleFileClick}
+                            onDoubleClick={onFileDoubleClick}
                           />
                         ))}
                       </div>
@@ -358,6 +363,7 @@ const FileManager = ({
                       onSelect={handleFileSelect}
                       onAction={onAction}
                       onClick={handleFileClick}
+                      onDoubleClick={onFileDoubleClick}
                     />
                   ));
                 }
@@ -387,6 +393,7 @@ const FileManager = ({
                       onSelect={handleFileSelect}
                       onAction={onAction}
                       onClick={handleFileClick}
+                      onDoubleClick={onFileDoubleClick}
                     />
                   ))}
                 </div>
@@ -407,6 +414,7 @@ const FileManager = ({
                       onSelect={handleFileSelect}
                       onAction={onAction}
                       onClick={handleFileClick}
+                      onDoubleClick={onFileDoubleClick}
                     />
                   ))}
                 </div>
@@ -436,6 +444,7 @@ const FileManager = ({
                             onSelect={handleFileSelect}
                             onAction={onAction}
                             onClick={handleFileClick}
+                            onDoubleClick={onFileDoubleClick}
                           />
                         ))}
                       </div>
@@ -458,6 +467,7 @@ const FileManager = ({
                         onSelect={handleFileSelect}
                         onAction={onAction}
                         onClick={handleFileClick}
+                        onDoubleClick={onFileDoubleClick}
                       />
                     ))}
                   </div>

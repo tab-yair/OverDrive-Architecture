@@ -26,7 +26,8 @@ const FileRow = ({
   selectedCount = 0,
   onSelect,
   onAction, 
-  onClick 
+  onClick,
+  onDoubleClick
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -95,9 +96,18 @@ const FileRow = ({
       onSelect(file, event);
     }
     
-    // If it's a normal click (not Ctrl/Cmd), also open the file
+    // If it's a normal click (not Ctrl/Cmd), also call onClick if provided
     if (!event.ctrlKey && !event.metaKey && onClick) {
       onClick(file);
+    }
+  };
+
+  const handleRowDoubleClick = (event) => {
+    event.stopPropagation();
+    
+    // Double-click opens the file/folder
+    if (onDoubleClick) {
+      onDoubleClick(file);
     }
   };
 
@@ -191,7 +201,13 @@ const FileRow = ({
 
   return (
     <>
-      <div className={`file-row ${isSelected ? 'selected' : ''}`} onClick={handleRowClick} role="button" tabIndex={0}>
+      <div 
+        className={`file-row ${isSelected ? 'selected' : ''}`} 
+        onClick={handleRowClick}
+        onDoubleClick={handleRowDoubleClick}
+        role="button" 
+        tabIndex={0}
+      >
         {/* File Icon and Name */}
         <div className="file-row-name">
           <img
@@ -213,7 +229,7 @@ const FileRow = ({
         ))}
 
         {/* Action Buttons - Driven by single source of truth */}
-        <div className="file-row-actions" onClick={(e) => e.stopPropagation()}>
+        <div className="file-row-actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
           {rowButtons.map((action) => (
             <ActionButton
               key={action.id}

@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import useFiles from '../../hooks/useFiles';
+import { useNavigation } from '../../context/NavigationContext';
 import { FileManager, InfoSidebar } from '../FileManagement';
 import './FilePageWrapper.css';
 
 /**
  * FilePageWrapper Component
- * Reusable wrapper for all file-based pages (MyDrive, Shared, Recent, Starred, Trash)
+ * Reusable wrapper for all file-based pages (MyDrive, Shared, Recent, Starred, Trash, Folders)
  * Eliminates code duplication across sidebar pages
  * 
  * @param {Object} props
- * @param {string} props.endpoint - API endpoint type: 'mydrive', 'shared', 'recent', 'trash', 'starred'
+ * @param {string} props.endpoint - API endpoint type: 'mydrive', 'shared', 'recent', 'trash', 'starred' (optional if customFiles provided)
+ * @param {Array} props.customFiles - Custom files array (optional, overrides endpoint)
+ * @param {boolean} props.customLoading - Custom loading state (optional, overrides endpoint loading)
+ * @param {React.Component} props.headerComponent - Custom header component (e.g., Breadcrumbs)
  * @param {string} props.pageContext - Display context for FileManager (e.g., 'MyDrive', 'Shared')
  * @param {boolean} props.isOwner - Whether user is the owner of displayed files
  * @param {string} props.permissionLevel - Permission level: 'owner', 'editor', 'viewer'
@@ -20,6 +24,9 @@ import './FilePageWrapper.css';
  */
 function FilePageWrapper({
     endpoint,
+    customFiles,
+    customLoading,
+    headerComponent,
     pageContext,
     isOwner = false,
     permissionLevel = 'viewer',
@@ -28,7 +35,14 @@ function FilePageWrapper({
     onFileClick,
     onAction
 }) {
-    const { files, loading, refetch } = useFiles(endpoint);
+    // Always call hooks unconditionally (React rule)
+    const hookResult = useFiles(endpoint || 'mydrive'); // Provide default to avoid conditional hook call
+    const { handleOpen } = useNavigation();
+    
+    // Use custom files/loading if provided, otherwise use hook result
+    const files = customFiles !== undefined ? customFiles : hookResult.files;
+    const loading = customLoading !== undefined ? customLoading : hookResult.loading;
+    const refetch = hookResult.refetch;
     const [viewMode, setViewMode] = useState('grid');
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -41,15 +55,25 @@ function FilePageWrapper({
 
     /**
      * Default action handler
-     * @param {string} action - The action type (e.g., 'details', 'delete', 'share', etc.)
+     * @param {string} action - The action type (e.g., 'open', 'details', 'delete', 'share', etc.)
      * @param {Object|Array} fileOrFiles - Single file object or array of file objects
      * 
      * Uses selectedCount (from FileManager's onSelectionChange) to determine:
+     * - Open: Use NavigationContext to open files/folders
      * - Details: Only open sidebar if selectedCount <= 1
      * - Future: Permission checks based on all selected files (most restrictive)
      */
     const defaultAction = (action, fileOrFiles) => {
         console.log(`[FilePageWrapper] ${pageContext} action:`, action, 'Files:', fileOrFiles, 'Selected count:', selectedCount);
+        
+        // Handle open action - use NavigationContext
+        if (action === 'open') {
+            const item = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
+            if (item) {
+                handleOpen(item);
+            }
+            return;
+        }
         
         // Handle details action - open InfoSidebar
         // Rule: Only allow details sidebar when 0 or 1 files are selected
@@ -108,12 +132,16 @@ function FilePageWrapper({
 
     return (
         <div className={`file-page ${className}`}>
+            {/* Custom header component (e.g., Breadcrumbs) */}
+            {headerComponent}
+            
             <FileManager
                 files={files}
                 pageContext={pageContext}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
                 onFileClick={onFileClick || defaultFileClick}
+                onFileDoubleClick={handleOpen}
                 onAction={onAction || defaultAction}
                 isOwner={isOwner}
                 permissionLevel={permissionLevel}
