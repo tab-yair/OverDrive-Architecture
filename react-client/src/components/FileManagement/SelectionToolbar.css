@@ -8,8 +8,10 @@
   background-color: var(--bg-secondary, #f8f9fa);
   border-bottom: 1px solid var(--border-color, #e0e0e0);
   min-height: 60px;
-  position: sticky;
+  position: absolute; /* Changed from sticky to absolute */
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
   animation: toolbarSlideDown 0.2s ease-out;
 }

@@ -233,17 +233,19 @@ const FileManager = ({
 
   return (
     <div ref={containerRef} className="file-manager" onClick={handleBackgroundClick}>
-      {/* Selection Toolbar */}
-      {selectedFiles.length > 0 && (
-        <SelectionToolbar
-          selectedFiles={selectedFiles}
-          pageContext={pageContext}
-          permissionLevel={permissionLevel}
-          isOwner={isOwner}
-          onClearSelection={handleClearSelection}
-          onAction={handleBulkAction}
-        />
-      )}
+      {/* Reserved Toolbar Slot - Prevents layout shift */}
+      <div className="selection-toolbar-slot">
+        {selectedFiles.length > 0 && (
+          <SelectionToolbar
+            selectedFiles={selectedFiles}
+            pageContext={pageContext}
+            permissionLevel={permissionLevel}
+            isOwner={isOwner}
+            onClearSelection={handleClearSelection}
+            onAction={handleBulkAction}
+          />
+        )}
+      </div>
 
       {/* View Toggle */}
       <div className="file-manager-header">
