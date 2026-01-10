@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import Logo from '../Logo/Logo';
+import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import SearchBar from '../SearchBar/SearchBar';
 import ProfileDropdown from '../ProfileDropdown/ProfileDropdown';
 import NewButton from '../Sidebar/NewButton/NewButton';
@@ -26,6 +27,9 @@ function Navbar() {
                     size="sm"
                     to={isAuthenticated ? '/home' : '/'}
                 />
+                
+                {/* Breadcrumbs - shown when authenticated */}
+                {isAuthenticated && <Breadcrumbs />}
             </div>
 
             {/* Center section - search bar (only when authenticated) */}

@@ -1,0 +1,171 @@
+/* ===================================
+   BREADCRUMBS - Google Drive Style
+   =================================== */
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 16px;
+  min-width: 0; /* Allow shrinking */
+  flex: 1; /* Take available space */
+}
+
+.breadcrumbs-path {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Individual breadcrumb item */
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.breadcrumb-item:hover:not(:disabled) {
+  background-color: var(--hover-bg);
+}
+
+.breadcrumb-item:disabled {
+  cursor: default;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.breadcrumb-icon {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.breadcrumb-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Separator between items */
+.breadcrumb-separator {
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  font-size: 18px;
+}
+
+.breadcrumb-separator .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Overflow button (...) */
+.breadcrumb-overflow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.breadcrumb-overflow:hover {
+  background-color: var(--hover-bg);
+}
+
+.breadcrumb-overflow .material-symbols-outlined {
+  font-size: 20px;
+}
+
+/* Overflow dropdown menu */
+.breadcrumb-overflow-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 200px;
+  max-width: 300px;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.breadcrumb-overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.breadcrumb-overflow-item:hover {
+  background-color: var(--hover-bg);
+}
+
+.breadcrumb-overflow-item .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.breadcrumb-overflow-item span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===================================
+   RESPONSIVE
+   =================================== */
+
+@media (max-width: 768px) {
+  .breadcrumbs {
+    display: none; /* Hide on mobile - too cramped */
+  }
+}
+
+/* ===================================
+   DARK MODE
+   =================================== */
+
+[data-theme='dark'] .breadcrumb-overflow-menu {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
