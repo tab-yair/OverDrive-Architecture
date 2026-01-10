@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { filesApi } from '../services/api';
+import { useUserChange } from '../hooks/useUserChange';
+import { useAppEvent } from '../hooks/useAppEvent';
+import { AppEvents, notifyStorageUpdated } from '../utils/eventManager';
 
 /**
  * FilesContext - Single Source of Truth (SSOT) for all file metadata
@@ -25,8 +28,30 @@ export function FilesProvider({ children }) {
     const [errors, setErrors] = useState({});
 
     /**
+     * Clear all files when user changes (login/logout/user switch)
+     */
+    useUserChange(() => {
+        console.log('🧹 FilesContext: Clearing all files due to user change');
+        setFilesMap(new Map());
+        setLoadedEndpoints(new Set());
+        setLoading({});
+        setErrors({});
+    });
+
+    /**
+     * Listen for files updated events and invalidate cache
+     */
+    useAppEvent(AppEvents.FILES_UPDATED, () => {
+        console.log('📥 FilesContext: Files updated event - invalidating all endpoints for refetch');
+        setLoadedEndpoints(new Set());
+    });
+
+    /**
      * Schema-aligned file object (matches backend exactly)
      * Fields from README.md API documentation
+     * 
+     * NOTE: location is NOT stored - computed dynamically by getFile()
+     * This ensures TRUE Single Source of Truth - no data duplication
      */
     const normalizeFile = useCallback((file) => {
         return {
@@ -36,7 +61,7 @@ export function FilesProvider({ children }) {
             type: file.type, // folder, docs, pdf, image
             size: file.size || 0,
             
-            // Hierarchy
+            // Hierarchy (location computed from parentId by getFile)
             ownerId: file.ownerId,
             parentId: file.parentId || null,
             
@@ -64,6 +89,7 @@ export function FilesProvider({ children }) {
 
     /**
      * Update files map (merges new data with existing)
+     * Simple merge - no need for deep merge since location is computed
      */
     const updateFilesInStore = useCallback((files) => {
         setFilesMap(prev => {
@@ -72,7 +98,7 @@ export function FilesProvider({ children }) {
                 const normalized = normalizeFile(file);
                 const existing = newMap.get(file.id);
                 
-                // Merge with existing to preserve any locally loaded data
+                // Merge: new data overwrites old
                 newMap.set(file.id, existing ? { ...existing, ...normalized } : normalized);
             });
             return newMap;
@@ -178,7 +204,7 @@ export function FilesProvider({ children }) {
             
             // If content was updated, storage may have changed
             if (updates.content !== undefined) {
-                window.dispatchEvent(new CustomEvent('storage-updated'));
+                notifyStorageUpdated();
             }
             
             return { success: true, error: null };
@@ -242,7 +268,7 @@ export function FilesProvider({ children }) {
             await filesApi.deleteFile(token, fileId);
             
             // Emit storage-updated event (delete affects storage)
-            window.dispatchEvent(new CustomEvent('storage-updated'));
+            notifyStorageUpdated();
             
             return { success: true, error: null };
         } catch (error) {
@@ -255,6 +281,7 @@ export function FilesProvider({ children }) {
 
     /**
      * Get files for specific endpoint from store
+     * Returns files with computed location (consistent with getFile)
      */
     const getFilesFromStore = useCallback((endpoint, filterFn = null) => {
         const allFiles = Array.from(filesMap.values());
@@ -283,14 +310,65 @@ export function FilesProvider({ children }) {
             filtered = filtered.filter(filterFn);
         }
         
-        return filtered;
+        // Compute location for each file (consistent with getFile)
+        return filtered.map(file => {
+            if (file.parentId) {
+                const parent = filesMap.get(file.parentId);
+                return {
+                    ...file,
+                    location: {
+                        parentId: file.parentId,
+                        parentName: parent?.name || 'Unknown Folder',
+                        isRoot: false
+                    }
+                };
+            }
+            
+            // Root level files
+            return {
+                ...file,
+                location: {
+                    parentId: null,
+                    parentName: null,
+                    isRoot: true
+                }
+            };
+        });
     }, [filesMap]);
 
     /**
      * Get single file from store (for Details Panel - no server interaction)
+     * Computes location dynamically from parent folder (TRUE SSOT)
+     * - Always returns fresh location data
+     * - If parent folder renamed, location updates automatically
+     * - No data duplication
      */
     const getFile = useCallback((fileId) => {
-        return filesMap.get(fileId) || null;
+        const file = filesMap.get(fileId);
+        if (!file) return null;
+        
+        // Compute location on-the-fly from parent folder in store
+        if (file.parentId) {
+            const parent = filesMap.get(file.parentId);
+            return {
+                ...file,
+                location: {
+                    parentId: file.parentId,
+                    parentName: parent?.name || 'Unknown Folder',
+                    isRoot: false
+                }
+            };
+        }
+        
+        // Root level files (parentId = null)
+        return {
+            ...file,
+            location: {
+                parentId: null,
+                parentName: null,
+                isRoot: true
+            }
+        };
     }, [filesMap]);
 
     /**
@@ -303,18 +381,15 @@ export function FilesProvider({ children }) {
             return newSet;
         });
     }, []);
-
     /**
-     * Listen for global file update events
+     * Clear all files from store (used on logout/user change)
      */
-    useEffect(() => {
-        const handleFilesUpdated = () => {
-            // Invalidate all endpoints to force refetch
-            setLoadedEndpoints(new Set());
-        };
-
-        window.addEventListener('files-updated', handleFilesUpdated);
-        return () => window.removeEventListener('files-updated', handleFilesUpdated);
+    const clearAllFiles = useCallback(() => {
+        console.log('🧹 Clearing all files from FilesContext');
+        setFilesMap(new Map());
+        setLoadedEndpoints(new Set());
+        setLoading({});
+        setErrors({});
     }, []);
 
     const value = {
@@ -322,6 +397,7 @@ export function FilesProvider({ children }) {
         filesMap,
         getFile,
         getFilesFromStore,
+        updateFilesInStore, // Allow manual updates to store (e.g., FolderPage)
         
         // Data fetching
         fetchFiles,
@@ -334,6 +410,7 @@ export function FilesProvider({ children }) {
         
         // Cache management
         invalidateEndpoint,
+        clearAllFiles,
         loadedEndpoints,
         
         // Loading/error states

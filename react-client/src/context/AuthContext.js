@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { userApi } from '../services/api';
 
@@ -8,6 +9,7 @@ const AuthContext = createContext();
 const USER_UPDATE_EVENT_KEY = 'user_data_updated';
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -129,12 +131,20 @@ export const AuthProvider = ({ children }) => {
 
   /*
    * logout function: clears state and localStorage
+   * Uses setTimeout to ensure state clears before navigation
    */
-  const logout = () => {
+  const logout = useCallback(() => {
+    // Clear state first
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
-  };
+    
+    // Navigate after state update completes
+    // This prevents race condition with ProtectedRoute
+    setTimeout(() => {
+      navigate('/');
+    }, 0);
+  }, [navigate]);
 
   /*
    * Notifier: Notify other tabs that user data has been updated

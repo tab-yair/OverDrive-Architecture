@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useFilesContext } from '../context/FilesContext';
 import { getFilterHeaders, getDefaultFilters } from '../utils/filterUtils';
 
@@ -17,6 +18,7 @@ import { getFilterHeaders, getDefaultFilters } from '../utils/filterUtils';
  * @returns {Object} - { files, loading, error, refetch, filters, setFilters, clearFilters }
  */
 export const useFiles = (endpoint, initialFilters = null) => {
+    const { user } = useAuth();
     const filesContext = useFilesContext();
     const [files, setFiles] = useState([]);
     const [filters, setFilters] = useState(
@@ -41,29 +43,39 @@ export const useFiles = (endpoint, initialFilters = null) => {
 
     /**
      * Fetch on mount and when dependencies change
+     * Force refetch when user changes or endpoint invalidated
      */
     useEffect(() => {
-        // Check if endpoint already loaded, if not fetch
-        if (!filesContext.loadedEndpoints.has(endpoint)) {
+        if (!user?.id) {
+            // No user - clear files
+            setFiles([]);
+            return;
+        }
+
+        // Check if endpoint is loaded
+        const isLoaded = filesContext.loadedEndpoints.has(endpoint);
+        
+        if (!isLoaded) {
+            // Endpoint not loaded - fetch from server
+            console.log(`🔄 useFiles: Fetching ${endpoint} for user ${user.id} (not loaded)`);
             fetchFiles();
         } else {
-            // Get from store without refetching
+            // Endpoint loaded - get from store
+            const storeFiles = filesContext.getFilesFromStore(endpoint);
+            console.log(`💾 useFiles: Getting ${endpoint} from store (${storeFiles.length} files)`);
+            setFiles(storeFiles);
+        }
+    }, [user?.id, endpoint, filesContext.loadedEndpoints, fetchFiles, filesContext]);
+
+    /**
+     * Subscribe to filesMap updates to get new data immediately
+     */
+    useEffect(() => {
+        // Update files whenever filesMap changes
+        if (filesContext.loadedEndpoints.has(endpoint)) {
             const storeFiles = filesContext.getFilesFromStore(endpoint);
             setFiles(storeFiles);
         }
-    }, [filesContext, endpoint, fetchFiles]);
-
-    /**
-     * Subscribe to store updates
-     */
-    useEffect(() => {
-        const updateFromStore = () => {
-            const storeFiles = filesContext.getFilesFromStore(endpoint);
-            setFiles(storeFiles);
-        };
-
-        // Update whenever filesMap changes
-        updateFromStore();
     }, [filesContext.filesMap, endpoint, filesContext]);
 
     /**

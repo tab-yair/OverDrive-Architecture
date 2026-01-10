@@ -13,7 +13,7 @@ import './FilePageWrapper.css';
  * @param {string} props.endpoint - API endpoint type: 'mydrive', 'shared', 'recent', 'trash', 'starred' (optional if customFiles provided)
  * @param {Array} props.customFiles - Custom files array (optional, overrides endpoint)
  * @param {boolean} props.customLoading - Custom loading state (optional, overrides endpoint loading)
- * @param {React.Component} props.headerComponent - Custom header component (e.g., Breadcrumbs)
+// ...existing code...
  * @param {string} props.pageContext - Display context for FileManager (e.g., 'MyDrive', 'Shared')
  * @param {boolean} props.isOwner - Whether user is the owner of displayed files
  * @param {string} props.permissionLevel - Permission level: 'owner', 'editor', 'viewer'
@@ -132,7 +132,7 @@ function FilePageWrapper({
 
     return (
         <div className={`file-page ${className}`}>
-            {/* Custom header component (e.g., Breadcrumbs) */}
+            {/* Custom header component removed */}
             {headerComponent}
             
             <FileManager

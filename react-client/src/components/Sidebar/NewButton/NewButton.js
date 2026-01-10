@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigation } from '../../../context/NavigationContext';
 import { filesApi } from '../../../services/api';
+import { notifyFilesAndStorageUpdated } from '../../../utils/eventManager';
 import './NewButton.css';
 
 /**
@@ -12,9 +14,17 @@ import './NewButton.css';
 function NewButton({ parentId = null }) {
     const { token } = useAuth();
     const { currentFolderId } = useNavigation();
+    const location = useLocation();
     
-    // Use currentFolderId from context if no explicit parentId provided
-    const effectiveParentId = parentId || currentFolderId;
+    // Only use currentFolderId if we're actually in a folder page
+    // Check if current route is /folders/:id
+    const isInFolderPage = location.pathname.startsWith('/folders/');
+    
+    // Use currentFolderId from context ONLY if:
+    // 1. No explicit parentId provided AND
+    // 2. We're actually inside a folder page
+    const effectiveParentId = parentId || (isInFolderPage ? currentFolderId : null);
+    
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [showNamePrompt, setShowNamePrompt] = useState(null); // 'folder' | 'file' | null
@@ -128,8 +138,7 @@ function NewButton({ parentId = null }) {
 
             await filesApi.createFile(token, fileData);
             // Emit events so file lists and storage can refresh
-            window.dispatchEvent(new CustomEvent('files-updated'));
-            window.dispatchEvent(new CustomEvent('storage-updated'));
+            notifyFilesAndStorageUpdated();
             setIsOpen(false);
         } catch (error) {
             console.error('Failed to upload file:', error);
@@ -169,8 +178,7 @@ function NewButton({ parentId = null }) {
 
             await filesApi.createFile(token, data);
             // Emit events so file lists and storage can refresh
-            window.dispatchEvent(new CustomEvent('files-updated'));
-            window.dispatchEvent(new CustomEvent('storage-updated'));
+            notifyFilesAndStorageUpdated();
             setIsOpen(false);
             setShowNamePrompt(null);
             setNewName('');

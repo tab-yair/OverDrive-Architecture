@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import { useUserChange } from '../hooks/useUserChange';
 
 const NavigationContext = createContext();
 
@@ -9,8 +11,17 @@ const NavigationContext = createContext();
  */
 export const NavigationProvider = ({ children }) => {
   const navigate = useNavigate();
-  const [breadcrumbs, setBreadcrumbs] = useState([]);
+  // Breadcrumbs state removed
   const [currentFolderId, setCurrentFolderId] = useState(null);
+
+  /**
+   * Clear navigation state when user changes
+   */
+  useUserChange(() => {
+    console.log('🧹 NavigationContext: Clearing navigation state due to user change');
+    setCurrentFolderId(null);
+    navigate('/mydrive');
+  }, [navigate]);
 
   /**
    * Central handleOpen function - dispatches based on item type
@@ -30,7 +41,7 @@ export const NavigationProvider = ({ children }) => {
       setCurrentFolderId(item.id);
       navigate(`/folders/${item.id}`);
       
-      // Update breadcrumbs (will be fully managed by FolderPage)
+      // ...existing code...
       console.log(`📂 Opening folder: ${item.name} (${item.id})`);
     } else {
       // Handle file opening (images, PDFs, docs, etc.)
@@ -57,33 +68,18 @@ export const NavigationProvider = ({ children }) => {
   /**
    * Navigate back to parent folder or My Drive
    */
-  const navigateUp = useCallback(() => {
-    if (breadcrumbs.length > 0) {
-      const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
-      if (parentCrumb) {
-        navigateToFolder(parentCrumb.id);
-      } else {
-        navigate('/mydrive');
-      }
-    } else {
-      navigate('/mydrive');
-    }
-  }, [breadcrumbs, navigate, navigateToFolder]);
+  // navigateUp removed
 
   /**
    * Set breadcrumbs path
    * @param {Array} crumbs - Array of {id, name} objects
    */
-  const updateBreadcrumbs = useCallback((crumbs) => {
-    setBreadcrumbs(crumbs);
-  }, []);
+  // updateBreadcrumbs removed
 
   const value = {
     handleOpen,
     navigateToFolder,
-    navigateUp,
-    breadcrumbs,
-    updateBreadcrumbs,
+    // breadcrumbs and updateBreadcrumbs removed
     currentFolderId,
     setCurrentFolderId
   };

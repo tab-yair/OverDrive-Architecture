@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import { useUserChange } from '../hooks/useUserChange';
 import { filesApi, formatBytes } from '../services/api';
 import './Pages.css';
 import './StoragePage.css';
@@ -10,12 +11,18 @@ import './StoragePage.css';
  * Shows storage usage and files sorted by size
  */
 function StoragePage() {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const { storageInfo, storageLoading } = useUserPreferences();
 
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Clear files when user changes
+    useUserChange(() => {
+        setFiles([]);
+        setError(null);
+    });
 
     // Fetch files sorted by size
     useEffect(() => {
@@ -44,7 +51,7 @@ function StoragePage() {
         }
 
         fetchFiles();
-    }, [token]);
+    }, [token, user?.id]);
 
     // Get file icon based on type/mimetype
     const getFileIcon = (file) => {
