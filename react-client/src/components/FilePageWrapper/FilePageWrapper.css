@@ -5,6 +5,16 @@
     flex-direction: column;
 }
 
+/* Breadcrumbs Container - Fixed height to prevent layout shift */
+.file-page-breadcrumbs {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+}
+
 .file-page-loading {
     display: flex;
     flex-direction: column;

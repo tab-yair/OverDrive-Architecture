@@ -6,7 +6,6 @@
   display: flex;
   align-items: center;
   height: 100%;
-  padding: 0 16px;
   min-width: 0; /* Allow shrinking */
   flex: 1; /* Take available space */
 }
@@ -85,6 +84,7 @@
   color: var(--text-secondary);
   transition: background-color 0.2s;
   position: relative;
+  z-index: 10; /* Ensure button is above other elements */
 }
 
 .breadcrumb-overflow:hover {
@@ -93,6 +93,7 @@
 
 .breadcrumb-overflow .material-symbols-outlined {
   font-size: 20px;
+  pointer-events: none; /* Allow clicks to pass through to button */
 }
 
 /* Overflow dropdown menu */
@@ -107,7 +108,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 8px 0;
-  z-index: 1000;
+  z-index: 1001; /* Above overflow button */
   animation: fadeIn 0.15s ease-out;
 }
 

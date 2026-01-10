@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import useFiles from '../../hooks/useFiles';
 import { useNavigation } from '../../context/NavigationContext';
 import { FileManager, InfoSidebar } from '../FileManagement';
+import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import './FilePageWrapper.css';
 
 /**
@@ -132,6 +133,11 @@ function FilePageWrapper({
 
     return (
         <div className={`file-page ${className}`}>
+            {/* Breadcrumbs Navigation - First element, aligned with content */}
+            <div className="file-page-breadcrumbs">
+                <Breadcrumbs />
+            </div>
+
             {/* Custom header component removed */}
             {headerComponent}
             

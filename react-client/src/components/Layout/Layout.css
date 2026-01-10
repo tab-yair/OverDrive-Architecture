@@ -10,7 +10,7 @@
 .layout-body {
     display: flex;
     flex: 1;
-    margin-top: 64px; /* Account for fixed navbar height */
+    margin-top: 64px; /* Single-row navbar */
     min-height: calc(100vh - 64px);
 }
 

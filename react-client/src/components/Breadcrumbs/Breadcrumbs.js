@@ -108,9 +108,27 @@ const Breadcrumbs = () => {
   /**
    * Toggle overflow dropdown
    */
-  const toggleOverflow = () => {
+  const toggleOverflow = (e) => {
+    e.stopPropagation();
     setShowOverflow(!showOverflow);
   };
+
+  /**
+   * Close dropdown when clicking outside
+   */
+  useEffect(() => {
+    if (!showOverflow) return;
+
+    const handleClickOutside = (e) => {
+      // Close if clicking outside the breadcrumbs container
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setShowOverflow(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showOverflow]);
 
   /**
    * Calculate which items to show/hide based on available width
