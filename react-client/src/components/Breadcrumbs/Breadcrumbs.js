@@ -110,6 +110,8 @@ const Breadcrumbs = () => {
    */
   const toggleOverflow = (e) => {
     e.stopPropagation();
+    console.log('Toggle overflow clicked, current state:', showOverflow);
+    console.log('Overflow items:', overflowItems);
     setShowOverflow(!showOverflow);
   };
 
@@ -136,7 +138,10 @@ const Breadcrumbs = () => {
    */
   useEffect(() => {
     const calculateOverflow = () => {
+      console.log('Calculating overflow, breadcrumbs.length:', breadcrumbs.length);
+      
       if (!containerRef.current || breadcrumbs.length <= 3) {
+        console.log('No overflow needed');
         setOverflowItems([]);
         return;
       }
@@ -144,8 +149,10 @@ const Breadcrumbs = () => {
       // For long paths: show [Root] > [...] > [Parent] > [Current]
       if (breadcrumbs.length > 4) {
         const hiddenItems = breadcrumbs.slice(1, -2);
+        console.log('Setting overflow items:', hiddenItems);
         setOverflowItems(hiddenItems);
       } else {
+        console.log('Not enough breadcrumbs for overflow');
         setOverflowItems([]);
       }
     };
@@ -161,6 +168,13 @@ const Breadcrumbs = () => {
     ? [breadcrumbs[0], ...breadcrumbs.slice(-2)] // Root + last 2
     : breadcrumbs;
 
+  console.log('Rendering breadcrumbs:', {
+    totalBreadcrumbs: breadcrumbs.length,
+    overflowItemsCount: overflowItems.length,
+    visibleCrumbsCount: visibleCrumbs.length,
+    showOverflow
+  });
+
   return (
     <div className="breadcrumbs" ref={containerRef}>
       <div className="breadcrumbs-path">
@@ -169,35 +183,37 @@ const Breadcrumbs = () => {
             {/* Overflow dropdown trigger */}
             {index === 1 && overflowItems.length > 0 && (
               <>
-                <button
-                  className="breadcrumb-overflow"
-                  onClick={toggleOverflow}
-                  title="Show hidden folders"
-                >
-                  <span className="material-symbols-outlined">more_horiz</span>
-                </button>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    className="breadcrumb-overflow"
+                    onClick={toggleOverflow}
+                    title="Show hidden folders"
+                  >
+                    <span className="material-symbols-outlined">more_horiz</span>
+                  </button>
+                  
+                  {/* Overflow dropdown menu */}
+                  {showOverflow && (
+                    <div className="breadcrumb-overflow-menu">
+                      {overflowItems.map((item) => (
+                        <button
+                          key={item.id}
+                          className="breadcrumb-overflow-item"
+                          onClick={() => {
+                            handleCrumbClick(item);
+                            setShowOverflow(false);
+                          }}
+                        >
+                          <span className="material-symbols-outlined">folder</span>
+                          <span>{item.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <span className="breadcrumb-separator">
                   <span className="material-symbols-outlined">chevron_right</span>
                 </span>
-
-                {/* Overflow dropdown menu */}
-                {showOverflow && (
-                  <div className="breadcrumb-overflow-menu">
-                    {overflowItems.map((item) => (
-                      <button
-                        key={item.id}
-                        className="breadcrumb-overflow-item"
-                        onClick={() => {
-                          handleCrumbClick(item);
-                          setShowOverflow(false);
-                        }}
-                      >
-                        <span className="material-symbols-outlined">folder</span>
-                        <span>{item.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </>
             )}
 

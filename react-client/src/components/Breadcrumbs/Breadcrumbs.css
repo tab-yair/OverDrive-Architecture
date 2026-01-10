@@ -6,15 +6,16 @@
   display: flex;
   align-items: center;
   height: 100%;
-  min-width: 0; /* Allow shrinking */
-  flex: 1; /* Take available space */
+  min-width: 0;
+  flex: 1;
+  overflow: visible; /* Allow dropdown to overflow */
 }
 
 .breadcrumbs-path {
   display: flex;
   align-items: center;
   gap: 4px;
-  overflow: hidden;
+  overflow: visible; /* Changed from hidden to allow dropdown to show */
   position: relative;
 }
 
@@ -83,8 +84,6 @@
   cursor: pointer;
   color: var(--text-secondary);
   transition: background-color 0.2s;
-  position: relative;
-  z-index: 10; /* Ensure button is above other elements */
 }
 
 .breadcrumb-overflow:hover {
@@ -93,23 +92,26 @@
 
 .breadcrumb-overflow .material-symbols-outlined {
   font-size: 20px;
-  pointer-events: none; /* Allow clicks to pass through to button */
+  pointer-events: none;
 }
 
 /* Overflow dropdown menu */
 .breadcrumb-overflow-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: 100%;
   left: 0;
-  min-width: 200px;
-  max-width: 300px;
+  margin-top: 4px;
+  min-width: 220px;
+  max-width: 320px;
   background: var(--surface-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 8px 0;
-  z-index: 1001; /* Above overflow button */
+  z-index: 9999;
   animation: fadeIn 0.15s ease-out;
+  /* Debug - remove later */
+  outline: 2px solid red;
 }
 
 @keyframes fadeIn {
