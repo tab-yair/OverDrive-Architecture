@@ -3,7 +3,6 @@ import useFiles from '../../hooks/useFiles';
 import { useNavigation } from '../../context/NavigationContext';
 import { FileManager, InfoSidebar } from '../FileManagement';
 import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
-import PreviewModal from '../PreviewModal';
 import './FilePageWrapper.css';
 
 /**
@@ -49,7 +48,6 @@ function FilePageWrapper({
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [selectedCount, setSelectedCount] = useState(0);
-    const [previewItem, setPreviewItem] = useState(null);
 
     const defaultFileClick = (file) => {
         console.log(`${pageContext} file clicked:`, file);
@@ -62,24 +60,43 @@ function FilePageWrapper({
      * @param {Object|Array} fileOrFiles - Single file object or array of file objects
      * 
      * Uses selectedCount (from FileManager's onSelectionChange) to determine:
-     * - Open: Use NavigationContext for folders, PreviewModal for PDFs/images
+     * - Open: Navigate folders, open PDFs/images in new tab via download endpoint
      * - Details: Only open sidebar if selectedCount <= 1
      * - Future: Permission checks based on all selected files (most restrictive)
      */
     const defaultAction = (action, fileOrFiles) => {
         console.log(`[FilePageWrapper] ${pageContext} action:`, action, 'Files:', fileOrFiles, 'Selected count:', selectedCount);
         
-        // Handle open action - use NavigationContext for folders, PreviewModal for files
+        // Handle open action - folders navigate, files open in new tab
         if (action === 'open') {
             const item = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
             if (item) {
-                // For PDF and image files, open preview modal
-                if (item.type === 'pdf' || item.type === 'image') {
-                    console.log('[FilePageWrapper] Opening preview for:', item.name);
-                    setPreviewItem(item);
-                } else {
-                    // For folders and other files, use navigation
+                if (item.type === 'folder') {
+                    // Navigate to folder
                     handleOpen(item);
+                } else {
+                    // For all file types (PDF, image, docs), download and open in new tab
+                    const token = localStorage.getItem('token');
+                    const downloadUrl = `http://localhost:3000/api/files/${item.id}/download`;
+                    
+                    // Fetch with auth, then open blob URL in new tab
+                    fetch(downloadUrl, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Download failed');
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const url = URL.createObjectURL(blob);
+                        window.open(url, '_blank');
+                        // Clean up after a delay
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to open file:', err);
+                        alert(`Failed to open ${item.name}`);
+                    });
                 }
             }
             return;
@@ -169,14 +186,6 @@ function FilePageWrapper({
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
             />
-
-            {/* PreviewModal - For PDFs and Images */}
-            {previewItem && (
-                <PreviewModal
-                    item={previewItem}
-                    onClose={() => setPreviewItem(null)}
-                />
-            )}
         </div>
     );
 }
