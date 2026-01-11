@@ -9,7 +9,7 @@ class Preference {
         }
 
         // Validate theme
-        const validThemes = ['light', 'dark'];
+        const validThemes = ['light', 'dark', 'system'];
         if (!validThemes.includes(theme)) {
             throw new Error(`Invalid theme: ${theme}. Must be one of: ${validThemes.join(', ')}`);
         }
@@ -36,7 +36,7 @@ class Preference {
 
         // Validate theme if provided
         if (theme !== undefined) {
-            const validThemes = ['light', 'dark'];
+            const validThemes = ['light', 'dark', 'system'];
             if (!validThemes.includes(theme)) {
                 return `Invalid theme: ${theme}. Must be one of: ${validThemes.join(', ')}`;
             }

@@ -7,7 +7,7 @@ A full-stack, distributed file storage system featuring a Node.js Web API layer 
 OverDrive is a networked file storage system featuring:
 - **Web Server (Node.js)**: Handles JWT-based authentication (Gmail-only), permissions, and file metadata.
 - **Storage Server (C++)**: A high-performance engine for file persistence, featuring custom RLE compression and multi-threaded searching.
-- **Security & Validation**: JWT token authentication, strict email validation, password length checks, and owner-only file access.
+- **Security & Validation**: JWT token authentication, strict email validation, strong password requirements (8+ characters with both letters and numbers), and owner-only file access.
 - **RESTful API**: Clean HTTP interface for managing users and files.
 - **User Features**: Starred files and recently accessed file tracking with automatic interaction recording.
 - **Dockerized Microservices**: Seamlessly orchestrated using Docker Compose.
@@ -50,7 +50,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 | Method | Endpoint | Auth Required | Description |
 |:---:|:---|:---:|:---|
-| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 8+ char password). Fields: `username`, `password`, `firstName`, `profileImage` (required Base64 image), `lastName` (optional, defaults to `null`). **Automatically creates default preferences** |
+| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, password: 8+ chars with letters and numbers). Fields: `username`, `password`, `firstName`, `profileImage` (required Base64 image), `lastName` (optional, defaults to `null`). **Automatically creates default preferences** (theme: light, landingPage: home) |
 | `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details. **Owner**: Returns full profile (id, username, firstName, lastName, profileImage, storageUsed, createdAt, modifiedAt). **Non-owner**: Returns limited public profile (id, firstName, lastName, username, profileImage) |
 | `PATCH` | `/api/users/:id` | ✅ | **Update User Profile**: Update user details. Allowed fields: `password`, `firstName`, `lastName`, `profileImage`. Username cannot be changed. Set `lastName` or `profileImage` to `null` to remove them |
 | `GET` | `/api/users/:id/preference` | ✅ | **Get User Preferences**: Retrieve user's preferences (`theme`, `landingPage`). User can only access their own preferences |
@@ -204,7 +204,7 @@ This ensures every user has preferences available immediately after registration
 | Field | Type | Allowed Values | Default | Description |
 |:---:|:---:|:---:|:---:|:---|
 | `userId` | String (UUID) | - | - | Links preference to its owner (1:1 relationship) |
-| `theme` | String | `"light"`, `"dark"` | `"light"` | UI color scheme preference |
+| `theme` | String | `"light"`, `"dark"`, `"system"` | `"light"` | UI color scheme preference (`"system"` uses device default) |
 | `landingPage` | String | `"home"`, `"storage"` | `"home"` | Default page after login |
 
 ### API Usage
@@ -1992,6 +1992,15 @@ OverDrive/
      If the user enters the username without @gmail.com, it is automatically appended.
      
      Normalization is applied: dots (.) and uppercase letters are ignored or converted to lowercase.
+
+- Password Requirements:
+     
+     Minimum 8 characters.
+     
+     Must contain both letters (a-z, A-Z) and numbers (0-9).
+     
+     Applies to both registration and password updates.
+
 - In-Memory Users: User data resets on Web Server restart (unless persistent store is attached).
 - Search Case-Sensitivity: Search is currently case-sensitive.
 
