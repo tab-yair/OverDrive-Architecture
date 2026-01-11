@@ -3,6 +3,7 @@ import useFiles from '../../hooks/useFiles';
 import { useNavigation } from '../../context/NavigationContext';
 import { FileManager, InfoSidebar } from '../FileManagement';
 import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
+import PreviewModal from '../PreviewModal';
 import './FilePageWrapper.css';
 
 /**
@@ -48,6 +49,7 @@ function FilePageWrapper({
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [selectedCount, setSelectedCount] = useState(0);
+    const [previewItem, setPreviewItem] = useState(null);
 
     const defaultFileClick = (file) => {
         console.log(`${pageContext} file clicked:`, file);
@@ -60,18 +62,25 @@ function FilePageWrapper({
      * @param {Object|Array} fileOrFiles - Single file object or array of file objects
      * 
      * Uses selectedCount (from FileManager's onSelectionChange) to determine:
-     * - Open: Use NavigationContext to open files/folders
+     * - Open: Use NavigationContext for folders, PreviewModal for PDFs/images
      * - Details: Only open sidebar if selectedCount <= 1
      * - Future: Permission checks based on all selected files (most restrictive)
      */
     const defaultAction = (action, fileOrFiles) => {
         console.log(`[FilePageWrapper] ${pageContext} action:`, action, 'Files:', fileOrFiles, 'Selected count:', selectedCount);
         
-        // Handle open action - use NavigationContext
+        // Handle open action - use NavigationContext for folders, PreviewModal for files
         if (action === 'open') {
             const item = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
             if (item) {
-                handleOpen(item);
+                // For PDF and image files, open preview modal
+                if (item.type === 'pdf' || item.type === 'image') {
+                    console.log('[FilePageWrapper] Opening preview for:', item.name);
+                    setPreviewItem(item);
+                } else {
+                    // For folders and other files, use navigation
+                    handleOpen(item);
+                }
             }
             return;
         }
@@ -160,6 +169,14 @@ function FilePageWrapper({
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
             />
+
+            {/* PreviewModal - For PDFs and Images */}
+            {previewItem && (
+                <PreviewModal
+                    item={previewItem}
+                    onClose={() => setPreviewItem(null)}
+                />
+            )}
         </div>
     );
 }
