@@ -155,7 +155,8 @@ function FilePageWrapper({
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
                 onFileClick={onFileClick || defaultFileClick}
-                onFileDoubleClick={handleOpen}
+                // Double-click should mirror the default open action (folders navigate, files preview)
+                onFileDoubleClick={(file) => defaultAction('open', file)}
                 onAction={onAction || defaultAction}
                 isOwner={isOwner}
                 permissionLevel={permissionLevel}

@@ -141,6 +141,16 @@ const FileRow = ({
         const action = file.lastActions[0]; // Show most recent action
         return formatRecentActivity(action);
       }
+
+      // Fallback: use lastEditedAt / lastViewedAt if lastActions not provided by server
+      if (file.lastEditedAt || file.lastViewedAt) {
+        const derivedAction = {
+          date: file.lastEditedAt || file.lastViewedAt,
+          action: file.lastEditedAt ? 'Edit' : 'Open',
+        };
+        return formatRecentActivity(derivedAction);
+      }
+
       return getFallbackValue('lastActions');
     }
 

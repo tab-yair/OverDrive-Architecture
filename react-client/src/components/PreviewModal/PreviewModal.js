@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { filesApi } from '../../services/api';
+import { useFilesContext } from '../../context/FilesContext';
 import './PreviewModal.css';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -12,6 +12,8 @@ const PreviewModal = ({ fileId, fileName, fileType, onClose }) => {
     const iframeRef = useRef(null);
     const imageContainerRef = useRef(null);
     
+    const { fetchFileContent } = useFilesContext();
+    
     const isImage = fileType === 'image';
     const isPdf = fileType === 'pdf';
 
@@ -23,8 +25,9 @@ const PreviewModal = ({ fileId, fileName, fileType, onClose }) => {
             try {
                 const token = localStorage.getItem('token');
                 
-                // IMPORTANT: First, trigger VIEW interaction to update lastViewedAt
-                await filesApi.getFile(token, fileId);
+                // IMPORTANT: Trigger VIEW interaction and update FilesContext
+                // This updates lastViewedAt on server AND in local store
+                await fetchFileContent(fileId);
                 
                 // Then download the file content for preview
                 const response = await fetch(`http://localhost:3000/api/files/${fileId}/download`, {
@@ -68,7 +71,7 @@ const PreviewModal = ({ fileId, fileName, fileType, onClose }) => {
                 URL.revokeObjectURL(blobUrl);
             }
         };
-    }, [fileId]);
+    }, [fileId, fetchFileContent]);
 
     // Handle Escape key
     useEffect(() => {

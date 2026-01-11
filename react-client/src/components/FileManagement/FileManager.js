@@ -326,7 +326,7 @@ const FileManager = ({
               /* Mixed layout for Recent/Shared - with time grouping */
               (() => {
                 if (pageContext === 'Recent' || pageContext === 'Shared') {
-                  const dateField = pageContext === 'Recent' ? 'lastActions' : 'shareDate';
+                  const dateField = pageContext === 'Recent' ? 'activity' : 'shareDate';
                   const timeGroups = groupFilesByTime(regularFiles, dateField);
                   
                   return Object.entries(timeGroups).map(([groupName, groupFiles]) =>
@@ -426,7 +426,7 @@ const FileManager = ({
             /* Mixed layout for Recent/Shared - with time grouping in grid */
             (() => {
               if (pageContext === 'Recent' || pageContext === 'Shared') {
-                const dateField = pageContext === 'Recent' ? 'lastActions' : 'shareDate';
+                const dateField = pageContext === 'Recent' ? 'activity' : 'shareDate';
                 const timeGroups = groupFilesByTime(regularFiles, dateField);
                 
                 return Object.entries(timeGroups).map(([groupName, groupFiles]) =>

@@ -77,6 +77,7 @@ export function FilesProvider({ children }) {
             
             // Interaction tracking
             lastInteractionType: file.lastInteractionType || null, // VIEW | EDIT
+            lastActions: file.lastActions || null, // Array of {date, action} for Recent page
             
             // Shared files specific
             sharedPermissionLevel: file.sharedPermissionLevel || null, // VIEWER | EDITOR
@@ -98,8 +99,15 @@ export function FilesProvider({ children }) {
                 const normalized = normalizeFile(file);
                 const existing = newMap.get(file.id);
                 
-                // Merge: new data overwrites old
-                newMap.set(file.id, existing ? { ...existing, ...normalized } : normalized);
+                // Merge: new data overwrites old, but keep activity fields if server didn't return them (avoid null erasing)
+                const merged = existing ? {
+                    ...existing,
+                    ...normalized,
+                    lastViewedAt: normalized.lastViewedAt ?? existing.lastViewedAt ?? null,
+                    lastEditedAt: normalized.lastEditedAt ?? existing.lastEditedAt ?? null,
+                } : normalized;
+
+                newMap.set(file.id, merged);
             });
             return newMap;
         });
@@ -165,11 +173,21 @@ export function FilesProvider({ children }) {
         try {
             // This endpoint records VIEW interaction and updates lastViewedAt
             const file = await filesApi.getFile(token, fileId);
+
+            // If server didn't return activity timestamps, ensure we keep it in Recent
+            const nowIso = new Date().toISOString();
+            const withActivity = {
+                ...file,
+                lastViewedAt: file.lastViewedAt || nowIso,
+                lastActions: (file.lastActions && file.lastActions.length > 0)
+                    ? file.lastActions
+                    : [{ date: file.lastEditedAt || file.lastViewedAt || nowIso, action: file.lastEditedAt ? 'Edit' : 'Open' }]
+            };
             
-            // Update store with fresh data including content
-            updateFilesInStore([file]);
+            // Update store with fresh data including content and activity
+            updateFilesInStore([withActivity]);
             
-            return { file, error: null };
+            return { file: withActivity, error: null };
         } catch (error) {
             const errorMsg = error.message || 'Failed to fetch file';
             setErrors(prev => ({ ...prev, [fileId]: errorMsg }));
@@ -294,11 +312,13 @@ export function FilesProvider({ children }) {
         } else if (endpoint === 'shared') {
             filtered = allFiles.filter(f => f.sharedPermissionLevel && !f.isTrashed);
         } else if (endpoint === 'recent') {
-            filtered = allFiles.filter(f => f.lastViewedAt || f.lastEditedAt).sort((a, b) => {
-                const aDate = new Date(a.lastEditedAt || a.lastViewedAt);
-                const bDate = new Date(b.lastEditedAt || b.lastViewedAt);
-                return bDate - aDate;
-            });
+            filtered = allFiles
+                .filter(f => !f.isTrashed && (f.lastViewedAt || f.lastEditedAt))
+                .sort((a, b) => {
+                    const aDate = new Date(a.lastEditedAt || a.lastViewedAt || 0);
+                    const bDate = new Date(b.lastEditedAt || b.lastViewedAt || 0);
+                    return bDate - aDate;
+                });
         } else if (endpoint === 'starred') {
             filtered = allFiles.filter(f => f.isStarred && !f.isTrashed);
         } else if (endpoint === 'trash') {
@@ -318,7 +338,7 @@ export function FilesProvider({ children }) {
                     ...file,
                     location: {
                         parentId: file.parentId,
-                        parentName: parent?.name || 'Unknown Folder',
+                        parentName: parent?.name || file.location?.parentName || 'Unknown Folder',
                         isRoot: false
                     }
                 };
@@ -329,7 +349,7 @@ export function FilesProvider({ children }) {
                 ...file,
                 location: {
                     parentId: null,
-                    parentName: null,
+                    parentName: file.location?.parentName || null,
                     isRoot: true
                 }
             };

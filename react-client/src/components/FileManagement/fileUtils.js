@@ -542,7 +542,7 @@ export const getFallbackValue = (key) => {
  * - Older: More than 30 days ago
  * 
  * @param {Array} files - Array of file objects
- * @param {string} dateField - Which date field to use ('lastModified', 'shareDate', 'lastActions')
+ * @param {string} dateField - Which date field to use ('lastModified', 'shareDate', 'lastActions', 'activity')
  * @returns {Object} Grouped files: { Today: [...], Yesterday: [...], ... }
  */
 export const groupFilesByTime = (files, dateField = 'lastModified') => {
@@ -569,7 +569,12 @@ export const groupFilesByTime = (files, dateField = 'lastModified') => {
   files.forEach(file => {
     // Get the date to use for grouping
     let fileDate = null;
-    if (dateField === 'lastActions' && file.lastActions && file.lastActions.length > 0) {
+    if (dateField === 'activity') {
+      // Prefer lastEditedAt, then lastViewedAt (NO lastModified fallback - doesn't exist)
+      fileDate = file.lastEditedAt
+        ? new Date(file.lastEditedAt)
+        : (file.lastViewedAt ? new Date(file.lastViewedAt) : null);
+    } else if (dateField === 'lastActions' && file.lastActions && file.lastActions.length > 0) {
       fileDate = new Date(file.lastActions[0].date);
     } else if (dateField === 'shareDate' && file.shareDate) {
       fileDate = new Date(file.shareDate);
@@ -605,7 +610,14 @@ export const groupFilesByTime = (files, dateField = 'lastModified') => {
       let dateA = null;
       let dateB = null;
 
-      if (dateField === 'lastActions') {
+      if (dateField === 'activity') {
+        dateA = a.lastEditedAt
+          ? new Date(a.lastEditedAt)
+          : (a.lastViewedAt ? new Date(a.lastViewedAt) : new Date(0));
+        dateB = b.lastEditedAt
+          ? new Date(b.lastEditedAt)
+          : (b.lastViewedAt ? new Date(b.lastViewedAt) : new Date(0));
+      } else if (dateField === 'lastActions') {
         dateA = a.lastActions && a.lastActions.length > 0 ? new Date(a.lastActions[0].date) : new Date(0);
         dateB = b.lastActions && b.lastActions.length > 0 ? new Date(b.lastActions[0].date) : new Date(0);
       } else if (dateField === 'shareDate') {
