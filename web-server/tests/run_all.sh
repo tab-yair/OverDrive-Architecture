@@ -33,7 +33,7 @@ echo "=========================================="
 echo ""
 
 # Loop through all test_*.sh files in tests folder
-for f in web-server/tests/test_*.sh; do
+for f in ./test_*.sh; do
     # Skip the framework file
     [[ "$(basename "$f")" == "test_framework.sh" ]] && continue
     
