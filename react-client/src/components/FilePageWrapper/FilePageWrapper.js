@@ -85,13 +85,17 @@ function FilePageWrapper({
                     })
                     .then(response => {
                         if (!response.ok) throw new Error('Download failed');
-                        return response.blob();
+                        // Get Content-Type from response to preserve it
+                        const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
+                        return response.blob().then(blob => ({ blob, contentType }));
                     })
-                    .then(blob => {
-                        const url = URL.createObjectURL(blob);
+                    .then(({ blob, contentType }) => {
+                        // Create blob with correct MIME type
+                        const typedBlob = new Blob([blob], { type: contentType });
+                        const url = URL.createObjectURL(typedBlob);
                         window.open(url, '_blank');
                         // Clean up after a delay
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        setTimeout(() => URL.revokeObjectURL(url), 10000);
                     })
                     .catch(err => {
                         console.error('Failed to open file:', err);

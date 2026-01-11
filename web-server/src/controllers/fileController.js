@@ -316,7 +316,8 @@ const downloadFile = asyncHandler(async (req, res) => {
     if (result.type === 'file') {
         // Single file download: stream binary with proper headers
         res.setHeader('Content-Type', result.contentType);
-        res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+        // Use 'inline' to display in browser, not force download
+        res.setHeader('Content-Disposition', `inline; filename="${result.fileName}"`);
         res.setHeader('Content-Length', result.size);
         res.status(200).send(result.buffer);
     } else if (result.type === 'folder') {
