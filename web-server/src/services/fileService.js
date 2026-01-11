@@ -1177,35 +1177,77 @@ class FileService {
 
     // Helper: Download single file with proper decoding
     async _downloadSingleFile(file) {
+        console.log('[DEBUG] _downloadSingleFile START:', { 
+            fileId: file.id, 
+            fileName: file.name, 
+            fileType: file.type 
+        });
+
         // Fetch content from storage server (uncompressed)
         const response = await storageClient.get(file.id);
         if (!response.success) {
             throw new Error(response.error || "Failed to retrieve file from storage");
         }
 
-        const content = response.data || '';
+        let content = response.data || '';
+        
+        // IMPORTANT: Storage may return JSON-escaped string - unescape it
+        if (content.startsWith('"') && content.endsWith('"')) {
+            try {
+                content = JSON.parse(content);
+            } catch (e) {
+                console.warn('[DEBUG] Failed to JSON.parse content, using as-is');
+            }
+        }
+        
+        console.log('[DEBUG] Content from storage:', {
+            contentType: typeof content,
+            contentLength: content.length,
+            firstChars: content.substring(0, 100),
+            isDataURL: content.startsWith('data:')
+        });
 
         // Decode based on file type
         let buffer;
         let contentType;
         
-        if (file.type === 'image') {
-            // Images: Base64 → Binary
-            buffer = Buffer.from(content, 'base64');
-            contentType = 'image/jpeg'; // Default, could be enhanced to detect image type
-        } else if (file.type === 'pdf') {
-            // PDFs: Base64 → Binary
-            buffer = Buffer.from(content, 'base64');
-            contentType = 'application/pdf';
+        if (file.type === 'image' || file.type === 'pdf') {
+            // Images & PDFs may be stored as data URLs: data:image/png;base64,iVBORw0KG...
+            if (content.startsWith('data:')) {
+                console.log('[DEBUG] Detected data URL format');
+                // Extract MIME type and base64 data
+                const match = content.match(/^data:([^;]+);base64,(.+)$/);
+                if (match) {
+                    contentType = match[1]; // e.g., "image/png" or "application/pdf"
+                    const base64Data = match[2];
+                    console.log('[DEBUG] Extracted MIME:', contentType, 'Base64 length:', base64Data.length);
+                    buffer = Buffer.from(base64Data, 'base64');
+                } else {
+                    throw new Error('Invalid data URL format');
+                }
+            } else {
+                // Plain base64 (legacy format)
+                console.log('[DEBUG] Plain base64 format');
+                buffer = Buffer.from(content, 'base64');
+                contentType = file.type === 'pdf' ? 'application/pdf' : 'image/jpeg';
+            }
         } else if (file.type === 'docs') {
             // Docs: Plain text → UTF8
+            console.log('[DEBUG] Converting text to buffer');
             buffer = Buffer.from(content, 'utf8');
             contentType = 'text/plain';
         } else {
             // Fallback for unknown types
+            console.log('[DEBUG] Unknown type, treating as text');
             buffer = Buffer.from(content, 'utf8');
             contentType = 'application/octet-stream';
         }
+
+        console.log('[DEBUG] _downloadSingleFile END:', {
+            bufferSize: buffer.length,
+            contentType,
+            firstBytes: buffer.slice(0, 20).toString('hex')
+        });
 
         return {
             type: 'file',

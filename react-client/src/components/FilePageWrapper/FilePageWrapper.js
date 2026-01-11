@@ -3,6 +3,7 @@ import useFiles from '../../hooks/useFiles';
 import { useNavigation } from '../../context/NavigationContext';
 import { FileManager, InfoSidebar } from '../FileManagement';
 import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
+import PreviewModal from '../PreviewModal/PreviewModal';
 import './FilePageWrapper.css';
 
 /**
@@ -48,6 +49,7 @@ function FilePageWrapper({
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [selectedCount, setSelectedCount] = useState(0);
+    const [previewFile, setPreviewFile] = useState(null);
 
     const defaultFileClick = (file) => {
         console.log(`${pageContext} file clicked:`, file);
@@ -75,32 +77,8 @@ function FilePageWrapper({
                     // Navigate to folder
                     handleOpen(item);
                 } else {
-                    // For all file types (PDF, image, docs), download and open in new tab
-                    const token = localStorage.getItem('token');
-                    const downloadUrl = `http://localhost:3000/api/files/${item.id}/download`;
-                    
-                    // Fetch with auth, then open blob URL in new tab
-                    fetch(downloadUrl, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Download failed');
-                        // Get Content-Type from response to preserve it
-                        const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
-                        return response.blob().then(blob => ({ blob, contentType }));
-                    })
-                    .then(({ blob, contentType }) => {
-                        // Create blob with correct MIME type
-                        const typedBlob = new Blob([blob], { type: contentType });
-                        const url = URL.createObjectURL(typedBlob);
-                        window.open(url, '_blank');
-                        // Clean up after a delay
-                        setTimeout(() => URL.revokeObjectURL(url), 10000);
-                    })
-                    .catch(err => {
-                        console.error('Failed to open file:', err);
-                        alert(`Failed to open ${item.name}`);
-                    });
+                    // For files (PDF, image, docs), open in preview modal
+                    setPreviewFile(item);
                 }
             }
             return;
@@ -190,6 +168,16 @@ function FilePageWrapper({
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
             />
+            
+            {/* Preview Modal */}
+            {previewFile && (
+                <PreviewModal
+                    fileId={previewFile.id}
+                    fileName={previewFile.name}
+                    fileType={previewFile.type}
+                    onClose={() => setPreviewFile(null)}
+                />
+            )}
         </div>
     );
 }

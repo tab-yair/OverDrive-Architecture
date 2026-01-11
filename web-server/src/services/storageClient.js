@@ -161,6 +161,15 @@ class StorageServerClient {
                         // Parse status code
                         const statusCode = parseInt(statusLine);
                         
+                        console.log('[DEBUG] storageClient response:', {
+                            statusCode,
+                            statusLine,
+                            hasContent: content !== undefined,
+                            contentLength: content ? content.length : 0,
+                            firstChars: content ? content.substring(0, 100) : 'N/A',
+                            lastChars: content ? content.substring(content.length - 100) : 'N/A'
+                        });
+                        
                         if (!isNaN(statusCode)) {
                             resolve({
                                 success: statusCode >= 200 && statusCode < 300,

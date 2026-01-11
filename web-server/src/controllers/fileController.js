@@ -310,14 +310,25 @@ const restoreAllTrash = asyncHandler(async (req, res) => {
  */
 const downloadFile = asyncHandler(async (req, res) => {
     const { id } = req.params;
+    
+    console.log('[DEBUG] downloadFile START:', { fileId: id, userId: req.userId });
 
     const result = await fileService.downloadFile({ fileId: id, userId: req.userId });
 
     if (result.type === 'file') {
+        console.log('[DEBUG] Sending file response:', {
+            fileName: result.fileName,
+            contentType: result.contentType,
+            bufferSize: result.size,
+            firstBytes: result.buffer.slice(0, 20).toString('hex')
+        });
+        
         // Single file download: stream binary with proper headers
         res.setHeader('Content-Type', result.contentType);
         // Use 'inline' to display in browser, not force download
-        res.setHeader('Content-Disposition', `inline; filename="${result.fileName}"`);
+        // Encode filename to handle special characters (Hebrew, etc.)
+        const encodedFileName = encodeURIComponent(result.fileName);
+        res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodedFileName}`);
         res.setHeader('Content-Length', result.size);
         res.status(200).send(result.buffer);
     } else if (result.type === 'folder') {
