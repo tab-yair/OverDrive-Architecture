@@ -398,7 +398,15 @@ export const filesApi = {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.message || 'Failed to update file');
         }
-        return response.json();
+        
+        // Check if response has content (200) or is empty (204)
+        if (response.status === 204) {
+            return { success: true };
+        }
+        
+        // Try to parse JSON, return success if empty
+        const text = await response.text();
+        return text ? JSON.parse(text) : { success: true };
     },
 
     /**

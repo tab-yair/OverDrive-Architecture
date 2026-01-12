@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import useFiles from '../../hooks/useFiles';
 import { useNavigation } from '../../context/NavigationContext';
+import { useAuth } from '../../context/AuthContext';
 import { FileManager, InfoSidebar } from '../FileManagement';
 import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import PreviewModal from '../PreviewModal/PreviewModal';
+import TextDocumentViewer from '../TextDocumentViewer/TextDocumentViewer';
 import './FilePageWrapper.css';
 
 /**
@@ -40,6 +42,7 @@ function FilePageWrapper({
     // Always call hooks unconditionally (React rule)
     const hookResult = useFiles(endpoint || 'mydrive'); // Provide default to avoid conditional hook call
     const { handleOpen } = useNavigation();
+    const { user } = useAuth();
     
     // Use custom files/loading if provided, otherwise use hook result
     const files = customFiles !== undefined ? customFiles : hookResult.files;
@@ -169,13 +172,27 @@ function FilePageWrapper({
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
             />
-            
-            {/* Preview Modal */}
-            {previewFile && (
+            {/* Preview Modal for images and PDFs */}
+            {previewFile && (previewFile.type === 'image' || previewFile.type === 'pdf') && (
                 <PreviewModal
                     fileId={previewFile.id}
                     fileName={previewFile.name}
                     fileType={previewFile.type}
+                    onClose={() => setPreviewFile(null)}
+                />
+            )}
+            
+            {/* Text Document Viewer for docs */}
+            {previewFile && previewFile.type === 'docs' && (
+                <TextDocumentViewer
+                    fileId={previewFile.id}
+                    fileName={previewFile.name}
+                    permissionLevel={
+                        // Determine permission level from file
+                        previewFile.ownerId === user?.id 
+                            ? 'owner' 
+                            : (previewFile.sharedPermissionLevel?.toLowerCase() || permissionLevel)
+                    }
                     onClose={() => setPreviewFile(null)}
                 />
             )}

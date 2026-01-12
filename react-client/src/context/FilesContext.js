@@ -215,9 +215,11 @@ export function FilesProvider({ children }) {
         try {
             const result = await filesApi.updateFile(token, fileId, updates);
             
-            // Sync with server response
-            if (result) {
-                updateFilesInStore([result]);
+            // After successful PATCH (204 No Content), fetch fresh data from server
+            // This ensures we get server-generated fields like lastEditedAt, lastInteractionType
+            const freshFile = await filesApi.getFile(token, fileId);
+            if (freshFile) {
+                updateFilesInStore([freshFile]);
             }
             
             // If content was updated, storage may have changed
