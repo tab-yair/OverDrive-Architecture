@@ -53,7 +53,6 @@ function AccountSettingsPage() {
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                // We set the Base64 string directly so it can be sent to the server later
                 setProfileImage(reader.result);
             };
             reader.readAsDataURL(file);
@@ -122,8 +121,9 @@ function AccountSettingsPage() {
             setPasswordError('New password is required');
             return;
         }
-        if (newPassword.length < 6) {
-            setPasswordError('New password must be at least 6 characters');
+        // FIXED: Aligned with server (8 chars minimum based on userService.js)
+        if (newPassword.length < 8) {
+            setPasswordError('New password must be at least 8 characters');
             return;
         }
         if (newPassword !== confirmPassword) {
@@ -159,10 +159,12 @@ function AccountSettingsPage() {
 
     return (
         <div className="account-settings">
+            {/* Profile Section */}
             <section className="settings-section">
                 <h2 className="settings-section-title">Profile</h2>
                 <div className="settings-section-content">
                     <div className="profile-settings">
+                        {/* Profile photo */}
                         <div className="profile-photo-section">
                             <div className="profile-photo-container">
                                 {profileImage ? (
@@ -204,6 +206,7 @@ function AccountSettingsPage() {
                             )}
                         </div>
 
+                        {/* Profile fields */}
                         <div className="profile-fields">
                             <div className="profile-field">
                                 <label className="profile-field-label">First name</label>
@@ -285,6 +288,7 @@ function AccountSettingsPage() {
                 </div>
             </section>
 
+            {/* Security Section */}
             <section className="settings-section">
                 <h2 className="settings-section-title">Security</h2>
                 <div className="settings-section-content">
@@ -318,6 +322,7 @@ function AccountSettingsPage() {
                                         type="button"
                                         className="password-toggle-btn"
                                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                        aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
                                     >
                                         <span className="material-symbols-outlined">
                                             {showCurrentPassword ? 'visibility_off' : 'visibility'}
@@ -340,6 +345,7 @@ function AccountSettingsPage() {
                                         type="button"
                                         className="password-toggle-btn"
                                         onClick={() => setShowNewPassword(!showNewPassword)}
+                                        aria-label={showNewPassword ? 'Hide password' : 'Show password'}
                                     >
                                         <span className="material-symbols-outlined">
                                             {showNewPassword ? 'visibility_off' : 'visibility'}
@@ -362,6 +368,7 @@ function AccountSettingsPage() {
                                         type="button"
                                         className="password-toggle-btn"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                                     >
                                         <span className="material-symbols-outlined">
                                             {showConfirmPassword ? 'visibility_off' : 'visibility'}

@@ -54,9 +54,9 @@ function Register() {
             return;
         }
 
-        // 2. Username Length Validation (Gmail style)
-        if (formData.username.length < 6 || formData.username.length > 30) {
-            setError('Invalid username: must be between 6 and 30 characters');
+        // 2. Password Length Validation - Aligned with Server (8 chars)
+        if (formData.password.length < 8) {
+            setError('Password must be at least 8 characters');
             return;
         }
 
@@ -65,7 +65,7 @@ function Register() {
                 username: formData.username,
                 password: formData.password,
                 firstName: formData.firstName,
-                lastName: formData.lastName,
+                lastName: formData.lastName || null,
                 profileImage: previewUrl || DEFAULT_IMAGE 
             };
 
@@ -95,13 +95,12 @@ function Register() {
                         <input name="firstName" type="text" placeholder="First Name" value={formData.firstName} onChange={handleChange} required />
                     </div>
                     <div className="input-group">
-                        <input name="lastName" type="text" placeholder="Last Name" value={formData.lastName} onChange={handleChange} required />
+                        <input name="lastName" type="text" placeholder="Last Name (Optional)" value={formData.lastName} onChange={handleChange} />
                     </div>
                     <div className="input-group">
                         <input name="username" type="text" placeholder="Username" value={formData.username} onChange={handleChange} required />
                     </div>
                     
-                    {/* Password Field with Toggle */}
                     <div className="input-group password-group">
                         <input 
                             name="password" 
@@ -122,7 +121,6 @@ function Register() {
                         </button>
                     </div>
 
-                    {/* Confirm Password Field with Toggle */}
                     <div className="input-group password-group">
                         <input 
                             name="confirmPassword" 
