@@ -3,10 +3,12 @@ import useFiles from '../../hooks/useFiles';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useDownload } from '../../hooks/useDownload';
+import { useRename } from '../../hooks/useRename';
 import { FileManager, InfoSidebar } from '../FileManagement';
 import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import PreviewModal from '../PreviewModal/PreviewModal';
 import TextDocumentViewer from '../TextDocumentViewer/TextDocumentViewer';
+import RenameModal from '../RenameModal/RenameModal';
 import './FilePageWrapper.css';
 
 /**
@@ -18,7 +20,7 @@ import './FilePageWrapper.css';
  * @param {string} props.endpoint - API endpoint type: 'mydrive', 'shared', 'recent', 'trash', 'starred' (optional if customFiles provided)
  * @param {Array} props.customFiles - Custom files array (optional, overrides endpoint)
  * @param {boolean} props.customLoading - Custom loading state (optional, overrides endpoint loading)
-// ...existing code...
+ * @param {React.Component} props.headerComponent - Custom header component (optional)
  * @param {string} props.pageContext - Display context for FileManager (e.g., 'MyDrive', 'Shared')
  * @param {boolean} props.isOwner - Whether user is the owner of displayed files
  * @param {string} props.permissionLevel - Permission level: 'owner', 'editor', 'viewer'
@@ -45,6 +47,7 @@ function FilePageWrapper({
     const { handleOpen } = useNavigation();
     const { user } = useAuth();
     const { downloadFile, downloadMultiple } = useDownload();
+    const { renameFile } = useRename();
     
     // Use custom files/loading if provided, otherwise use hook result
     const files = customFiles !== undefined ? customFiles : hookResult.files;
@@ -55,9 +58,18 @@ function FilePageWrapper({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [selectedCount, setSelectedCount] = useState(0);
     const [previewFile, setPreviewFile] = useState(null);
+    const [renameFile_modal, setRenameFile_modal] = useState(null);
+
+    console.log('🔄 FilePageWrapper render:', { 
+      pageContext,
+      filesCount: files?.length || 0,
+      loading,
+      endpoint,
+      timestamp: new Date().toISOString()
+    });
 
     const defaultFileClick = (file) => {
-        console.log(`${pageContext} file clicked:`, file);
+        console.log(`📝 ${pageContext} file clicked:`, file);
         // TODO: Navigate to file details or open file
     };
 
@@ -123,6 +135,23 @@ function FilePageWrapper({
                 downloadFile(fileOrFiles).catch(err => {
                     console.error('Download failed:', err);
                 });
+            }
+            return;
+        }
+        
+        // Handle rename action - only for single file selection
+        if (action === 'rename') {
+            console.log('[FilePageWrapper] Rename action triggered');
+            
+            // Only allow rename when exactly 1 item is selected
+            const file = Array.isArray(fileOrFiles) 
+                ? (fileOrFiles.length === 1 ? fileOrFiles[0] : null)
+                : fileOrFiles;
+            
+            if (file) {
+                setRenameFile_modal(file);
+            } else {
+                console.warn('[FilePageWrapper] Rename requires exactly 1 file selected');
             }
             return;
         }
@@ -211,6 +240,19 @@ function FilePageWrapper({
                             : (previewFile.sharedPermissionLevel?.toLowerCase() || permissionLevel)
                     }
                     onClose={() => setPreviewFile(null)}
+                />
+            )}
+            
+            {/* Rename Modal */}
+            {renameFile_modal && (
+                <RenameModal
+                    file={renameFile_modal}
+                    onRename={renameFile}
+                    onClose={() => {
+                        setRenameFile_modal(null);
+                        // Refetch after rename to update file list
+                        setTimeout(() => refetch(), 300);
+                    }}
                 />
             )}
         </div>

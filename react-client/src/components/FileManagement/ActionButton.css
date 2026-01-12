@@ -106,17 +106,13 @@
   display: block;
   transition: opacity var(--transition-normal);
   opacity: var(--opacity-visible);
+  /* Icons use currentColor from SVG or theme-aware colors - no filters needed */
+  color: var(--text-secondary);
 }
 
-/* Dark mode - make icons visible (except star and share which have currentColor) */
-[data-theme="dark"] .action-button-icon:not(.star-icon):not(.share-icon) {
-  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
-}
-
-/* Star and share icons should maintain their natural color - no filter */
-.action-button-icon.star-icon,
-.action-button-icon.share-icon {
-  filter: none;
+/* Dark mode - icons automatically adjust via currentColor */
+[data-theme="dark"] .action-button-icon {
+  color: var(--text-secondary);
 }
 
 .action-button:hover:not(.disabled) .action-button-icon {

@@ -424,10 +424,16 @@ class FileService {
                     if (!isStarred && fileIsStarred) continue;
                 }
 
+                // Get user's effective permission level (strongest between direct and inherited)
+                const { permissionService } = require('./permissionService');
+                const permission = await permissionService._getEffectivePermission(userId, fileId);
+                const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+
                 // Get user metadata
                 const metadata = await userFileMetadataStore.get(userId, fileId);
                 results.push({
                     ...file,
+                    permissionLevel,
                     isStarred: metadata ? metadata.isStarred : false,
                     lastViewedAt: metadata ? metadata.lastViewedAt : null,
                     lastEditedAt: metadata ? metadata.lastEditedAt : null
@@ -456,7 +462,22 @@ class FileService {
             
             const hasPermission = await this.checkPermission({ userId, fileId: file.id, action: 'Read' });
             if (hasPermission) {
-                accessibleFiles.push(file);
+                // Get user's effective permission level (strongest between direct and inherited)
+                const { permissionService } = require('./permissionService');
+                const permission = await permissionService._getEffectivePermission(userId, file.id);
+                const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+                
+                // Get user-specific metadata
+                const metadata = await userFileMetadataStore.get(userId, file.id);
+                
+                accessibleFiles.push({
+                    ...file,
+                    permissionLevel,
+                    isStarred: metadata?.isStarred || false,
+                    lastViewedAt: metadata?.lastViewedAt || null,
+                    lastEditedAt: metadata?.lastEditedAt || null,
+                    lastInteractionType: metadata?.lastInteractionType || null
+                });
             }
         }
 
@@ -521,14 +542,22 @@ class FileService {
             await userFileMetadataStore.recordView(userId, fileId);
         }
 
+        // Get user's effective permission level (strongest between direct and inherited)
+        const { permissionService } = require('./permissionService');
+        const permission = await permissionService._getEffectivePermission(userId, fileId);
+        const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+
         // Get user-specific metadata after recording the view (if applicable)
         // Includes: isStarred, lastViewedAt, lastEditedAt, lastInteractionType, 
         // viewCount, editCount, createdAt, modifiedAt
         const metadata = await userFileMetadataStore.get(userId, fileId);
 
-        // Helper to attach all metadata fields
+        // Helper to attach all metadata fields including permission level
         const attachMetadata = (fileObj) => {
             const result = { ...fileObj };
+            
+            // Add permission level
+            result.permissionLevel = permissionLevel;
             
             // Add all user-specific metadata fields if metadata exists
             if (metadata) {
@@ -608,8 +637,14 @@ class FileService {
                 // Check permission
                 const hasPermission = await this.checkPermission({ userId, fileId: file.id, action: 'Read' });
                 if (hasPermission) {
+                    // Get user's effective permission level (strongest between direct and inherited)
+                    const { permissionService } = require('./permissionService');
+                    const permission = await permissionService._getEffectivePermission(userId, file.id);
+                    const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+                    
                     files.push({
                         ...file,
+                        permissionLevel,
                         isStarred: metadata.isStarred,
                         lastViewedAt: metadata.lastViewedAt,
                         lastEditedAt: metadata.lastEditedAt,
@@ -650,8 +685,14 @@ class FileService {
                 // Check permission
                 const hasPermission = await this.checkPermission({ userId, fileId: file.id, action: 'Read' });
                 if (hasPermission) {
+                    // Get user's effective permission level (strongest between direct and inherited)
+                    const { permissionService } = require('./permissionService');
+                    const permission = await permissionService._getEffectivePermission(userId, file.id);
+                    const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+                    
                     files.push({
                         ...file,
+                        permissionLevel,
                         isStarred: metadata.isStarred,
                         lastViewedAt: metadata.lastViewedAt,
                         lastEditedAt: metadata.lastEditedAt,
@@ -963,7 +1004,11 @@ class FileService {
                 }
                 
                 if (isTopLevel) {
-                    trashItems.push(file);
+                    // User is always OWNER for trash items (only owners can trash globally)
+                    trashItems.push({
+                        ...file,
+                        permissionLevel: 'OWNER'
+                    });
                 }
             }
         }

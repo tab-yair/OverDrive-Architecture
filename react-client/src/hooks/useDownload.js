@@ -295,7 +295,7 @@ export function useDownload() {
             // ═══ STEP 2: SMART EMPTY HANDLING ═══
             if (allFiles.length === 0) {
                 // Only show error if EVERYTHING is empty
-                alert('No files to download (all folders are empty).');
+                alert('The selected folder is empty and contains no files to download.');
                 return;
             }
             // If some files exist, silently skip empty folders and continue

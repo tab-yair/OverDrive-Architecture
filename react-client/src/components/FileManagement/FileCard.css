@@ -100,11 +100,13 @@
   height: 64px;
   object-fit: contain;
   transition: transform var(--transition-normal);
+  /* Icons use currentColor from SVG or have proper colors - no filters needed */
+  color: var(--text-secondary);
 }
 
-/* Dark mode - make icons visible */
-[data-theme="dark"] .file-card-icon:not(.folder-icon) {
-  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+/* Dark mode - icons automatically adjust via currentColor */
+[data-theme="dark"] .file-card-icon {
+  color: var(--text-secondary);
 }
 
 .file-card:hover .file-card-icon {

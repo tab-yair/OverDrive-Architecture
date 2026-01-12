@@ -44,6 +44,7 @@ import './FileManager.css';
  * @param {Object} props
  * @param {Array} props.files - Array of file objects
  * @param {string} props.pageContext - Current page context ('MyDrive', 'Shared', 'Trash', etc.)
+ * @param {string} props.folderName - Current folder name (optional, for empty folder message)
  * @param {string} props.permissionLevel - User's permission level
  * @param {boolean} props.isOwner - Whether current user is the owner
  * @param {string} props.viewMode - 'list' or 'grid' (default: 'grid')
@@ -56,6 +57,7 @@ import './FileManager.css';
 const FileManager = ({
   files = [],
   pageContext = 'MyDrive',
+  folderName = null,
   permissionLevel = 'viewer',
   isOwner = true,
   viewMode = 'grid', // GLOBAL DEFAULT: Grid View for all new pages
@@ -222,11 +224,30 @@ const FileManager = ({
   };
 
   if (files.length === 0) {
+    // Construct empty message based on context
+    const emptyTitle = pageContext === 'Trash' 
+      ? 'Trash is empty'
+      : pageContext === 'Starred'
+        ? 'No starred files'
+        : pageContext === 'Recent'
+          ? 'No recent files'
+          : 'No files or folders';
+    
+    const emptySubtitle = pageContext === 'Trash'
+      ? 'Items you delete will appear here'
+      : pageContext === 'Starred'
+        ? 'Star files to find them easily'
+        : pageContext === 'Recent'
+          ? 'Your recently accessed files will appear here'
+          : 'Upload files or create folders to get started';
+    
+    console.log('📭 Empty state:', { pageContext, emptyTitle });
+    
     return (
       <div className="file-manager-empty">
         <img src={`${process.env.PUBLIC_URL}/assets/folder.svg`} alt="" className="empty-icon" />
-        <p className="empty-message">No files or folders</p>
-        <p className="empty-submessage">Upload files or create folders to get started</p>
+        <p className="empty-message">{emptyTitle}</p>
+        <p className="empty-submessage">{emptySubtitle}</p>
       </div>
     );
   }

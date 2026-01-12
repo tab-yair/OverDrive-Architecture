@@ -42,7 +42,18 @@ const FileRow = ({
       image: 'image.svg',
       docs: 'Docs.svg',
     };
-    return `${process.env.PUBLIC_URL}/assets/${iconMap[type] || 'Docs.svg'}`;
+    const iconFile = iconMap[type] || 'Docs.svg';
+    const iconPath = `${process.env.PUBLIC_URL}/assets/${iconFile}`;
+    
+    console.log(`🖼️ FileRow icon request:`, { 
+      fileName: file.name, 
+      fileType: type, 
+      iconFile, 
+      iconPath,
+      PUBLIC_URL: process.env.PUBLIC_URL 
+    });
+    
+    return iconPath;
   };
 
   const metadataConfig = getMetadataConfig(pageContext);
@@ -50,10 +61,12 @@ const FileRow = ({
   // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
   // It represents actions for THIS specific file, independent of global selection state
   // Only SelectionToolbar should use actual selectedCount for bulk operations
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, 1);
+  // Always include permissionLevel to ensure correct permission evaluation (especially for owners)
+  const fileWithPermission = { ...file, starred: isStarred, permissionLevel: file.permissionLevel || permissionLevel };
+  const availableActions = getAvailableActions(pageContext, fileWithPermission, 1, permissionLevel);
   
   // Get row buttons using the ACTION_REGISTRY
-  const rowButtons = getRowActionButtons(pageContext, { ...file, starred: isStarred });
+  const rowButtons = getRowActionButtons(pageContext, fileWithPermission, permissionLevel);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();

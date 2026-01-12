@@ -6,7 +6,10 @@
 import { jwtDecode } from "jwt-decode";
 
 // Base URL for the backend server
-const API_BASE_URL = 'http://localhost:3000';
+// Use environment variable if available, fallback to localhost
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000';
+
+console.log('🌐 API Base URL:', API_BASE_URL);
 
 /**
  * Helper to generate authorization headers with Bearer token.

@@ -31,23 +31,30 @@ export const NavigationProvider = ({ children }) => {
    * @param {string} item.name - Display name
    */
   const handleOpen = useCallback((item) => {
+    console.log('🧭 NavigationContext.handleOpen called:', { 
+      item, 
+      currentPath: window.location.pathname,
+      timestamp: new Date().toISOString() 
+    });
+
     if (!item || !item.type) {
-      console.error('Invalid item passed to handleOpen:', item);
+      console.error('❌ Invalid item passed to handleOpen:', item);
       return;
     }
 
     if (item.type === 'folder') {
       // Navigate to folder view
+      console.log(`📂 Navigating to folder: ${item.name} (${item.id})`);
+      console.log(`   From: ${window.location.pathname} → To: /folders/${item.id}`);
       setCurrentFolderId(item.id);
       navigate(`/folders/${item.id}`);
       
-      // ...existing code...
-      console.log(`📂 Opening folder: ${item.name} (${item.id})`);
+      console.log(`✅ Folder navigation completed: ${item.name}`);
     } else {
       // Handle file opening (images, PDFs, docs, etc.)
       // For now, just log - implement preview/download later
       console.log(`📄 Opening file: ${item.name} (${item.type})`);
-      console.log('File preview not implemented yet');
+      console.log('⚠️ File preview not implemented yet');
       
       // TODO: Implement file preview modal
       // - For images: show image viewer

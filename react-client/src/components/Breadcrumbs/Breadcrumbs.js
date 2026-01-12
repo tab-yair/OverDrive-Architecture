@@ -76,22 +76,33 @@ const Breadcrumbs = () => {
    */
   useEffect(() => {
     const updateBreadcrumbs = async () => {
+      console.log('🍞 Breadcrumbs update triggered:', { 
+        pathname: location.pathname, 
+        folderId,
+        timestamp: new Date().toISOString()
+      });
+
       const rootContext = getRootContext(location.pathname);
       
       if (!rootContext) {
+        console.log('⚠️ No root context found for path:', location.pathname);
         setBreadcrumbs([]);
         return;
       }
 
       // Start with root context
       const crumbs = [rootContext];
+      console.log('📍 Root context:', rootContext);
 
       // If we're in a folder, build the full path
       if (folderId) {
+        console.log('📂 Building breadcrumb path for folder:', folderId);
         const folderPath = await buildBreadcrumbPath(folderId);
+        console.log('📂 Folder path built:', folderPath);
         crumbs.push(...folderPath);
       }
 
+      console.log('✅ Breadcrumbs set:', crumbs);
       setBreadcrumbs(crumbs);
     };
 
@@ -102,6 +113,11 @@ const Breadcrumbs = () => {
    * Handle breadcrumb click navigation
    */
   const handleCrumbClick = (crumb) => {
+    console.log('🧭 Breadcrumb click:', { 
+      from: location.pathname, 
+      to: crumb.path, 
+      crumbName: crumb.name 
+    });
     navigate(crumb.path);
   };
 

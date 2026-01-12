@@ -65,6 +65,9 @@ export function FilesProvider({ children }) {
             ownerId: file.ownerId,
             parentId: file.parentId || null,
             
+            // Permissions (user's effective permission level)
+            permissionLevel: file.permissionLevel || null, // OWNER | EDITOR | VIEWER
+            
             // Status flags
             isStarred: file.isStarred || false,
             isTrashed: file.isTrashed || false,
@@ -118,7 +121,17 @@ export function FilesProvider({ children }) {
      * Only triggers VIEW interaction when fetching individual file content
      */
     const fetchFiles = useCallback(async (endpoint, filters = {}) => {
-        if (!token) return { files: [], error: null };
+        console.log('📁 FilesContext.fetchFiles called:', { 
+          endpoint, 
+          filters, 
+          hasToken: !!token,
+          timestamp: new Date().toISOString()
+        });
+
+        if (!token) {
+            console.log('⚠️ No token available, returning empty files');
+            return { files: [], error: null };
+        }
 
         const cacheKey = `${endpoint}:${JSON.stringify(filters)}`;
         setLoading(prev => ({ ...prev, [cacheKey]: true }));
@@ -127,6 +140,8 @@ export function FilesProvider({ children }) {
         try {
             let result;
             const filterHeaders = filters.headers || {};
+
+            console.log(`🔄 Fetching from endpoint: ${endpoint}`);
 
             switch (endpoint) {
                 case 'mydrive':
@@ -148,12 +163,18 @@ export function FilesProvider({ children }) {
                     throw new Error(`Unknown endpoint: ${endpoint}`);
             }
 
+            console.log(`✅ Files fetched from ${endpoint}:`, { 
+              count: result?.length || 0,
+              files: result?.slice(0, 3).map(f => ({ id: f.id, name: f.name, type: f.type }))
+            });
+
             updateFilesInStore(result || []);
             setLoadedEndpoints(prev => new Set(prev).add(endpoint));
             
             return { files: result || [], error: null };
         } catch (error) {
             const errorMsg = error.message || `Failed to load ${endpoint} files`;
+            console.error(`❌ Error fetching ${endpoint}:`, error);
             setErrors(prev => ({ ...prev, [cacheKey]: errorMsg }));
             return { files: [], error: errorMsg };
         } finally {

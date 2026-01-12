@@ -42,13 +42,24 @@ const FileCard = ({
       image: 'image.svg',
       docs: 'Docs.svg',
     };
-    return `${process.env.PUBLIC_URL}/assets/${iconMap[type] || 'Docs.svg'}`;
+    const iconFile = iconMap[type] || 'Docs.svg';
+    const iconPath = `${process.env.PUBLIC_URL}/assets/${iconFile}`;
+    
+    console.log(`🖼️ FileCard icon request:`, { 
+      fileName: file.name, 
+      fileType: type, 
+      iconFile, 
+      iconPath,
+      PUBLIC_URL: process.env.PUBLIC_URL 
+    });
+    
+    return iconPath;
   };
 
   // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
   // It represents actions for THIS specific file, independent of global selection state
   // Only SelectionToolbar should use actual selectedCount for bulk operations
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, 1);
+  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, 1, permissionLevel);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();
