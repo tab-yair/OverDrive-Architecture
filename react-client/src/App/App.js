@@ -18,10 +18,10 @@ import SettingsPage from '../pages/SettingsPage';
 import GeneralSettingsPage from '../pages/GeneralSettingsPage';
 import AccountSettingsPage from '../pages/AccountSettingsPage';
 import GetMoreStoragePage from '../pages/GetMoreStoragePage';
-import LoginPage from '../pages/LoginPage';
-import SignupPage from '../pages/SignupPage';
+import LoginPage from '../components/RegisterAndLogin/Login'; 
+import SignupPage from '../components/RegisterAndLogin/Register';
 
-// --- הייבוא החדש עבור הדמו ---
+// Example component import
 import FileManagementExample from '../components/FileManagement/FileManagementExample';
 
 import './App.css';
@@ -41,7 +41,7 @@ function AppRoutes() {
 
     return (
         <Routes>
-            {/* Public auth routes - OUTSIDE of Layout */}
+            {/* AUTH ROUTES */}
             <Route 
                 path="/login" 
                 element={
@@ -54,12 +54,11 @@ function AppRoutes() {
                     isAuthenticated ? <Navigate to="/home" replace /> : <SignupPage />
                 } 
             />
-
-            {/* Layout wrapper - all routes render inside Layout */}
-            <Route element={<Layout />}>
-
-            <Route path="/test" element={<FileManagementExample />} />
-
+            
+            {/* MAIN APP ROUTES */}
+            <Route element={<div className="app"><Layout /></div>}>
+                
+                <Route path="/test" element={<FileManagementExample />} />
 
                 {/* Root route - redirect based on auth status */}
                 <Route
@@ -69,7 +68,7 @@ function AppRoutes() {
                     }
                 />
 
-                {/* Protected routes - wrapped in single ProtectedRoute */}
+                {/* Protected routes area */}
                 <Route element={<ProtectedRoute />}>
                     <Route path="/home" element={<HomePage />} />
                     <Route path="/mydrive" element={<MyDrivePage />} />
@@ -111,9 +110,7 @@ function App() {
         <AuthProvider>
             <ThemeProvider>
                 <UserPreferencesProvider>
-                    <div className="app">
-                        <AppRoutes />
-                    </div>
+                    <AppRoutes />
                 </UserPreferencesProvider>
             </ThemeProvider>
         </AuthProvider>
