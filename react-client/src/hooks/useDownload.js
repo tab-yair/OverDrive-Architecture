@@ -255,19 +255,6 @@ export function useDownload() {
         }
 
         try {
-            // ═══ STEP 0: SMART CONFIRMATION ═══
-            // Only show if: multiple items OR any folder exists
-            const hasFolder = items.some(item => item.type === 'folder');
-            const needsConfirmation = items.length > 1 || hasFolder;
-            
-            if (needsConfirmation) {
-                const confirmed = await showDownloadConfirmation();
-                if (!confirmed) {
-                    console.log('❌ Download cancelled by user');
-                    return;
-                }
-            }
-            
             console.log(`📦 Preparing download for ${items.length} selected item(s)...`);
             
             // ═══ STEP 1: FLATTEN & BUILD UNIFIED FILE LIST ═══
