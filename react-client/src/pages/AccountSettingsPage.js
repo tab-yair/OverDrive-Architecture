@@ -5,7 +5,7 @@ import './SettingsPage.css';
 
 /**
  * AccountSettingsPage Component
- * Account settings: profile, password
+ * Account settings: profile, password with Base64 image support
  */
 function AccountSettingsPage() {
     const { user, token, login } = useAuth();
@@ -43,26 +43,26 @@ function AccountSettingsPage() {
         return names[0][0].toUpperCase();
     };
 
-    // Handle photo change click
     const handleChangePhotoClick = () => {
         fileInputRef.current?.click();
     };
 
-    // Handle file selection
+    // FIXED: Handle file selection and convert to Base64
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (file) {
-            // For now, create a local URL - in production would upload to server
-            const url = URL.createObjectURL(file);
-            setProfileImage(url);
-            // TODO: Upload to server when implementing file upload for profile images
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                // We set the Base64 string directly so it can be sent to the server later
+                setProfileImage(reader.result);
+            };
+            reader.readAsDataURL(file);
         }
     };
 
-    // Handle edit/save
     const handleEditClick = () => {
         if (isEditing) {
-            // Cancel editing
+            // Cancel editing - reset values to original user data
             setFirstName(user?.displayName?.split(' ')[0] || '');
             setLastName(user?.displayName?.split(' ').slice(1).join(' ') || '');
             setProfileImage(user?.profileImage || null);
@@ -71,7 +71,6 @@ function AccountSettingsPage() {
         setIsEditing(!isEditing);
     };
 
-    // Handle save profile
     const handleSaveProfile = async () => {
         if (!token || !user?.id) return;
 
@@ -84,13 +83,13 @@ function AccountSettingsPage() {
                 lastName: lastName.trim()
             };
 
+            // If profileImage has changed (it's now a Base64 string), include it in updates
             if (profileImage && profileImage !== user?.profileImage) {
                 updates.profileImage = profileImage;
             }
 
             await userApi.updateUser(token, user.id, updates);
 
-            // Update local user data
             const newDisplayName = lastName.trim()
                 ? `${firstName.trim()} ${lastName.trim()}`
                 : firstName.trim();
@@ -111,12 +110,10 @@ function AccountSettingsPage() {
         }
     };
 
-    // Handle password change
     const handlePasswordChange = async () => {
         setPasswordError(null);
         setPasswordSuccess(false);
 
-        // Validation
         if (!currentPassword) {
             setPasswordError('Current password is required');
             return;
@@ -139,7 +136,6 @@ function AccountSettingsPage() {
         try {
             await userApi.updateUser(token, user.id, {
                 password: newPassword
-                // Note: Server should verify currentPassword before allowing change
             });
 
             setPasswordSuccess(true);
@@ -148,12 +144,10 @@ function AccountSettingsPage() {
             setConfirmPassword('');
             setShowPasswordFields(false);
 
-            // Reset visibility states
             setShowCurrentPassword(false);
             setShowNewPassword(false);
             setShowConfirmPassword(false);
 
-            // Clear success message after 3 seconds
             setTimeout(() => setPasswordSuccess(false), 3000);
         } catch (err) {
             console.error('Failed to change password:', err);
@@ -165,12 +159,10 @@ function AccountSettingsPage() {
 
     return (
         <div className="account-settings">
-            {/* Profile Section */}
             <section className="settings-section">
                 <h2 className="settings-section-title">Profile</h2>
                 <div className="settings-section-content">
                     <div className="profile-settings">
-                        {/* Profile photo */}
                         <div className="profile-photo-section">
                             <div className="profile-photo-container">
                                 {profileImage ? (
@@ -197,6 +189,7 @@ function AccountSettingsPage() {
                             <input
                                 ref={fileInputRef}
                                 type="file"
+                                id="profile-upload-input"
                                 accept="image/*"
                                 onChange={handleFileChange}
                                 style={{ display: 'none' }}
@@ -211,7 +204,6 @@ function AccountSettingsPage() {
                             )}
                         </div>
 
-                        {/* Profile fields */}
                         <div className="profile-fields">
                             <div className="profile-field">
                                 <label className="profile-field-label">First name</label>
@@ -293,7 +285,6 @@ function AccountSettingsPage() {
                 </div>
             </section>
 
-            {/* Security Section */}
             <section className="settings-section">
                 <h2 className="settings-section-title">Security</h2>
                 <div className="settings-section-content">
@@ -327,7 +318,6 @@ function AccountSettingsPage() {
                                         type="button"
                                         className="password-toggle-btn"
                                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                        aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
                                     >
                                         <span className="material-symbols-outlined">
                                             {showCurrentPassword ? 'visibility_off' : 'visibility'}
@@ -350,7 +340,6 @@ function AccountSettingsPage() {
                                         type="button"
                                         className="password-toggle-btn"
                                         onClick={() => setShowNewPassword(!showNewPassword)}
-                                        aria-label={showNewPassword ? 'Hide password' : 'Show password'}
                                     >
                                         <span className="material-symbols-outlined">
                                             {showNewPassword ? 'visibility_off' : 'visibility'}
@@ -373,7 +362,6 @@ function AccountSettingsPage() {
                                         type="button"
                                         className="password-toggle-btn"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                                     >
                                         <span className="material-symbols-outlined">
                                             {showConfirmPassword ? 'visibility_off' : 'visibility'}

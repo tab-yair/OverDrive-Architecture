@@ -1,49 +1,46 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import apiService from '../../services/api';
 import Logo from '../Logo/Logo';
 import './Auth.css';
 
-/**
- * Login Component
- * Handles user authentication, validates input, and persists the JWT.
- */
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Eye icon state
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if we arrived here after a successful registration
+  const successMessage = location.state?.message;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     try {
-      // 1. Get token and the extracted userId
       const { token, userId } = await apiService.login(username, password);
-      
-      // 2. Now call getUserProfile with the CORRECT ID (the one from the token)
       const userProfile = await apiService.getUserProfile(token, userId);
-      
-      // 3. Save to global state
       login(token, userProfile);
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err) {
       setError(err.message);
     }
   };
-  
-  return (
-    <div className="auth-container">
+
+  const loginContent = (
+    <div className="auth-overlay">
       <div className="auth-card">
         <div className="auth-logo-container">
           <Logo size="lg" />
         </div>
-        <h2>Sign in</h2>
-        <p>Use your OverDrive Account</p>
+        <h2 className="auth-title">Sign in</h2>
+        <p className="auth-subtitle">Use your OverDrive Account</p>
         
+        {successMessage && <div className="success-alert">{successMessage}</div>}
         {error && <div className="error-alert">{error}</div>}
 
         <form onSubmit={handleSubmit}>
@@ -56,14 +53,25 @@ const Login = () => {
               required 
             />
           </div>
-          <div className="input-group">
+          
+          <div className="input-group password-group">
             <input 
-              type="password" 
+              type={showPassword ? "text" : "password"} 
               placeholder="Password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required 
             />
+            {/* Custom Eye Icon Button */}
+            <button 
+              type="button" 
+              className="password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              <span className="material-symbols-outlined">
+                {showPassword ? 'visibility_off' : 'visibility'}
+              </span>
+            </button>
           </div>
           
           <div className="auth-footer">
@@ -74,6 +82,8 @@ const Login = () => {
       </div>
     </div>
   );
+
+  return createPortal(loginContent, document.body);
 };
 
 export default Login;

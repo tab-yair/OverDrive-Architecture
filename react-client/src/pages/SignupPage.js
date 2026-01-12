@@ -1,37 +1,37 @@
 import { Link } from 'react-router-dom';
 import Logo from '../components/Logo/Logo';
-import './Pages.css';
+import './Auth.css';
 
 /**
  * SignupPage Component
- * Placeholder signup page - teammate will implement full functionality
  */
 function SignupPage() {
     return (
-        <div className="page signup-page">
-            <div className="auth-container">
-                <div className="auth-logo">
+        <div className="auth-container">
+            <div className="auth-card">
+                <div className="auth-logo-container">
                     <Logo size="md" />
                 </div>
 
                 <h1 className="auth-title">Create account</h1>
                 <p className="auth-subtitle">to start using OverDrive</p>
 
-                {/* Placeholder form - teammate will implement */}
-                <div className="auth-placeholder">
-                    <p>Signup form will be implemented by teammate</p>
-
-                    {/* TODO: Add signup form with fields:
-                        - Email
-                        - Display name
-                        - Password
-                        - Confirm password
-                    */}
+                <div className="input-group">
+                    <input type="text" placeholder="Full Name" />
+                </div>
+                <div className="input-group">
+                    <input type="text" placeholder="Username" />
+                </div>
+                <div className="input-group">
+                    <input type="password" placeholder="Password" />
+                </div>
+                <div className="input-group">
+                    <input type="password" placeholder="Confirm Password" />
                 </div>
 
                 <div className="auth-footer">
-                    <span>Already have an account?</span>
-                    <Link to="/login">Sign in</Link>
+                    <Link to="/login" className="link-btn">Sign in instead</Link>
+                    <button className="next-btn">Create</button>
                 </div>
             </div>
         </div>
