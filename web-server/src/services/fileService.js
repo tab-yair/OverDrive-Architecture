@@ -239,8 +239,11 @@ class FileService {
                 await permissionService.syncPermissionsOnMove(fileId, parentChange.oldParentId, parentChange.newParentId);
             }
 
-            // Record edit interaction
-            await userFileMetadataStore.recordEdit(userId, fileId);
+            // Record edit interaction ONLY for files (not folders)
+            // Recent files should only track document interactions (docs, pdf, image)
+            if (file.type !== 'folder') {
+                await userFileMetadataStore.recordEdit(userId, fileId);
+            }
 
             return {
                 success: true,
@@ -512,8 +515,35 @@ class FileService {
             throw new Error("Permission denied");
         }
 
-        // Record view interaction
-        await userFileMetadataStore.recordView(userId, fileId);
+        // Record view interaction ONLY for files (not folders)
+        // Recent files should only track document interactions (docs, pdf, image)
+        if (file.type !== 'folder') {
+            await userFileMetadataStore.recordView(userId, fileId);
+        }
+
+        // Get user-specific metadata after recording the view (if applicable)
+        // Includes: isStarred, lastViewedAt, lastEditedAt, lastInteractionType, 
+        // viewCount, editCount, createdAt, modifiedAt
+        const metadata = await userFileMetadataStore.get(userId, fileId);
+
+        // Helper to attach all metadata fields
+        const attachMetadata = (fileObj) => {
+            const result = { ...fileObj };
+            
+            // Add all user-specific metadata fields if metadata exists
+            if (metadata) {
+                result.isStarred = metadata.isStarred;
+                result.lastViewedAt = metadata.lastViewedAt;
+                result.lastEditedAt = metadata.lastEditedAt;
+                result.lastInteractionType = metadata.lastInteractionType;
+                result.viewCount = metadata.viewCount;
+                result.editCount = metadata.editCount;
+                result.metadataCreatedAt = metadata.createdAt;
+                result.metadataModifiedAt = metadata.modifiedAt;
+            }
+            
+            return result;
+        };
 
         // If it's a folder, return with children metadata (without their content)
         if (file.type === 'folder') {
@@ -535,20 +565,20 @@ class FileService {
                 }
             }
             
-            return {
+            return attachMetadata({
                 ...file,
                 children: accessibleChildren
-            };
+            });
         }
 
         // For files, fetch content from storage-server
         try {
             const storageResponse = await storageClient.get(fileId);
             if (storageResponse.success && storageResponse.data) {
-                return {
+                return attachMetadata({
                     ...file,
                     content: storageResponse.data
-                };
+                });
             }
         } catch (error) {
             // If file doesn't exist on storage server, continue without content
@@ -556,7 +586,7 @@ class FileService {
         }
 
         // Return file metadata without content if storage fetch failed
-        return file;
+        return attachMetadata(file);
     }
 
     // Get starred files for user
@@ -582,7 +612,12 @@ class FileService {
                         ...file,
                         isStarred: metadata.isStarred,
                         lastViewedAt: metadata.lastViewedAt,
-                        lastEditedAt: metadata.lastEditedAt
+                        lastEditedAt: metadata.lastEditedAt,
+                        lastInteractionType: metadata.lastInteractionType,
+                        viewCount: metadata.viewCount,
+                        editCount: metadata.editCount,
+                        metadataCreatedAt: metadata.createdAt,
+                        metadataModifiedAt: metadata.modifiedAt
                     });
                 }
             }
@@ -620,7 +655,11 @@ class FileService {
                         isStarred: metadata.isStarred,
                         lastViewedAt: metadata.lastViewedAt,
                         lastEditedAt: metadata.lastEditedAt,
-                        lastInteractionType: metadata.lastInteractionType
+                        lastInteractionType: metadata.lastInteractionType,
+                        viewCount: metadata.viewCount,
+                        editCount: metadata.editCount,
+                        metadataCreatedAt: metadata.createdAt,
+                        metadataModifiedAt: metadata.modifiedAt
                     });
                 }
             }
@@ -793,7 +832,12 @@ class FileService {
                     sharedPermissionLevel: permission.level,
                     isStarred: metadata?.isStarred || false,
                     lastViewedAt: metadata?.lastViewedAt || null,
-                    lastEditedAt: metadata?.lastEditedAt || null
+                    lastEditedAt: metadata?.lastEditedAt || null,
+                    lastInteractionType: metadata?.lastInteractionType || null,
+                    viewCount: metadata?.viewCount || 0,
+                    editCount: metadata?.editCount || 0,
+                    metadataCreatedAt: metadata?.createdAt || null,
+                    metadataModifiedAt: metadata?.modifiedAt || null
                 });
             }
         }
