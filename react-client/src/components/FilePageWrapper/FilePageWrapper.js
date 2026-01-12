@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import useFiles from '../../hooks/useFiles';
+import { useFilesContext } from '../../context/FilesContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useDownload } from '../../hooks/useDownload';
@@ -44,6 +45,7 @@ function FilePageWrapper({
 }) {
     // Always call hooks unconditionally (React rule)
     const hookResult = useFiles(endpoint || 'mydrive'); // Provide default to avoid conditional hook call
+    const { toggleStar } = useFilesContext(); // Access SSOT for star/unstar
     const { handleOpen } = useNavigation();
     const { user } = useAuth();
     const { downloadFile, downloadMultiple } = useDownload();
@@ -156,6 +158,30 @@ function FilePageWrapper({
             return;
         }
         
+        // Handle star/unstar action - update SSOT (FilesContext)
+        if (action === 'star' || action === 'unstar') {
+            console.log(`[FilePageWrapper] ${action} action triggered`);
+            
+            // Handle both single file and array
+            const filesToStar = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            
+            // Toggle star for each file using FilesContext (SSOT)
+            for (const file of filesToStar) {
+                if (file && file.id) {
+                    toggleStar(file.id).then(result => {
+                        if (result.success) {
+                            console.log(`✅ ${action} successful for:`, file.name);
+                        } else {
+                            console.error(`❌ ${action} failed for ${file.name}:`, result.error);
+                        }
+                    });
+                }
+            }
+            
+            // No need to refetch - FilesContext optimistically updates the SSOT
+            return;
+        }
+        
         // TODO: Future - Handle permission checks for multi-selection
         // When selectedCount > 1:
         // - Check permissions for ALL selected files
@@ -171,7 +197,8 @@ function FilePageWrapper({
         // }
         
         // Refetch after actions that modify data
-        const refetchActions = ['delete', 'restore', 'star', 'unstar', 'move', 'rename'];
+        // Note: star/unstar handled by FilesContext SSOT - no refetch needed
+        const refetchActions = ['delete', 'restore', 'move', 'rename'];
         if (refetchActions.includes(action)) {
             setTimeout(() => refetch(), 300);
         }

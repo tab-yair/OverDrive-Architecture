@@ -31,7 +31,8 @@ const FileRow = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const [isStarred, setIsStarred] = useState(file.starred || false);
+  // Use file.starred directly from SSOT (FilesContext) - no local state needed
+  const isStarred = file.starred || false;
   const menuButtonRef = useRef(null);
 
   // Helper to get file icon
@@ -81,10 +82,8 @@ const FileRow = ({
   const handleActionClick = (actionId) => (event) => {
     event.stopPropagation();
     
-    // Handle star/unstar locally for immediate UI feedback
-    if (actionId === 'star' || actionId === 'unstar') {
-      setIsStarred(actionId === 'star');
-    }
+    // Star/unstar handled by FilesContext (SSOT) - no local state update needed
+    // The icon will update automatically when FilesContext updates the file
     
     if (onAction) {
       onAction(actionId, file);
@@ -92,11 +91,7 @@ const FileRow = ({
   };
 
   const handleActionSelected = (actionId) => {
-    // Handle star/unstar locally for immediate UI feedback
-    if (actionId === 'star' || actionId === 'unstar') {
-      setIsStarred(actionId === 'star');
-    }
-    
+    // Star/unstar handled by FilesContext (SSOT) - no local state update needed
     if (onAction) {
       onAction(actionId, file);
     }

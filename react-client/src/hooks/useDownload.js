@@ -295,7 +295,12 @@ export function useDownload() {
             // ═══ STEP 2: SMART EMPTY HANDLING ═══
             if (allFiles.length === 0) {
                 // Only show error if EVERYTHING is empty
-                alert('The selected folder is empty and contains no files to download.');
+                // If single folder selected, show folder name in error for clarity
+                if (items.length === 1 && items[0].type === 'folder') {
+                    alert(`The folder "${items[0].name}" is empty and contains no files to download.`);
+                } else {
+                    alert('The selected folders are empty and contain no files to download.');
+                }
                 return;
             }
             // If some files exist, silently skip empty folders and continue

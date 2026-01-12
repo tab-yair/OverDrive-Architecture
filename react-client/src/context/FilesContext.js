@@ -70,6 +70,7 @@ export function FilesProvider({ children }) {
             
             // Status flags
             isStarred: file.isStarred || false,
+            starred: file.isStarred || file.starred || false, // Alias for convenience
             isTrashed: file.isTrashed || false,
             
             // Timestamps (ISO 8601)
@@ -282,7 +283,12 @@ export function FilesProvider({ children }) {
         }
 
         // Optimistic toggle
-        const optimisticFile = { ...originalFile, isStarred: !originalFile.isStarred };
+        const newStarredValue = !originalFile.isStarred;
+        const optimisticFile = { 
+            ...originalFile, 
+            isStarred: newStarredValue,
+            starred: newStarredValue // Update both for consistency
+        };
         updateFilesInStore([optimisticFile]);
 
         try {
@@ -291,7 +297,8 @@ export function FilesProvider({ children }) {
             // Update with server response
             updateFilesInStore([{
                 ...originalFile,
-                isStarred: result.isStarred
+                isStarred: result.isStarred,
+                starred: result.isStarred // Update both for consistency
             }]);
             
             return { success: true, isStarred: result.isStarred, error: null };
