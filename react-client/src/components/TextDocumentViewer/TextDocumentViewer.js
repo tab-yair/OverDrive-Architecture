@@ -135,8 +135,10 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
     // Handle download
     const handleDownload = () => {
         try {
+            // Ensure content is a string (handle null/undefined as empty string)
+            const textContent = (content === null || content === undefined) ? '' : String(content);
             // Create a blob from the current content
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
 
             // Create temporary download link
