@@ -88,24 +88,18 @@ function FilePageWrapper({
         }
         
         // Handle details action - open InfoSidebar
-        // Rule: Only allow details sidebar when 0 or 1 files are selected
         if (action === 'details') {
             console.log('[FilePageWrapper] Details action - selectedCount:', selectedCount);
             
-            if (selectedCount <= 1) {
-                console.log('[FilePageWrapper] Opening InfoSidebar for file:', fileOrFiles);
-                // Extract file ID from either object or array
-                const fileId = Array.isArray(fileOrFiles) 
-                    ? (fileOrFiles.length > 0 ? fileOrFiles[0].id : null)
-                    : (fileOrFiles ? fileOrFiles.id : null);
-                
-                if (fileId) {
-                    setSelectedFileId(fileId);
-                    setIsSidebarOpen(true);
-                    console.log('[FilePageWrapper] Sidebar opened - fileId:', fileId);
-                }
-            } else {
-                console.log('[FilePageWrapper] Details blocked - multiple files selected:', selectedCount);
+            // Extract file ID from either object or array
+            const fileId = Array.isArray(fileOrFiles) 
+                ? (fileOrFiles.length > 0 ? fileOrFiles[0].id : null)
+                : (fileOrFiles ? fileOrFiles.id : null);
+            
+            if (fileId) {
+                setSelectedFileId(fileId);
+                setIsSidebarOpen(true);
+                console.log('[FilePageWrapper] Sidebar opened - fileId:', fileId);
             }
             return;
         }

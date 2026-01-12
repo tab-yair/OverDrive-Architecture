@@ -47,9 +47,10 @@ const FileRow = ({
 
   const metadataConfig = getMetadataConfig(pageContext);
   
-  // Get actions using the single source of truth (ACTION_REGISTRY)
-  // Pass selectedCount to determine if actions should be enabled/disabled for multi-selection
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, selectedCount);
+  // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
+  // It represents actions for THIS specific file, independent of global selection state
+  // Only SelectionToolbar should use actual selectedCount for bulk operations
+  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, 1);
   
   // Get row buttons using the ACTION_REGISTRY
   const rowButtons = getRowActionButtons(pageContext, { ...file, starred: isStarred });

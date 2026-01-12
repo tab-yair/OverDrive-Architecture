@@ -45,7 +45,10 @@ const FileCard = ({
     return `${process.env.PUBLIC_URL}/assets/${iconMap[type] || 'Docs.svg'}`;
   };
 
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, selectedCount);
+  // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
+  // It represents actions for THIS specific file, independent of global selection state
+  // Only SelectionToolbar should use actual selectedCount for bulk operations
+  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, 1);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();

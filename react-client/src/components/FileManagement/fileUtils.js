@@ -663,8 +663,10 @@ const ACTION_REGISTRY = {
     },
     /**
      * Permission: Everyone can open files they have access to
+     * Disabled for multiple selection (can only open one file at a time)
      */
-    isEnabled: (file, pageContext) => {
+    isEnabled: (file, pageContext, selectedCount = 1) => {
+      if (selectedCount > 1) return false;
       return file.type !== 'folder';
     },
   },
@@ -743,8 +745,10 @@ const ACTION_REGISTRY = {
     },
     /**
      * Permission: Owner or Editor only
+     * Disabled for multiple selection (can only rename one item at a time)
      */
-    isEnabled: (file, pageContext) => {
+    isEnabled: (file, pageContext, selectedCount = 1) => {
+      if (selectedCount > 1) return false;
       const permissionLevel = file.permissionLevel || 'viewer';
       return permissionLevel === 'owner' || permissionLevel === 'editor';
     },
@@ -1115,8 +1119,8 @@ export const getBulkMenuActions = (pageContext, selectedFiles) => {
     // Trash: Same actions for all items regardless of type
     candidateActions = ['restore', 'deletePermanently'];
   } else {
-    // Standard contexts: Combine all possible actions
-    // We'll filter based on what ALL items support
+    // Standard contexts: All possible actions
+    // Single-context actions (open, rename, details) will appear but be disabled when selectedCount > 1
     candidateActions = [
       'open',
       'download',
