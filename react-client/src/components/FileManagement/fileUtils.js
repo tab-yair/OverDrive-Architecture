@@ -570,10 +570,11 @@ export const groupFilesByTime = (files, dateField = 'lastModified') => {
     // Get the date to use for grouping
     let fileDate = null;
     if (dateField === 'activity') {
-      // Prefer lastEditedAt, then lastViewedAt (NO lastModified fallback - doesn't exist)
-      fileDate = file.lastEditedAt
-        ? new Date(file.lastEditedAt)
-        : (file.lastViewedAt ? new Date(file.lastViewedAt) : null);
+      // Use the MOST RECENT of lastEditedAt or lastViewedAt (no preference)
+      const editDate = file.lastEditedAt ? new Date(file.lastEditedAt).getTime() : 0;
+      const viewDate = file.lastViewedAt ? new Date(file.lastViewedAt).getTime() : 0;
+      const mostRecent = Math.max(editDate, viewDate);
+      fileDate = mostRecent > 0 ? new Date(mostRecent) : null;
     } else if (dateField === 'lastActions' && file.lastActions && file.lastActions.length > 0) {
       fileDate = new Date(file.lastActions[0].date);
     } else if (dateField === 'shareDate' && file.shareDate) {
@@ -611,12 +612,14 @@ export const groupFilesByTime = (files, dateField = 'lastModified') => {
       let dateB = null;
 
       if (dateField === 'activity') {
-        dateA = a.lastEditedAt
-          ? new Date(a.lastEditedAt)
-          : (a.lastViewedAt ? new Date(a.lastViewedAt) : new Date(0));
-        dateB = b.lastEditedAt
-          ? new Date(b.lastEditedAt)
-          : (b.lastViewedAt ? new Date(b.lastViewedAt) : new Date(0));
+        // Use the MOST RECENT of lastEditedAt or lastViewedAt (no preference)
+        const aEdit = a.lastEditedAt ? new Date(a.lastEditedAt).getTime() : 0;
+        const aView = a.lastViewedAt ? new Date(a.lastViewedAt).getTime() : 0;
+        dateA = new Date(Math.max(aEdit, aView) || 0);
+        
+        const bEdit = b.lastEditedAt ? new Date(b.lastEditedAt).getTime() : 0;
+        const bView = b.lastViewedAt ? new Date(b.lastViewedAt).getTime() : 0;
+        dateB = new Date(Math.max(bEdit, bView) || 0);
       } else if (dateField === 'lastActions') {
         dateA = a.lastActions && a.lastActions.length > 0 ? new Date(a.lastActions[0].date) : new Date(0);
         dateB = b.lastActions && b.lastActions.length > 0 ? new Date(b.lastActions[0].date) : new Date(0);

@@ -144,10 +144,15 @@ const FileRow = ({
       }
 
       // Fallback: use lastEditedAt / lastViewedAt if lastActions not provided by server
+      // Use the MOST RECENT action, not preference for Edit
       if (file.lastEditedAt || file.lastViewedAt) {
+        const editDate = file.lastEditedAt ? new Date(file.lastEditedAt).getTime() : 0;
+        const viewDate = file.lastViewedAt ? new Date(file.lastViewedAt).getTime() : 0;
+        const mostRecentIsEdit = editDate >= viewDate && editDate > 0;
+        
         const derivedAction = {
-          date: file.lastEditedAt || file.lastViewedAt,
-          action: file.lastEditedAt ? 'Edit' : 'Open',
+          date: mostRecentIsEdit ? file.lastEditedAt : file.lastViewedAt,
+          action: mostRecentIsEdit ? 'Edit' : 'Open',
         };
         return formatRecentActivity(derivedAction);
       }

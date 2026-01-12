@@ -176,12 +176,25 @@ export function FilesProvider({ children }) {
 
             // If server didn't return activity timestamps, ensure we keep it in Recent
             const nowIso = new Date().toISOString();
+            
+            // Determine most recent action - no preference for Edit over View
+            let fallbackAction = { date: nowIso, action: 'Open' };
+            if (file.lastEditedAt || file.lastViewedAt) {
+                const editDate = file.lastEditedAt ? new Date(file.lastEditedAt).getTime() : 0;
+                const viewDate = file.lastViewedAt ? new Date(file.lastViewedAt).getTime() : 0;
+                const mostRecentIsEdit = editDate >= viewDate && editDate > 0;
+                fallbackAction = {
+                    date: mostRecentIsEdit ? file.lastEditedAt : (file.lastViewedAt || nowIso),
+                    action: mostRecentIsEdit ? 'Edit' : 'Open'
+                };
+            }
+            
             const withActivity = {
                 ...file,
                 lastViewedAt: file.lastViewedAt || nowIso,
                 lastActions: (file.lastActions && file.lastActions.length > 0)
                     ? file.lastActions
-                    : [{ date: file.lastEditedAt || file.lastViewedAt || nowIso, action: file.lastEditedAt ? 'Edit' : 'Open' }]
+                    : [fallbackAction]
             };
             
             // Update store with fresh data including content and activity
@@ -317,9 +330,16 @@ export function FilesProvider({ children }) {
             filtered = allFiles
                 .filter(f => !f.isTrashed && (f.lastViewedAt || f.lastEditedAt))
                 .sort((a, b) => {
-                    const aDate = new Date(a.lastEditedAt || a.lastViewedAt || 0);
-                    const bDate = new Date(b.lastEditedAt || b.lastViewedAt || 0);
-                    return bDate - aDate;
+                    // Use MOST RECENT of lastEditedAt or lastViewedAt (no preference)
+                    const aEdit = a.lastEditedAt ? new Date(a.lastEditedAt).getTime() : 0;
+                    const aView = a.lastViewedAt ? new Date(a.lastViewedAt).getTime() : 0;
+                    const aDate = Math.max(aEdit, aView) || 0;
+                    
+                    const bEdit = b.lastEditedAt ? new Date(b.lastEditedAt).getTime() : 0;
+                    const bView = b.lastViewedAt ? new Date(b.lastViewedAt).getTime() : 0;
+                    const bDate = Math.max(bEdit, bView) || 0;
+                    
+                    return bDate - aDate; // Newest first (descending)
                 });
         } else if (endpoint === 'starred') {
             filtered = allFiles.filter(f => f.isStarred && !f.isTrashed);
