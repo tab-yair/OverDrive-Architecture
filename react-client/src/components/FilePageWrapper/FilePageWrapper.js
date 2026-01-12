@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import useFiles from '../../hooks/useFiles';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useDownload } from '../../hooks/useDownload';
 import { FileManager, InfoSidebar } from '../FileManagement';
 import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import PreviewModal from '../PreviewModal/PreviewModal';
@@ -43,6 +44,7 @@ function FilePageWrapper({
     const hookResult = useFiles(endpoint || 'mydrive'); // Provide default to avoid conditional hook call
     const { handleOpen } = useNavigation();
     const { user } = useAuth();
+    const { downloadFile, downloadMultiple } = useDownload();
     
     // Use custom files/loading if provided, otherwise use hook result
     const files = customFiles !== undefined ? customFiles : hookResult.files;
@@ -100,6 +102,27 @@ function FilePageWrapper({
                 setSelectedFileId(fileId);
                 setIsSidebarOpen(true);
                 console.log('[FilePageWrapper] Sidebar opened - fileId:', fileId);
+            }
+            return;
+        }
+        
+        // Handle download action
+        if (action === 'download') {
+            console.log('[FilePageWrapper] Download action triggered');
+            
+            // Handle both single file and multiple files
+            if (Array.isArray(fileOrFiles)) {
+                if (fileOrFiles.length > 0) {
+                    // Multiple files selected
+                    downloadMultiple(fileOrFiles).catch(err => {
+                        console.error('Download failed:', err);
+                    });
+                }
+            } else if (fileOrFiles) {
+                // Single file
+                downloadFile(fileOrFiles).catch(err => {
+                    console.error('Download failed:', err);
+                });
             }
             return;
         }

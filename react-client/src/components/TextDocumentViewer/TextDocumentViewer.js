@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFilesContext } from '../../context/FilesContext';
+import { useDownload } from '../../hooks/useDownload';
 import './TextDocumentViewer.css';
 
 /**
@@ -28,6 +29,7 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
     const [wasSaved, setWasSaved] = useState(false); // Track if content was saved during this session
     
     const { fetchFileContent, updateFile, updateFilesInStore, filesMap } = useFilesContext();
+    const { sanitizeFilename } = useDownload();
     
     // Determine if user can edit
     const canEdit = permissionLevel === 'owner' || permissionLevel === 'editor';
@@ -141,12 +143,10 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
             const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
 
-            // Create temporary download link
+            // Create temporary download link with sanitized filename
             const link = document.createElement('a');
             link.href = url;
-            // Use fileName with .txt extension
-            const downloadName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
-            link.download = downloadName;
+            link.download = sanitizeFilename(fileName, '.txt');
             document.body.appendChild(link);
             link.click();
 
