@@ -84,6 +84,8 @@ export function FilesProvider({ children }) {
             
             // Shared files specific
             sharedPermissionLevel: file.sharedPermissionLevel || null, // VIEWER | EDITOR
+            sharer: file.sharer || null, // { displayName, avatarUrl, username } - who shared this file
+            shareDate: file.shareDate || null, // When it was shared with current user
             
             // Content (only loaded on explicit fetch)
             content: file.content || null,
@@ -93,7 +95,7 @@ export function FilesProvider({ children }) {
 
     /**
      * Update files map (merges new data with existing)
-     * Simple merge - no need for deep merge since location is computed
+     * Preserves endpoint-specific fields (sharer, shareDate) that may not be returned by all endpoints
      * CRITICAL: Always return a NEW Map instance to trigger React re-renders
      */
     const updateFilesInStore = useCallback((files) => {
@@ -105,12 +107,17 @@ export function FilesProvider({ children }) {
                 const normalized = normalizeFile(file);
                 const existing = newMap.get(file.id);
                 
-                // Merge: new data overwrites old, but keep activity fields if server didn't return them (avoid null erasing)
+                // Merge: new data overwrites old, but preserve endpoint-specific fields if not provided
                 const merged = existing ? {
                     ...existing,
                     ...normalized,
+                    // Preserve activity timestamps if not provided by new data
                     lastViewedAt: normalized.lastViewedAt ?? existing.lastViewedAt ?? null,
                     lastEditedAt: normalized.lastEditedAt ?? existing.lastEditedAt ?? null,
+                    // Preserve shared-specific fields if not provided (critical for Shared page)
+                    sharer: normalized.sharer ?? existing.sharer ?? null,
+                    shareDate: normalized.shareDate ?? existing.shareDate ?? null,
+                    sharedPermissionLevel: normalized.sharedPermissionLevel ?? existing.sharedPermissionLevel ?? null,
                 } : normalized;
 
                 // Check if there are actual changes
@@ -353,7 +360,8 @@ export function FilesProvider({ children }) {
     }, [token, filesMap, updateFilesInStore]);
 
     /**
-     * Delete file (optimistic removal)
+     * Delete file (move to trash for Owner, remove from view for Editor/Viewer)
+     * Server returns { action: 'trashed' | 'hidden' } to indicate what happened
      */
     const deleteFile = useCallback(async (fileId) => {
         if (!token) return { success: false, error: 'Not authenticated' };
@@ -363,17 +371,35 @@ export function FilesProvider({ children }) {
             return { success: false, error: 'File not found' };
         }
 
-        // Optimistic: mark as trashed or remove from map
+        // Optimistic: mark as trashed (will be corrected if action is 'hidden')
         const optimisticFile = { ...originalFile, isTrashed: true };
         updateFilesInStore([optimisticFile]);
 
         try {
-            await filesApi.deleteFile(token, fileId);
+            const result = await filesApi.deleteFile(token, fileId);
             
-            // Emit storage-updated event (delete affects storage)
-            notifyStorageUpdated();
+            // If action was 'hidden' (Editor/Viewer local remove), remove from map entirely
+            if (result.action === 'hidden') {
+                const newMap = new Map(filesMap);
+                newMap.delete(fileId);
+                setFilesMap(newMap);
+                
+                // Emit storage-updated event (delete affects storage)
+                notifyStorageUpdated();
+                
+                // Do NOT emit files-updated - we don't want to refetch as it would re-add the file
+                // The file is hidden locally via isHiddenForUser in the backend
+            } else {
+                // If action was 'trashed' (Owner global trash), keep the isTrashed flag
+                
+                // Emit storage-updated event (delete affects storage)
+                notifyStorageUpdated();
+                
+                // Emit files-updated to trigger refetch on relevant pages
+                notifyFilesUpdated();
+            }
             
-            return { success: true, error: null };
+            return { success: true, error: null, action: result.action };
         } catch (error) {
             // Rollback
             updateFilesInStore([originalFile]);

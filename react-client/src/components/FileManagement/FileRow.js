@@ -57,14 +57,32 @@ const FileRow = ({
 
   const metadataConfig = getMetadataConfig(pageContext);
   
+  // CRITICAL: Use file-specific permission level, not global prop
+  // For Shared page: file.sharedPermissionLevel or file.permissionLevel
+  // For other pages: file.permissionLevel or fallback to prop
+  const effectivePermissionLevel = file.sharedPermissionLevel || file.permissionLevel || permissionLevel;
+  
+  // Debug logging for permission level resolution
+  if (pageContext === 'Shared' && (file.sharedPermissionLevel || file.permissionLevel)) {
+    console.log('🔐 FileRow Permission Debug:', {
+      fileName: file.name,
+      pageContext,
+      propPermissionLevel: permissionLevel,
+      fileSharedPermissionLevel: file.sharedPermissionLevel,
+      filePermissionLevel: file.permissionLevel,
+      effectivePermissionLevel,
+      willEnableShare: effectivePermissionLevel === 'OWNER' || effectivePermissionLevel === 'EDITOR'
+    });
+  }
+  
   // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
   // It represents actions for THIS specific file, independent of global selection state
   // Only SelectionToolbar should use actual selectedCount for bulk operations
   // Always include permissionLevel to ensure correct permission evaluation (especially for owners)
-  const availableActions = getAvailableActions(pageContext, file, 1, permissionLevel);
+  const availableActions = getAvailableActions(pageContext, file, 1, effectivePermissionLevel);
   
   // Get row buttons using the ACTION_REGISTRY
-  const rowButtons = getRowActionButtons(pageContext, file, permissionLevel);
+  const rowButtons = getRowActionButtons(pageContext, file, effectivePermissionLevel);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();

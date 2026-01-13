@@ -107,6 +107,26 @@ export const userApi = {
     },
 
     /**
+     * Searches for a user by email address.
+     * Returns user ID and basic profile info for sharing.
+     */
+    async searchUserByEmail(token, email) {
+        const response = await fetch(`${API_BASE_URL}/api/users/search?email=${encodeURIComponent(email)}`, {
+            headers: getAuthHeaders(token)
+        });
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error('User not found');
+            }
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to search user');
+        }
+        
+        return response.json();
+    },
+
+    /**
      * Local storage fallback for user preferences.
      */
     getPreferences(userId) {
@@ -414,6 +434,7 @@ export const filesApi = {
 
     /**
      * Deletes a file (moves to trash for owners, hides for viewers/editors)
+     * Returns { success, action, message } where action is 'trashed' or 'hidden'
      */
     async deleteFile(token, fileId) {
         const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
@@ -423,8 +444,7 @@ export const filesApi = {
         if (!response.ok) {
             throw new Error('Failed to delete file');
         }
-        // 204 No Content
-        return { success: true };
+        return response.json();
     },
 
     /**
@@ -438,6 +458,87 @@ export const filesApi = {
             throw new Error('Failed to search files');
         }
         return response.json();
+    },
+
+    /**
+     * Gets all permissions for a file/folder
+     */
+    async getPermissions(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/permissions`, {
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch permissions');
+        }
+        return response.json();
+    },
+
+    /**
+     * Grants a new permission to a user
+     * @param {string} token - JWT token
+     * @param {string} fileId - File/folder ID
+     * @param {string} targetUserId - User ID to grant permission to
+     * @param {string} permissionLevel - VIEWER, EDITOR, or OWNER
+     */
+    async grantPermission(token, fileId, targetUserId, permissionLevel) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/permissions`, {
+            method: 'POST',
+            headers: getAuthHeaders(token),
+            body: JSON.stringify({ targetUserId, permissionLevel })
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to grant permission');
+        }
+        // 201 Created with Location header
+        if (response.status === 201) {
+            const location = response.headers.get('Location');
+            if (location) {
+                const permissionId = location.split('/').pop();
+                return { id: permissionId, success: true };
+            }
+        }
+        return { success: true };
+    },
+
+    /**
+     * Updates an existing permission (including ownership transfer)
+     * @param {string} token - JWT token
+     * @param {string} fileId - File/folder ID
+     * @param {string} permissionId - Permission ID
+     * @param {string} permissionLevel - VIEWER, EDITOR, or OWNER
+     */
+    async updatePermission(token, fileId, permissionId, permissionLevel) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/permissions/${permissionId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(token),
+            body: JSON.stringify({ permissionLevel })
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to update permission');
+        }
+        // 204 No Content
+        return { success: true };
+    },
+
+    /**
+     * Revokes a permission
+     * @param {string} token - JWT token
+     * @param {string} fileId - File/folder ID
+     * @param {string} permissionId - Permission ID
+     */
+    async revokePermission(token, fileId, permissionId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/permissions/${permissionId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to revoke permission');
+        }
+        // 204 No Content
+        return { success: true };
     }
 };
 

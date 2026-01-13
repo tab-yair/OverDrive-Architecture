@@ -55,10 +55,15 @@ const FileCard = ({
     return iconPath;
   };
 
+  // CRITICAL: Use file-specific permission level, not global prop
+  // For Shared page: file.sharedPermissionLevel or file.permissionLevel
+  // For other pages: file.permissionLevel or fallback to prop
+  const effectivePermissionLevel = file.sharedPermissionLevel || file.permissionLevel || permissionLevel;
+  
   // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
   // It represents actions for THIS specific file, independent of global selection state
   // Only SelectionToolbar should use actual selectedCount for bulk operations
-  const availableActions = getAvailableActions(pageContext, file, 1, permissionLevel);
+  const availableActions = getAvailableActions(pageContext, file, 1, effectivePermissionLevel);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();

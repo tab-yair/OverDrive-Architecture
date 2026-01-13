@@ -870,33 +870,57 @@ class FileService {
         // Get all permissions for this user
         const permissions = await permissionStore.getByUserId(userId);
         
-        // Filter to only VIEWER and EDITOR (not OWNER), and only DIRECT permissions (not inherited)
+        // Filter to only VIEWER and EDITOR (not OWNER), only DIRECT permissions (not inherited),
+        // and exclude locally hidden files (isHiddenForUser=true from Editor/Viewer local hide)
         const sharedPermissions = permissions.filter(p => 
-            (p.level === 'VIEWER' || p.level === 'EDITOR') && !p.isInherited
+            (p.level === 'VIEWER' || p.level === 'EDITOR') && 
+            !p.isInherited &&
+            !p.isHiddenForUser
         );
 
         // Fetch the actual files with metadata
         const files = [];
         for (const permission of sharedPermissions) {
             const file = await filesStore.getById(permission.fileId);
-            if (file && file.ownerId !== userId) {
-                // Get user-specific metadata
-                const metadata = await userFileMetadataStore.get(userId, permission.fileId);
-                
-                // Add permission level and user metadata to file
-                files.push({
-                    ...file,
-                    sharedPermissionLevel: permission.level,
-                    isStarred: metadata?.isStarred || false,
-                    lastViewedAt: metadata?.lastViewedAt || null,
-                    lastEditedAt: metadata?.lastEditedAt || null,
-                    lastInteractionType: metadata?.lastInteractionType || null,
-                    viewCount: metadata?.viewCount || 0,
-                    editCount: metadata?.editCount || 0,
-                    metadataCreatedAt: metadata?.createdAt || null,
-                    metadataModifiedAt: metadata?.modifiedAt || null
-                });
+            
+            // Skip if: file doesn't exist, user is owner, or file is trashed by owner
+            // (isTrashed=true means owner deleted it - only appears in owner's trash, not in Shared)
+            if (!file || file.ownerId === userId || file.isTrashed) {
+                continue;
             }
+            
+            // Get user-specific metadata
+            const metadata = await userFileMetadataStore.get(userId, permission.fileId);
+            
+            // Get sharer information (user who created this permission)
+            let sharer = null;
+            if (permission.createdBy) {
+                const sharerUser = await usersStore.getById(permission.createdBy);
+                if (sharerUser) {
+                    sharer = {
+                        id: sharerUser.id,
+                        displayName: sharerUser.username, // Use username (email) for "Shared By" column
+                        username: sharerUser.username,
+                        avatarUrl: sharerUser.profileImage || null
+                    };
+                }
+            }
+            
+            // Add permission level, sharer info, and user metadata to file
+            files.push({
+                ...file,
+                sharedPermissionLevel: permission.level,
+                sharer: sharer,
+                shareDate: permission.createdAt, // When this permission was created
+                isStarred: metadata?.isStarred || false,
+                lastViewedAt: metadata?.lastViewedAt || null,
+                lastEditedAt: metadata?.lastEditedAt || null,
+                lastInteractionType: metadata?.lastInteractionType || null,
+                viewCount: metadata?.viewCount || 0,
+                editCount: metadata?.editCount || 0,
+                metadataCreatedAt: metadata?.createdAt || null,
+                metadataModifiedAt: metadata?.modifiedAt || null
+            });
         }
 
         return files;

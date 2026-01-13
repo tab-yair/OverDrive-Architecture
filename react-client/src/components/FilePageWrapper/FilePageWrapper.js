@@ -10,6 +10,7 @@ import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import PreviewModal from '../PreviewModal/PreviewModal';
 import TextDocumentViewer from '../TextDocumentViewer/TextDocumentViewer';
 import RenameModal from '../RenameModal/RenameModal';
+import ShareModal from '../ShareModal/ShareModal';
 import './FilePageWrapper.css';
 
 /**
@@ -63,8 +64,9 @@ function FilePageWrapper({
     const [selectedCount, setSelectedCount] = useState(0);
     const [previewFile, setPreviewFile] = useState(null);
     const [renameFile_modal, setRenameFile_modal] = useState(null);
+    const [shareFile_modal, setShareFile_modal] = useState(null);
 
-    console.log('🔄 FilePageWrapper render:', { 
+    console.log('🔄 FilePageWrapper render:', {
       pageContext,
       filesCount: files?.length || 0,
       loading,
@@ -156,6 +158,23 @@ function FilePageWrapper({
                 setRenameFile_modal(file);
             } else {
                 console.warn('[FilePageWrapper] Rename requires exactly 1 file selected');
+            }
+            return;
+        }
+        
+        // Handle share action - only for single file selection
+        if (action === 'share') {
+            console.log('[FilePageWrapper] Share action triggered');
+            
+            // Only allow share when exactly 1 item is selected
+            const file = Array.isArray(fileOrFiles) 
+                ? (fileOrFiles.length === 1 ? fileOrFiles[0] : null)
+                : fileOrFiles;
+            
+            if (file) {
+                setShareFile_modal(file);
+            } else {
+                console.warn('[FilePageWrapper] Share requires exactly 1 file selected');
             }
             return;
         }
@@ -360,6 +379,21 @@ function FilePageWrapper({
                         setRenameFile_modal(null);
                         // Refetch after rename to update file list
                         setTimeout(() => refetch(), 300);
+                    }}
+                />
+            )}
+            
+            {/* Share Modal */}
+            {shareFile_modal && (
+                <ShareModal
+                    file={shareFile_modal}
+                    onShare={(fileId, userId, permissionLevel) => {
+                        console.log('[FilePageWrapper] File shared successfully:', { fileId, userId, permissionLevel });
+                        // Optionally refetch to show updated permissions
+                        // Note: We don't refetch here as the modal shows success message
+                    }}
+                    onClose={() => {
+                        setShareFile_modal(null);
                     }}
                 />
             )}

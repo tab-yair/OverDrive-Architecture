@@ -143,10 +143,10 @@ const updateFile = asyncHandler(async (req, res) => {
 const deleteFile = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    await fileService.removeFile({ fileId: id, userId: req.userId });
+    const result = await fileService.removeFile({ fileId: id, userId: req.userId });
 
-    // Return 204 No Content
-    res.status(204).end();
+    // Return result to inform frontend of action taken
+    res.status(200).json(result);
 });
 
 /**

@@ -811,7 +811,22 @@ const ACTION_REGISTRY = {
      */
     isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
       const level = permissionLevel?.toUpperCase();
-      return level === 'OWNER' || level === 'EDITOR';
+      const canShare = level === 'OWNER' || level === 'EDITOR';
+      
+      // Debug logging for Share action
+      if (pageContext === 'Shared') {
+        console.log('🔐 Share Action isEnabled Debug:', {
+          fileName: file?.name,
+          pageContext,
+          permissionLevelRaw: permissionLevel,
+          permissionLevelUpper: level,
+          canShare,
+          isOwner: level === 'OWNER',
+          isEditor: level === 'EDITOR'
+        });
+      }
+      
+      return canShare;
     },
   },
   
@@ -985,14 +1000,38 @@ export const evaluateBulkAction = (actionId, files, pageContext, permissionLevel
   
   // Get the base properties from the first file
   const firstFile = files[0];
-  const baseEval = evaluateAction(actionId, firstFile, pageContext, selectedCount, permissionLevel);
+  // Use file-specific permission level (critical for Shared page where each file can have different permission)
+  const firstFilePermission = firstFile.sharedPermissionLevel || firstFile.permissionLevel || permissionLevel;
+  const baseEval = evaluateAction(actionId, firstFile, pageContext, selectedCount, firstFilePermission);
+  
+  // Debug logging for Share action on Shared page
+  if (actionId === 'share' && pageContext === 'Shared') {
+    console.log('🔍 Bulk Share Action Debug:', {
+      actionId,
+      pageContext,
+      selectedCount,
+      propPermissionLevel: permissionLevel,
+      firstFile: {
+        name: firstFile.name,
+        sharedPermissionLevel: firstFile.sharedPermissionLevel,
+        permissionLevel: firstFile.permissionLevel,
+        effectivePermission: firstFilePermission
+      },
+      baseEval: {
+        isVisible: baseEval.isVisible,
+        isEnabled: baseEval.isEnabled
+      }
+    });
+  }
   
   // Check if action is visible and enabled for ALL files
   let isVisibleForAll = baseEval.isVisible;
   let isEnabledForAll = baseEval.isEnabled;
   
   for (let i = 1; i < files.length; i++) {
-    const fileEval = evaluateAction(actionId, files[i], pageContext, selectedCount, permissionLevel);
+    // CRITICAL: Use each file's specific permission level
+    const filePermission = files[i].sharedPermissionLevel || files[i].permissionLevel || permissionLevel;
+    const fileEval = evaluateAction(actionId, files[i], pageContext, selectedCount, filePermission);
     
     if (!fileEval.isVisible) {
       isVisibleForAll = false;
