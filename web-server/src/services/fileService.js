@@ -579,6 +579,7 @@ class FileService {
             const childrenFiles = await filesStore.getByParentId(fileId);
             
             // Filter children by permissions and exclude trashed files
+            // CRITICAL: Attach user metadata to each child (including isStarred)
             const accessibleChildren = [];
             for (const child of childrenFiles) {
                 // Skip files in trash (they should only appear in trash endpoint)
@@ -589,8 +590,23 @@ class FileService {
                 
                 const hasChildPermission = await this.checkPermission({ userId, fileId: child.id, action: 'Read' });
                 if (hasChildPermission) {
-                    // Return only metadata - no content for files, no children for folders
-                    accessibleChildren.push(child);
+                    // Get permission level for child
+                    const { permissionService } = require('./permissionService');
+                    const childPermission = await permissionService._getEffectivePermission(userId, child.id);
+                    const childPermissionLevel = childPermission ? childPermission.level : (child.ownerId === userId ? 'OWNER' : null);
+                    
+                    // Get user metadata for child (including isStarred)
+                    const childMetadata = await userFileMetadataStore.get(userId, child.id);
+                    
+                    // Return child with all metadata attached
+                    accessibleChildren.push({
+                        ...child,
+                        permissionLevel: childPermissionLevel,
+                        isStarred: childMetadata?.isStarred || false,
+                        lastViewedAt: childMetadata?.lastViewedAt || null,
+                        lastEditedAt: childMetadata?.lastEditedAt || null,
+                        lastInteractionType: childMetadata?.lastInteractionType || null
+                    });
                 }
             }
             
