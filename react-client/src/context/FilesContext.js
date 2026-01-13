@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { filesApi } from '../services/api';
 import { useUserChange } from '../hooks/useUserChange';
 import { useAppEvent } from '../hooks/useAppEvent';
-import { AppEvents, notifyStorageUpdated } from '../utils/eventManager';
+import { AppEvents, notifyStorageUpdated, notifyFilesUpdated } from '../utils/eventManager';
 
 /**
  * FilesContext - Single Source of Truth (SSOT) for all file metadata
@@ -278,6 +278,20 @@ export function FilesProvider({ children }) {
                 notifyStorageUpdated();
             }
             
+            // CRITICAL FIX: If file name changed and file is starred, invalidate starred cache
+            // This ensures the Starred page shows the updated name without needing F5
+            if (updates.name !== undefined && (originalFile.isStarred || freshFile?.isStarred)) {
+                console.log('📝 File renamed and is starred - invalidating starred cache');
+                setLoadedEndpoints(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete('starred');
+                    return newSet;
+                });
+            }
+            
+            // Emit FILES_UPDATED event so all pages (including nested folders) can refresh
+            notifyFilesUpdated();
+            
             return { success: true, error: null };
         } catch (error) {
             // Rollback on failure
@@ -386,11 +400,33 @@ export function FilesProvider({ children }) {
         try {
             await filesApi.restoreFromTrash(token, fileId);
             
-            // Emit storage-updated event (restore may affect storage)
-            notifyStorageUpdated();
+            // Fetch fresh data from server to ensure all fields are correct
+            // This is especially important for nested folders to get correct star status
+            try {
+                const freshFile = await filesApi.getFile(token, fileId);
+                if (freshFile) {
+                    console.log('✅ Restored file fresh data:', {
+                        id: freshFile.id,
+                        name: freshFile.name,
+                        isStarred: freshFile.isStarred,
+                        isTrashed: freshFile.isTrashed
+                    });
+                    updateFilesInStore([freshFile]);
+                }
+            } catch (fetchError) {
+                console.warn('Failed to fetch fresh file data after restore:', fetchError);
+            }
+            
+            // Emit events to trigger refetches across the app
+            notifyStorageUpdated(); // Storage may have changed
+            
+            // CRITICAL FIX: Emit FILES_UPDATED so FolderPage and all pages refetch
+            // This ensures nested folders get fresh data with correct star status
+            notifyFilesUpdated();
             
             // Invalidate starred cache if file is starred (so it appears in starred page)
             if (originalFile.isStarred) {
+                console.log('⭐ Restored file was starred - invalidating starred cache');
                 setLoadedEndpoints(prev => {
                     const newSet = new Set(prev);
                     newSet.delete('starred');
