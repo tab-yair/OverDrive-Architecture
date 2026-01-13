@@ -31,9 +31,11 @@ const FileCard = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  // Use file.starred directly from SSOT (FilesContext) - no local state needed
-  const isStarred = file.starred || false;
   const menuButtonRef = useRef(null);
+
+  // Get starred status directly from file (FilesContext SSOT)
+  // Use isStarred first (schema-aligned), fallback to starred, then pageContext
+  const isStarred = file.isStarred ?? file.starred ?? (pageContext === 'Starred');
 
   // Helper to get file icon
   const getFileIconSrc = (type) => {
@@ -73,17 +75,9 @@ const FileCard = ({
   };
 
   const handleActionSelected = (actionId) => {
-    // Star/unstar handled by FilesContext (SSOT) - no local state update needed
+    // No local state update needed - FilesContext will update and trigger re-render
     if (onAction) {
       onAction(actionId, file);
-    }
-  };
-
-  const handleStarClick = (event) => {
-    event.stopPropagation();
-    // Star/unstar handled by FilesContext (SSOT)
-    if (onAction) {
-      onAction(isStarred ? 'unstar' : 'star', file);
     }
   };
 

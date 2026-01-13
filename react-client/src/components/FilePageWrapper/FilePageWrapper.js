@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import useFiles from '../../hooks/useFiles';
-import { useFilesContext } from '../../context/FilesContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useFilesContext } from '../../context/FilesContext';
 import { useDownload } from '../../hooks/useDownload';
 import { useRename } from '../../hooks/useRename';
 import { FileManager, InfoSidebar } from '../FileManagement';
@@ -45,9 +45,9 @@ function FilePageWrapper({
 }) {
     // Always call hooks unconditionally (React rule)
     const hookResult = useFiles(endpoint || 'mydrive'); // Provide default to avoid conditional hook call
-    const { toggleStar } = useFilesContext(); // Access SSOT for star/unstar
     const { handleOpen } = useNavigation();
     const { user } = useAuth();
+    const filesContext = useFilesContext();
     const { downloadFile, downloadMultiple } = useDownload();
     const { renameFile } = useRename();
     
@@ -158,27 +158,107 @@ function FilePageWrapper({
             return;
         }
         
-        // Handle star/unstar action - update SSOT (FilesContext)
+        // Handle star/unstar action - works for both single and multiple files
         if (action === 'star' || action === 'unstar') {
-            console.log(`[FilePageWrapper] ${action} action triggered`);
+            console.log('[FilePageWrapper] Star/Unstar action triggered:', action);
             
-            // Handle both single file and array
-            const filesToStar = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            // Handle both single file and multiple files
+            const filesToToggle = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
             
-            // Toggle star for each file using FilesContext (SSOT)
-            for (const file of filesToStar) {
-                if (file && file.id) {
-                    toggleStar(file.id).then(result => {
-                        if (result.success) {
-                            console.log(`✅ ${action} successful for:`, file.name);
-                        } else {
-                            console.error(`❌ ${action} failed for ${file.name}:`, result.error);
-                        }
-                    });
+            // Toggle star for each file
+            Promise.all(
+                filesToToggle.map(file => filesContext.toggleStar(file.id))
+            ).then(results => {
+                const failures = results.filter(r => !r.success);
+                if (failures.length > 0) {
+                    console.error('[FilePageWrapper] Some files failed to toggle star:', failures);
+                } else {
+                    console.log('[FilePageWrapper] All files star toggled successfully');
                 }
-            }
+                // Refetch to update the view
+                setTimeout(() => refetch(), 300);
+            }).catch(err => {
+                console.error('[FilePageWrapper] Star toggle operation failed:', err);
+            });
             
-            // No need to refetch - FilesContext optimistically updates the SSOT
+            return;
+        }
+        
+        // Handle trash action (delete/remove) - works for both single and multiple files
+        if (action === 'trash') {
+            console.log('[FilePageWrapper] Trash action triggered');
+            
+            // Handle both single file and multiple files
+            const filesToTrash = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            
+            // Delete each file
+            Promise.all(
+                filesToTrash.map(file => filesContext.deleteFile(file.id))
+            ).then(results => {
+                const failures = results.filter(r => !r.success);
+                if (failures.length > 0) {
+                    console.error('[FilePageWrapper] Some files failed to trash:', failures);
+                } else {
+                    console.log('[FilePageWrapper] All files trashed successfully');
+                }
+                // Refetch to update the view
+                setTimeout(() => refetch(), 300);
+            }).catch(err => {
+                console.error('[FilePageWrapper] Trash operation failed:', err);
+            });
+            
+            return;
+        }
+        
+        // Handle restore action - works for both single and multiple files
+        if (action === 'restore') {
+            console.log('[FilePageWrapper] Restore action triggered');
+            
+            // Handle both single file and multiple files
+            const filesToRestore = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            
+            // Restore each file
+            Promise.all(
+                filesToRestore.map(file => filesContext.restoreFile(file.id))
+            ).then(results => {
+                const failures = results.filter(r => !r.success);
+                if (failures.length > 0) {
+                    console.error('[FilePageWrapper] Some files failed to restore:', failures);
+                } else {
+                    console.log('[FilePageWrapper] All files restored successfully');
+                }
+                // Refetch to update the view
+                setTimeout(() => refetch(), 300);
+            }).catch(err => {
+                console.error('[FilePageWrapper] Restore operation failed:', err);
+            });
+            
+            return;
+        }
+        
+        // Handle deletePermanently action - works for both single and multiple files
+        if (action === 'deletePermanently') {
+            console.log('[FilePageWrapper] Permanent delete action triggered');
+            
+            // Handle both single file and multiple files
+            const filesToDelete = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            
+            // Permanently delete each file
+            Promise.all(
+                filesToDelete.map(file => filesContext.permanentlyDeleteFile(file.id))
+            ).then(results => {
+                const failures = results.filter(r => !r.success);
+                if (failures.length > 0) {
+                    console.error('[FilePageWrapper] Some files failed to permanently delete:', failures);
+                } else {
+                    console.log('[FilePageWrapper] All files permanently deleted successfully');
+                }
+                // Refetch to update the view
+                setTimeout(() => refetch(), 300);
+            }).catch(err => {
+                console.error('[FilePageWrapper] Permanent delete operation failed:', err);
+            });
+            
             return;
         }
         
@@ -197,8 +277,7 @@ function FilePageWrapper({
         // }
         
         // Refetch after actions that modify data
-        // Note: star/unstar handled by FilesContext SSOT - no refetch needed
-        const refetchActions = ['delete', 'restore', 'move', 'rename'];
+        const refetchActions = ['move'];
         if (refetchActions.includes(action)) {
             setTimeout(() => refetch(), 300);
         }

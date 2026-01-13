@@ -70,7 +70,6 @@ export function FilesProvider({ children }) {
             
             // Status flags
             isStarred: file.isStarred || false,
-            starred: file.isStarred || file.starred || false, // Alias for convenience
             isTrashed: file.isTrashed || false,
             
             // Timestamps (ISO 8601)
@@ -283,12 +282,7 @@ export function FilesProvider({ children }) {
         }
 
         // Optimistic toggle
-        const newStarredValue = !originalFile.isStarred;
-        const optimisticFile = { 
-            ...originalFile, 
-            isStarred: newStarredValue,
-            starred: newStarredValue // Update both for consistency
-        };
+        const optimisticFile = { ...originalFile, isStarred: !originalFile.isStarred };
         updateFilesInStore([optimisticFile]);
 
         try {
@@ -297,8 +291,7 @@ export function FilesProvider({ children }) {
             // Update with server response
             updateFilesInStore([{
                 ...originalFile,
-                isStarred: result.isStarred,
-                starred: result.isStarred // Update both for consistency
+                isStarred: result.isStarred
             }]);
             
             return { success: true, isStarred: result.isStarred, error: null };
@@ -339,6 +332,68 @@ export function FilesProvider({ children }) {
             return { success: false, error: errorMsg };
         }
     }, [token, filesMap, updateFilesInStore]);
+
+    /**
+     * Restore file from trash (optimistic update)
+     */
+    const restoreFile = useCallback(async (fileId) => {
+        if (!token) return { success: false, error: 'Not authenticated' };
+
+        const originalFile = filesMap.get(fileId);
+        if (!originalFile) {
+            return { success: false, error: 'File not found' };
+        }
+
+        // Optimistic: mark as not trashed
+        const optimisticFile = { ...originalFile, isTrashed: false };
+        updateFilesInStore([optimisticFile]);
+
+        try {
+            await filesApi.restoreFromTrash(token, fileId);
+            
+            // Emit storage-updated event (restore may affect storage)
+            notifyStorageUpdated();
+            
+            return { success: true, error: null };
+        } catch (error) {
+            // Rollback
+            updateFilesInStore([originalFile]);
+            const errorMsg = error.message || 'Failed to restore file';
+            return { success: false, error: errorMsg };
+        }
+    }, [token, filesMap, updateFilesInStore]);
+
+    /**
+     * Permanently delete file from trash (optimistic removal)
+     */
+    const permanentlyDeleteFile = useCallback(async (fileId) => {
+        if (!token) return { success: false, error: 'Not authenticated' };
+
+        const originalFile = filesMap.get(fileId);
+        if (!originalFile) {
+            return { success: false, error: 'File not found' };
+        }
+
+        // Optimistic: remove from store
+        const newMap = new Map(filesMap);
+        newMap.delete(fileId);
+        setFilesMap(newMap);
+
+        try {
+            await filesApi.permanentDelete(token, fileId);
+            
+            // Emit storage-updated event (permanent delete frees up storage)
+            notifyStorageUpdated();
+            
+            return { success: true, error: null };
+        } catch (error) {
+            // Rollback - restore to map
+            updateFilesInStore([originalFile]);
+            const errorMsg = error.message || 'Failed to permanently delete file';
+            return { success: false, error: errorMsg };
+        }
+    }, [token, filesMap, updateFilesInStore]);
+
 
     /**
      * Get files for specific endpoint from store
@@ -477,6 +532,8 @@ export function FilesProvider({ children }) {
         updateFile,
         toggleStar,
         deleteFile,
+        restoreFile,
+        permanentlyDeleteFile,
         
         // Cache management
         invalidateEndpoint,
