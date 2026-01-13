@@ -21,6 +21,7 @@ import './FilePageWrapper.css';
  * @param {string} props.endpoint - API endpoint type: 'mydrive', 'shared', 'recent', 'trash', 'starred' (optional if customFiles provided)
  * @param {Array} props.customFiles - Custom files array (optional, overrides endpoint)
  * @param {boolean} props.customLoading - Custom loading state (optional, overrides endpoint loading)
+ * @param {Function} props.customRefetch - Custom refetch function (optional, for FolderPage)
  * @param {React.Component} props.headerComponent - Custom header component (optional)
  * @param {string} props.pageContext - Display context for FileManager (e.g., 'MyDrive', 'Shared')
  * @param {boolean} props.isOwner - Whether user is the owner of displayed files
@@ -34,6 +35,7 @@ function FilePageWrapper({
     endpoint,
     customFiles,
     customLoading,
+    customRefetch,
     headerComponent,
     pageContext,
     isOwner = false,
@@ -51,10 +53,10 @@ function FilePageWrapper({
     const { downloadFile, downloadMultiple } = useDownload();
     const { renameFile } = useRename();
     
-    // Use custom files/loading if provided, otherwise use hook result
+    // Use custom files/loading/refetch if provided, otherwise use hook result
     const files = customFiles !== undefined ? customFiles : hookResult.files;
     const loading = customLoading !== undefined ? customLoading : hookResult.loading;
-    const refetch = hookResult.refetch;
+    const refetch = customRefetch || hookResult.refetch;
     const [viewMode, setViewMode] = useState('grid');
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);

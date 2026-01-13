@@ -84,9 +84,13 @@ const FileRow = ({
   const handleActionClick = (actionId) => (event) => {
     event.stopPropagation();
     
+    console.log('🎯 FileRow handleActionClick:', { actionId, file: file.name, fileId: file.id });
+    
     // No local state update needed - FilesContext will update and trigger re-render
     if (onAction) {
       onAction(actionId, file);
+    } else {
+      console.warn('⚠️ FileRow: onAction handler is missing!');
     }
   };
 

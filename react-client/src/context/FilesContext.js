@@ -274,12 +274,23 @@ export function FilesProvider({ children }) {
      * Toggle star (optimistic update)
      */
     const toggleStar = useCallback(async (fileId) => {
+        console.log('⭐ toggleStar called:', { fileId, hasToken: !!token, filesMapSize: filesMap.size });
+        
         if (!token) return { success: false, error: 'Not authenticated' };
 
         const originalFile = filesMap.get(fileId);
         if (!originalFile) {
+            console.error('❌ toggleStar: File not found in filesMap!', { 
+                fileId, 
+                availableIds: Array.from(filesMap.keys()) 
+            });
             return { success: false, error: 'File not found' };
         }
+
+        console.log('✅ toggleStar: File found, toggling star', { 
+            fileId, 
+            currentStar: originalFile.isStarred 
+        });
 
         // Optimistic toggle
         const optimisticFile = { ...originalFile, isStarred: !originalFile.isStarred };

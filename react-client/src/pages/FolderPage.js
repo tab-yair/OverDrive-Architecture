@@ -18,17 +18,15 @@ const FolderPage = () => {
   const { token, user } = useAuth();
   const { handleOpen, setCurrentFolderId } = useNavigation();
   const filesContext = useFilesContext();
-  const { updateFilesInStore } = filesContext;
+  const { updateFilesInStore, filesMap } = filesContext;
   
   const [folder, setFolder] = useState(null);
-  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Clear state when user changes
   useUserChange(() => {
     setFolder(null);
-    setFiles([]);
     setError(null);
   });
 
@@ -70,19 +68,6 @@ const FolderPage = () => {
       const filesToStore = [data, ...children];
       updateFilesInStore(filesToStore);
       
-      // Compute location for children (can't use getFile yet - store update is async)
-      // Manually compute location same way getFile does
-      const filesWithLocation = children.map(child => ({
-        ...child,
-        location: {
-          parentId: folderId,
-          parentName: data.name,
-          isRoot: false
-        }
-      }));
-      
-      setFiles(filesWithLocation);
-      
       console.log(`📂 Loaded folder: ${data.name} with ${children.length} items`);
 
     } catch (err) {
@@ -91,7 +76,7 @@ const FolderPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, folderId, setCurrentFolderId]);
+  }, [token, folderId, setCurrentFolderId, updateFilesInStore]);
 
   // Fetch on mount and when dependencies change
   useEffect(() => {
@@ -103,6 +88,46 @@ const FolderPage = () => {
     console.log('📥 FolderPage: Files updated event - refetching folder data');
     fetchFolderData();
   }, [fetchFolderData]);
+
+  // Get files from FilesContext (always fresh, auto-updates on star/etc)
+  // Filter children of current folder and compute location
+  const files = React.useMemo(() => {
+    console.log('🔄 FolderPage useMemo - recalculating files list', {
+      folderId,
+      filesMapSize: filesMap.size,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (!folderId) return [];
+    
+    const allFiles = Array.from(filesMap.values());
+    // Filter children of current folder AND exclude trashed items
+    const children = allFiles.filter(f => 
+      f.parentId === folderId && !f.isTrashed
+    );
+    
+    console.log('📋 Filtered children:', {
+      childrenCount: children.length,
+      childrenIds: children.map(c => c.id)
+    });
+    
+    // Get folder data from filesMap (not local state)
+    const currentFolder = filesMap.get(folderId);
+    if (!currentFolder) {
+      console.warn('⚠️ Current folder not found in filesMap:', folderId);
+      return [];
+    }
+    
+    // Compute location for children
+    return children.map(child => ({
+      ...child,
+      location: {
+        parentId: folderId,
+        parentName: currentFolder.name,
+        isRoot: false
+      }
+    }));
+  }, [filesMap, folderId]);
 
   if (error) {
     return (
@@ -116,6 +141,7 @@ const FolderPage = () => {
     <FilePageWrapper
       customFiles={files}
       customLoading={loading}
+      customRefetch={fetchFolderData}
       pageContext="Folder"
       isOwner={true}
       permissionLevel="owner"
