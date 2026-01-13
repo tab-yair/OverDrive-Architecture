@@ -200,27 +200,46 @@ class PermissionService {
             throw new Error("Permission denied: You cannot modify this permission");
         }
 
-        // Check if permission is inherited - cannot modify directly
+        // Check if permission is inherited
         if (permission.isInherited) {
-            // Check if user has permission to edit the source folder
-            const sourceFolder = await filesStore.getById(permission.inheritedFrom);
-            const canEditSource = await this.canUserWrite({ userId: requestingUserId, fileId: permission.inheritedFrom });
+            // ALLOWED: Upgrade inherited permission (creates direct permission override)
+            // ALLOWED: Set to same level (no-op, just return current)
+            // NOT ALLOWED: Downgrade inherited permission
             
-            const error = {
-                error: "Cannot modify inherited permission directly",
-                message: "This permission is inherited from a parent folder. To modify it, please change the permission on the parent folder.",
-                canEditSource: canEditSource,
-                sourceFolder: sourceFolder ? {
-                    id: sourceFolder.id,
-                    name: sourceFolder.name,
-                    path: sourceFolder.path
-                } : null
-            };
+            const strength = { VIEWER: 1, EDITOR: 2, OWNER: 3 };
+            const currentStrength = strength[permission.level];
+            const targetStrength = strength[updates.level];
             
-            // Return structured error as JSON for client to handle
-            const err = new Error(JSON.stringify(error));
-            err.isStructuredError = true;
-            throw err;
+            // Same level - no-op, just return current permission
+            if (targetStrength === currentStrength) {
+                return permission;
+            }
+            
+            // If trying to downgrade inherited permission
+            if (targetStrength < currentStrength) {
+                const sourceFolder = await filesStore.getById(permission.inheritedFrom);
+                const canEditSource = await this.canUserWrite({ userId: requestingUserId, fileId: permission.inheritedFrom });
+                
+                const error = {
+                    error: "Cannot downgrade inherited permission",
+                    message: "This permission is inherited from a parent folder. You can only upgrade it. To downgrade, modify the parent folder permission.",
+                    canEditSource: canEditSource,
+                    sourceFolder: sourceFolder ? {
+                        id: sourceFolder.id,
+                        name: sourceFolder.name,
+                        path: sourceFolder.path
+                    } : null
+                };
+                
+                const err = new Error(JSON.stringify(error));
+                err.isStructuredError = true;
+                throw err;
+            }
+            
+            // UPGRADE: Convert inherited permission to direct permission with higher level
+            // This creates a direct permission that overrides the inherited one
+            permission.isInherited = false;
+            permission.inheritedFrom = null;
         }
 
         // Only allow level changes (not userId changes)

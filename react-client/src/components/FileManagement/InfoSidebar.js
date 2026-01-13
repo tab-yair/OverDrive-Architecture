@@ -133,6 +133,43 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
     ? 'owner' 
     : (file.sharedPermissionLevel?.toLowerCase() || file.permissionLevel?.toLowerCase() || 'viewer');
 
+  /**
+   * CENTRAL PERMISSION VALIDATION - Single Source of Truth
+   * Validates if a permission action is allowed before execution
+   * Returns: { allowed: boolean, reason: string }
+   */
+  const validatePermissionAction = (targetUser, actionKey) => {
+    const strength = { viewer: 1, editor: 2, owner: 3 };
+    
+    // 1. Check current user's role permissions
+    if (currentUserRole === 'viewer') {
+      return { allowed: false, reason: 'Viewers cannot manage permissions' };
+    }
+    
+    if (currentUserRole === 'editor' && actionKey === 'transfer') {
+      return { allowed: false, reason: 'Only the owner can transfer ownership' };
+    }
+    
+    // 2. Check inheritance constraints
+    if (targetUser.isInherited) {
+      // Cannot remove inherited permissions
+      if (actionKey === 'remove') {
+        return { allowed: false, reason: 'Cannot remove inherited permission' };
+      }
+      
+      // Cannot downgrade inherited permissions (but CAN upgrade)
+      const currentStrength = strength[targetUser.role];
+      const targetStrength = strength[actionKey];
+      
+      if (actionKey !== 'transfer' && targetStrength < currentStrength) {
+        return { allowed: false, reason: 'Cannot downgrade inherited permission' };
+      }
+    }
+    
+    // 3. All checks passed - action is allowed
+    return { allowed: true, reason: '' };
+  };
+
   return (
     <div 
       ref={sidebarRef}
@@ -241,23 +278,48 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                       onChange={{
                         setRole: async (userId, newRole) => {
                           const perm = permissions.find(p => p.userId === userId);
-                          if (perm) {
-                            try {
-                              await filesApi.updatePermission(token, fileId, perm.pid, newRole.toUpperCase());
-                              // Reload permissions
-                              const perms = await filesApi.getPermissions(token, fileId);
-                              setPermissions(perms);
-                              // Trigger file refresh in context
-                              notifyFilesUpdated();
-                            } catch (err) {
-                              console.error('Failed to update permission:', err);
-                              alert('Failed to update permission');
-                            }
+                          if (!perm) return;
+                          
+                          // VALIDATION: Check if action is allowed (SSOT)
+                          const targetUser = permissions.find(p => p.userId === userId);
+                          const validation = validatePermissionAction(
+                            { role: perm.level?.toLowerCase(), isInherited: perm.isInherited },
+                            newRole
+                          );
+                          
+                          if (!validation.allowed) {
+                            console.error('Permission denied:', validation.reason);
+                            alert(validation.reason);
+                            return;
+                          }
+                          
+                          try {
+                            await filesApi.updatePermission(token, fileId, perm.pid, newRole.toUpperCase());
+                            // Reload permissions
+                            const perms = await filesApi.getPermissions(token, fileId);
+                            setPermissions(perms);
+                            // Trigger file refresh in context
+                            notifyFilesUpdated();
+                          } catch (err) {
+                            console.error('Failed to update permission:', err);
+                            alert('Failed to update permission');
                           }
                         },
                         removeAccess: async (userId) => {
                           const perm = permissions.find(p => p.userId === userId);
                           if (!perm) return;
+                          
+                          // VALIDATION: Check if action is allowed (SSOT)
+                          const validation = validatePermissionAction(
+                            { role: perm.level?.toLowerCase(), isInherited: perm.isInherited },
+                            'remove'
+                          );
+                          
+                          if (!validation.allowed) {
+                            console.error('Permission denied:', validation.reason);
+                            alert(validation.reason);
+                            return;
+                          }
                           
                           try {
                             await filesApi.revokePermission(token, fileId, perm.pid);

@@ -109,33 +109,55 @@ export default function PermissionsManager({ currentUserRole = 'owner', currentU
     }
   };
 
-  const isDisabledByInheritance = (user, actionKey) => {
-    if (!user.isInherited) return false;
-    // Inheritance rule: cannot reduce permission level or remove access.
-    // "remove" is always disabled; roles lower than current are disabled.
-    if (actionKey === 'remove') return true;
-    if (actionKey === 'transfer') return false; // transfer isn't a reduction; ownership change allowed only by current owner rule
-    // Disallow any role lower than current role
+  /**
+   * Check permission for UI display
+   * Returns: { disabled: boolean, tooltip: string }
+   * 
+   * This validates permissions for UI state only.
+   * Server-side validation happens in InfoSidebar onChange handlers.
+   */
+  const checkActionPermission = (user, actionKey) => {
     const strength = { viewer: 1, editor: 2, owner: 3 };
-    const currentStrength = strength[user.role];
-    const targetStrength = strength[actionKey];
-    if (targetStrength < currentStrength) return true;
-    return false;
-  };
-
-  // Helper to get tooltip text based on disabled reason
-  const getDisabledTooltip = (user, actionKey) => {
-    if (user.isInherited) {
-      if (actionKey === 'remove') return 'Cannot remove - permission inherited from parent folder';
-      return 'Cannot modify - permission inherited from parent folder';
-    }
-    if (currentUserRole !== 'owner' && actionKey === 'transfer') {
-      return 'Only the owner can transfer ownership';
-    }
+    
+    // 1. Check current user's role permissions
     if (currentUserRole === 'viewer') {
-      return 'Viewers cannot manage permissions';
+      return { 
+        disabled: true, 
+        tooltip: 'Viewers cannot manage permissions' 
+      };
     }
-    return 'Insufficient permissions';
+    
+    if (currentUserRole === 'editor' && actionKey === 'transfer') {
+      return { 
+        disabled: true, 
+        tooltip: 'Only the owner can transfer ownership' 
+      };
+    }
+    
+    // 2. Check inheritance constraints
+    if (user.isInherited) {
+      // Cannot remove inherited permissions
+      if (actionKey === 'remove') {
+        return { 
+          disabled: true, 
+          tooltip: 'Cannot remove inherited permission' 
+        };
+      }
+      
+      // Cannot downgrade inherited permissions (but CAN upgrade)
+      const currentStrength = strength[user.role];
+      const targetStrength = strength[actionKey];
+      
+      if (actionKey !== 'transfer' && targetStrength < currentStrength) {
+        return { 
+          disabled: true, 
+          tooltip: 'Cannot downgrade inherited permission' 
+        };
+      }
+    }
+    
+    // 3. All checks passed - action is allowed
+    return { disabled: false, tooltip: '' };
   };
 
   return (
@@ -177,34 +199,20 @@ export default function PermissionsManager({ currentUserRole = 'owner', currentU
                   {isMenuOpen && (
                     <div className="perm-menu" role="menu">
                       {options.map((opt) => {
-                        let disabled = false;
-                        let title = '';
-
-                        // Check if current user role allows this action (SSOT based on README)
-                        if (!isActionAllowed(opt.key)) {
-                          disabled = true;
-                          title = getDisabledTooltip(user, opt.key);
-                        }
-
-                        // Inheritance constraints (SSOT: cannot downgrade inherited permissions)
-                        if (!disabled && isDisabledByInheritance(user, opt.key)) {
-                          disabled = true;
-                          title = getDisabledTooltip(user, opt.key);
-                        }
-
-                        // Visual disabled state
-                        const classes = `perm-menu-item ${disabled ? 'perm-disabled' : ''}`;
+                        // SINGLE SOURCE OF TRUTH - one function decides everything
+                        const permission = checkActionPermission(user, opt.key);
+                        const classes = `perm-menu-item ${permission.disabled ? 'perm-disabled' : ''}`;
 
                         return (
                           <button
                             key={opt.key}
                             className={classes}
                             onClick={() => handleAction(user, opt.key)}
-                            disabled={disabled}
-                            title={disabled ? title : ''}
+                            disabled={permission.disabled}
+                            data-tooltip={permission.tooltip}
                             role="menuitem"
                           >
-                            {disabled && <span className="perm-lock" aria-hidden>🔒</span>}
+                            {permission.disabled && <span className="perm-lock" aria-hidden>🔒</span>}
                             <span>{opt.label}</span>
                           </button>
                         );
