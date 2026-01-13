@@ -555,6 +555,16 @@ export function formatBytes(bytes, decimals = 1) {
 }
 
 /**
+ * Permissions API (alias to filesApi methods for convenience)
+ */
+export const permissionsApi = {
+    getPermissions: filesApi.getPermissions,
+    grantPermission: filesApi.grantPermission,
+    updatePermission: filesApi.updatePermission,
+    revokePermission: filesApi.revokePermission
+};
+
+/**
  * Legacy Support / Default Export
  * Allows existing login/register components to work without changes.
  */

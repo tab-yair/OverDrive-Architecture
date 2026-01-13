@@ -343,6 +343,14 @@ body.info-sidebar-open {
   overflow-y: auto;
 }
 
+.info-sidebar__loading,
+.info-sidebar__empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-secondary, #5f6368);
+  font-size: 14px;
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .info-sidebar {
