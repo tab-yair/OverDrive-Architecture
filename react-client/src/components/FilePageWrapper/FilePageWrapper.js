@@ -168,6 +168,8 @@ function FilePageWrapper({
             const filesToToggle = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
             
             // Toggle star for each file
+            // Note: FilesContext handles optimistic updates and server sync automatically
+            // No need to refetch - that would overwrite the optimistic update!
             Promise.all(
                 filesToToggle.map(file => filesContext.toggleStar(file.id))
             ).then(results => {
@@ -177,8 +179,6 @@ function FilePageWrapper({
                 } else {
                     console.log('[FilePageWrapper] All files star toggled successfully');
                 }
-                // Refetch to update the view
-                setTimeout(() => refetch(), 300);
             }).catch(err => {
                 console.error('[FilePageWrapper] Star toggle operation failed:', err);
             });

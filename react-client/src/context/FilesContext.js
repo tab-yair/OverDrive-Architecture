@@ -305,6 +305,13 @@ export function FilesProvider({ children }) {
                 isStarred: result.isStarred
             }]);
             
+            // Invalidate starred cache to trigger refetch on starred page
+            setLoadedEndpoints(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('starred');
+                return newSet;
+            });
+            
             return { success: true, isStarred: result.isStarred, error: null };
         } catch (error) {
             // Rollback
@@ -364,6 +371,15 @@ export function FilesProvider({ children }) {
             
             // Emit storage-updated event (restore may affect storage)
             notifyStorageUpdated();
+            
+            // Invalidate starred cache if file is starred (so it appears in starred page)
+            if (originalFile.isStarred) {
+                setLoadedEndpoints(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete('starred');
+                    return newSet;
+                });
+            }
             
             return { success: true, error: null };
         } catch (error) {
