@@ -94,10 +94,13 @@ export function FilesProvider({ children }) {
     /**
      * Update files map (merges new data with existing)
      * Simple merge - no need for deep merge since location is computed
+     * CRITICAL: Always return a NEW Map instance to trigger React re-renders
      */
     const updateFilesInStore = useCallback((files) => {
         setFilesMap(prev => {
             const newMap = new Map(prev);
+            let hasChanges = false;
+            
             files.forEach(file => {
                 const normalized = normalizeFile(file);
                 const existing = newMap.get(file.id);
@@ -110,9 +113,23 @@ export function FilesProvider({ children }) {
                     lastEditedAt: normalized.lastEditedAt ?? existing.lastEditedAt ?? null,
                 } : normalized;
 
+                // Check if there are actual changes
+                if (!existing || JSON.stringify(existing) !== JSON.stringify(merged)) {
+                    hasChanges = true;
+                    console.log('📝 FilesContext: File updated in store', {
+                        id: file.id,
+                        name: file.name,
+                        isStarred: merged.isStarred,
+                        wasStarred: existing?.isStarred,
+                        changed: !existing || existing.isStarred !== merged.isStarred
+                    });
+                }
+
                 newMap.set(file.id, merged);
             });
-            return newMap;
+            
+            // Always return new Map to trigger re-renders
+            return hasChanges ? newMap : prev;
         });
     }, [normalizeFile]);
 

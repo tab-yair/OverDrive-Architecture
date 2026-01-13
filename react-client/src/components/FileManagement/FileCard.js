@@ -33,10 +33,6 @@ const FileCard = ({
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const menuButtonRef = useRef(null);
 
-  // Get starred status directly from file (FilesContext SSOT)
-  // Use isStarred first (schema-aligned), fallback to starred, then pageContext
-  const isStarred = file.isStarred ?? file.starred ?? (pageContext === 'Starred');
-
   // Helper to get file icon
   const getFileIconSrc = (type) => {
     const iconMap = {
@@ -62,7 +58,7 @@ const FileCard = ({
   // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
   // It represents actions for THIS specific file, independent of global selection state
   // Only SelectionToolbar should use actual selectedCount for bulk operations
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred }, 1, permissionLevel);
+  const availableActions = getAvailableActions(pageContext, file, 1, permissionLevel);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();

@@ -69,14 +69,22 @@ export const useFiles = (endpoint, initialFilters = null) => {
 
     /**
      * Subscribe to filesMap updates to get new data immediately
+     * CRITICAL: Use filesMap.size as dependency to detect ANY changes to the Map
      */
+    const filesMapSize = filesContext.filesMap.size;
+    
     useEffect(() => {
         // Update files whenever filesMap changes
         if (filesContext.loadedEndpoints.has(endpoint)) {
             const storeFiles = filesContext.getFilesFromStore(endpoint);
+            console.log(`🔄 useFiles: Map updated, refreshing ${endpoint}`, {
+                filesCount: storeFiles.length,
+                filesMapSize,
+                starredFiles: storeFiles.filter(f => f.isStarred).map(f => ({ id: f.id, name: f.name }))
+            });
             setFiles(storeFiles);
         }
-    }, [filesContext.filesMap, endpoint, filesContext]);
+    }, [filesMapSize, endpoint, filesContext]);
 
     /**
      * Update filters and trigger refetch

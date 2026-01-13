@@ -33,10 +33,6 @@ const FileRow = ({
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const menuButtonRef = useRef(null);
 
-  // Get starred status directly from file (FilesContext SSOT)
-  // Use isStarred first (schema-aligned), fallback to starred, then pageContext
-  const isStarred = file.isStarred ?? file.starred ?? (pageContext === 'Starred');
-
   // Helper to get file icon
   const getFileIconSrc = (type) => {
     const iconMap = {
@@ -65,11 +61,10 @@ const FileRow = ({
   // It represents actions for THIS specific file, independent of global selection state
   // Only SelectionToolbar should use actual selectedCount for bulk operations
   // Always include permissionLevel to ensure correct permission evaluation (especially for owners)
-  const fileWithPermission = { ...file, starred: isStarred, permissionLevel: file.permissionLevel || permissionLevel };
-  const availableActions = getAvailableActions(pageContext, fileWithPermission, 1, permissionLevel);
+  const availableActions = getAvailableActions(pageContext, file, 1, permissionLevel);
   
   // Get row buttons using the ACTION_REGISTRY
-  const rowButtons = getRowActionButtons(pageContext, fileWithPermission, permissionLevel);
+  const rowButtons = getRowActionButtons(pageContext, file, permissionLevel);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();

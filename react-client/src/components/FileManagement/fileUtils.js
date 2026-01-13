@@ -713,7 +713,8 @@ const ACTION_REGISTRY = {
      */
     isVisible: (file, pageContext, permissionLevel) => {
       if (pageContext === 'Trash') return false;
-      const isStarred = file.starred || pageContext === 'Starred';
+      // Use isStarred (schema-aligned with FilesContext)
+      const isStarred = file.isStarred || pageContext === 'Starred';
       return !isStarred;
     },
     /**
@@ -735,7 +736,8 @@ const ACTION_REGISTRY = {
      */
     isVisible: (file, pageContext, permissionLevel) => {
       if (pageContext === 'Trash') return false;
-      const isStarred = file.starred || pageContext === 'Starred';
+      // Use isStarred (schema-aligned with FilesContext)
+      const isStarred = file.isStarred || pageContext === 'Starred';
       return isStarred;
     },
     /**

@@ -91,10 +91,15 @@ const FolderPage = () => {
 
   // Get files from FilesContext (always fresh, auto-updates on star/etc)
   // Filter children of current folder and compute location
+  // IMPORTANT: Convert filesMap.size to dependency to trigger recalculation on ANY map change
+  const filesMapSize = filesMap.size;
+  const filesMapVersion = React.useMemo(() => Date.now(), [filesMapSize]);
+  
   const files = React.useMemo(() => {
     console.log('🔄 FolderPage useMemo - recalculating files list', {
       folderId,
-      filesMapSize: filesMap.size,
+      filesMapSize,
+      filesMapVersion,
       timestamp: new Date().toISOString()
     });
     
@@ -108,7 +113,8 @@ const FolderPage = () => {
     
     console.log('📋 Filtered children:', {
       childrenCount: children.length,
-      childrenIds: children.map(c => c.id)
+      childrenIds: children.map(c => c.id),
+      childrenStarred: children.map(c => ({ id: c.id, name: c.name, isStarred: c.isStarred }))
     });
     
     // Get folder data from filesMap (not local state)
@@ -127,7 +133,7 @@ const FolderPage = () => {
         isRoot: false
       }
     }));
-  }, [filesMap, folderId]);
+  }, [filesMap, folderId, filesMapSize, filesMapVersion]);
 
   if (error) {
     return (
