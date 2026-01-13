@@ -19,7 +19,7 @@ import { AppEvents, notifyStorageUpdated, notifyFilesUpdated } from '../utils/ev
 const FilesContext = createContext();
 
 export function FilesProvider({ children }) {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     
     // SSOT: Map for O(1) lookups, Set for tracking loaded endpoints
     const [filesMap, setFilesMap] = useState(new Map());
@@ -65,6 +65,9 @@ export function FilesProvider({ children }) {
             ownerId: file.ownerId,
             parentId: file.parentId || null,
             
+            // Ownership flag (for UI decisions: "Move to Trash" vs "Remove")
+            isOwner: user && file.ownerId === user.id,
+            
             // Permissions (user's effective permission level)
             permissionLevel: file.permissionLevel || null, // OWNER | EDITOR | VIEWER
             
@@ -91,7 +94,7 @@ export function FilesProvider({ children }) {
             content: file.content || null,
             path: file.path || null
         };
-    }, []);
+    }, [user]);
 
     /**
      * Update files map (merges new data with existing)

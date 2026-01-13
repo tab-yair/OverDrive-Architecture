@@ -17,7 +17,7 @@ const Breadcrumbs = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { folderId } = useParams();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [breadcrumbs, setBreadcrumbs] = useState([]);
   const [showOverflow, setShowOverflow] = useState(false);
   const [overflowItems, setOverflowItems] = useState([]);
@@ -30,18 +30,20 @@ const Breadcrumbs = () => {
     if (pathname.startsWith('/recent')) return { name: 'Recent', path: '/recent', icon: 'schedule' };
     if (pathname.startsWith('/trash')) return { name: 'Trash', path: '/trash', icon: 'delete' };
     if (pathname.startsWith('/shared')) return { name: 'Shared with me', path: '/shared', icon: 'people' };
-    if (pathname.startsWith('/folders')) return { name: 'My Drive', path: '/mydrive', icon: 'folder' };
+    if (pathname.startsWith('/folders')) return null; // Will be determined dynamically
     return null;
   };
 
   /**
    * Build breadcrumb path by traversing parent folders
+   * Returns { path: [...], isShared: boolean }
    */
   const buildBreadcrumbPath = async (currentFolderId) => {
-    if (!token || !currentFolderId) return [];
+    if (!token || !currentFolderId || !user) return { path: [], isShared: false };
 
     const path = [];
     let folderId = currentFolderId;
+    let isShared = false;
 
     try {
       // Traverse up the folder hierarchy
@@ -53,6 +55,11 @@ const Breadcrumbs = () => {
         if (!response.ok) break;
 
         const folder = await response.json();
+        
+        // Check if this folder is shared (not owned by current user)
+        if (folder.ownerId !== user.id || folder.sharedPermissionLevel) {
+          isShared = true;
+        }
         
         // Add folder to path (we'll reverse it later)
         path.unshift({
@@ -68,7 +75,7 @@ const Breadcrumbs = () => {
       console.error('Failed to build breadcrumb path:', error);
     }
 
-    return path;
+    return { path, isShared };
   };
 
   /**
@@ -82,7 +89,24 @@ const Breadcrumbs = () => {
         timestamp: new Date().toISOString()
       });
 
-      const rootContext = getRootContext(location.pathname);
+      let rootContext = getRootContext(location.pathname);
+      
+      // If we're in a folder, determine root context based on ownership
+      if (location.pathname.startsWith('/folders') && folderId) {
+        console.log('📂 Building breadcrumb path for folder:', folderId);
+        const { path: folderPath, isShared } = await buildBreadcrumbPath(folderId);
+        console.log('📂 Folder path built:', { folderPath, isShared });
+        
+        // Set root context based on ownership
+        rootContext = isShared 
+          ? { name: 'Shared with me', path: '/shared', icon: 'people' }
+          : { name: 'My Drive', path: '/mydrive', icon: 'folder' };
+        
+        const crumbs = [rootContext, ...folderPath];
+        console.log('✅ Breadcrumbs set:', crumbs);
+        setBreadcrumbs(crumbs);
+        return;
+      }
       
       if (!rootContext) {
         console.log('⚠️ No root context found for path:', location.pathname);
@@ -94,10 +118,10 @@ const Breadcrumbs = () => {
       const crumbs = [rootContext];
       console.log('📍 Root context:', rootContext);
 
-      // If we're in a folder, build the full path
-      if (folderId) {
+      // If we're in a folder (non-/folders route), build the full path
+      if (folderId && !location.pathname.startsWith('/folders')) {
         console.log('📂 Building breadcrumb path for folder:', folderId);
-        const folderPath = await buildBreadcrumbPath(folderId);
+        const { path: folderPath } = await buildBreadcrumbPath(folderId);
         console.log('📂 Folder path built:', folderPath);
         crumbs.push(...folderPath);
       }
@@ -107,7 +131,7 @@ const Breadcrumbs = () => {
     };
 
     updateBreadcrumbs();
-  }, [location.pathname, folderId, token]);
+  }, [location.pathname, folderId, token, user]);
 
   /**
    * Handle breadcrumb click navigation
