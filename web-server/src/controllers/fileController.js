@@ -75,6 +75,43 @@ const createFile = asyncHandler(async (req, res) => {
         await fileService.uploadFile({ fileId: file.id, content });
     }
 
+    // Inherit permissions from parent folder if creating inside a folder
+    if (normalizedParentId !== null) {
+        const { permissionStore } = require('../models/permissionStore');
+        const { generateId } = require('../utils/idGenerator');
+        
+        const parentPermissions = await permissionStore.getByFileId(normalizedParentId);
+        
+        for (const perm of parentPermissions) {
+            // Skip the creator (already has OWNER permission on the new file)
+            if (perm.userId === req.userId) continue;
+            
+            // Skip hidden permissions
+            if (perm.isHiddenForUser) continue;
+            
+            // Determine inherited permission level:
+            // - OWNER on parent folder → EDITOR on new file
+            // - EDITOR on parent folder → EDITOR on new file  
+            // - VIEWER on parent folder → VIEWER on new file
+            const inheritedLevel = (perm.level === 'OWNER' || perm.level === 'EDITOR') 
+                ? 'EDITOR' 
+                : 'VIEWER';
+            
+            // Create inherited permission for this user
+            const inheritedPermId = generateId();
+            await permissionStore.create(
+                inheritedPermId,
+                file.id,
+                perm.userId,
+                inheritedLevel,
+                true,                    // isInherited
+                normalizedParentId,      // inheritedFrom
+                false,                   // isHiddenForUser
+                null                     // createdBy
+            );
+        }
+    }
+
     // Return 201 Created with Location header (empty body per assignment spec)
     res.status(201)
        .location(`/api/files/${file.id}`)
