@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './SearchBar.css';
 
@@ -73,6 +74,7 @@ function CustomDropdown({ value, options, onChange, placeholder }) {
  * Includes advanced filter panel for filtering by type, date, owner, etc.
  */
 function SearchBar() {
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
@@ -148,7 +150,56 @@ function SearchBar() {
         console.log('Searching for:', searchQuery);
         console.log('With filters:', filters);
 
-        // TODO: Implement server search integration
+        // Build URL params for search
+        const params = new URLSearchParams();
+        
+        // Add search query
+        if (searchQuery.trim()) {
+            params.set('q', searchQuery.trim());
+        } else if (filters.itemName) {
+            // If no main query but has item name filter, use that as query
+            params.set('q', filters.itemName);
+        }
+
+        // Add filters as URL params
+        if (filters.type) {
+            params.set('type', filters.type);
+        }
+        if (filters.owner) {
+            params.set('owner', filters.owner === 'me' ? 'owned' : 'shared');
+        }
+
+        // Map date filter to API format
+        if (filters.dateModified) {
+            if (filters.dateModified === 'custom') {
+                if (filters.dateStart) params.set('dateStart', filters.dateStart);
+                if (filters.dateEnd) params.set('dateEnd', filters.dateEnd);
+            } else {
+                // Map UI date options to API date categories
+                const dateMapping = {
+                    'today': 'today',
+                    'week': 'last7days',
+                    'month': 'last30days',
+                    'year': 'thisyear'
+                };
+                if (dateMapping[filters.dateModified]) {
+                    params.set('dateCategory', dateMapping[filters.dateModified]);
+                }
+            }
+        }
+
+        // Determine search location
+        if (filters.hasWords && !searchQuery.trim()) {
+            // If only searching by content words
+            params.set('searchIn', 'content');
+            params.set('q', filters.hasWords);
+        } else if (filters.hasWords) {
+            // Search in both if we have both query and content words
+            params.set('searchIn', 'both');
+        }
+
+        // Navigate to search page with params
+        navigate(`/search?${params.toString()}`);
     };
 
     /**

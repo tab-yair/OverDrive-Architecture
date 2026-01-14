@@ -725,6 +725,46 @@ class FileService {
         return files;
     }
 
+    // Get all files owned by user (excluding folders), sorted by size
+    async getOwnedFiles({ userId, sortOrder = 'desc' }) {
+        // Get all files from store
+        const allFiles = await filesStore.getAll();
+        
+        // Filter files owned by user, excluding folders and trash
+        const ownedFiles = [];
+        for (const file of allFiles) {
+            // Skip if not owned by user
+            if (file.ownerId !== userId) {
+                continue;
+            }
+            
+            // Skip folders
+            if (file.type === 'folder') {
+                continue;
+            }
+            
+            // Skip files in trash
+            const inTrash = await this._isInTrash(file.id);
+            if (inTrash) {
+                continue;
+            }
+            
+            ownedFiles.push({
+                ...file,
+                permissionLevel: 'OWNER'
+            });
+        }
+        
+        // Sort by size
+        ownedFiles.sort((a, b) => {
+            const aSize = a.size || 0;
+            const bSize = b.size || 0;
+            return sortOrder === 'desc' ? bSize - aSize : aSize - bSize;
+        });
+        
+        return ownedFiles;
+    }
+
     // Toggle star status for a file
     async toggleStarFile({ fileId, userId }) {
         // Check file exists

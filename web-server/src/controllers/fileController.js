@@ -244,6 +244,27 @@ const getSharedFiles = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /api/files/owned
+ * Get all files owned by current user (excluding folders), sorted by size
+ * Supports filtering via HTTP headers
+ */
+const getOwnedFiles = asyncHandler(async (req, res) => {
+    // Parse filter headers
+    const filters = filterService.parseFilters(req.headers);
+    
+    // Get sort order from query params (default: desc = largest first)
+    const sortOrder = req.query.sortOrder || 'desc';
+    
+    // Get owned files
+    let files = await fileService.getOwnedFiles({ userId: req.userId, sortOrder });
+    
+    // Apply filters
+    files = filterService.applyFilters(files, filters, req.userId);
+    
+    res.status(200).json(files);
+});
+
+/**
  * GET /api/files/trash
  * Get all items in trash (top-level only)
  * Supports filtering via HTTP headers (ownership filter is ignored)
@@ -338,6 +359,7 @@ module.exports = {
     deleteFile,
     getStarredFiles,
     getRecentFiles,
+    getOwnedFiles,
     toggleStarFile,
     copyFile,
     getSharedFiles,

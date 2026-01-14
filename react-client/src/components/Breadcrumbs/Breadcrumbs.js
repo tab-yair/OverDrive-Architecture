@@ -30,6 +30,7 @@ const Breadcrumbs = () => {
     if (pathname.startsWith('/recent')) return { name: 'Recent', path: '/recent', icon: 'schedule' };
     if (pathname.startsWith('/trash')) return { name: 'Trash', path: '/trash', icon: 'delete' };
     if (pathname.startsWith('/shared')) return { name: 'Shared with me', path: '/shared', icon: 'people' };
+    if (pathname.startsWith('/search')) return { name: 'Search', path: '/search', icon: 'search' };
     if (pathname.startsWith('/folders')) return null; // Will be determined dynamically
     return null;
   };

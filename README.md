@@ -61,6 +61,7 @@ Authorization: Bearer <JWT_TOKEN>
 | `GET` | `/api/files` | ✅ | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
 | `GET` | `/api/files/starred` | ✅ | **Get Starred Files**: Retrieve all files starred by the current user with metadata (`isStarred`, `lastViewedAt`, `lastEditedAt`) |
 | `GET` | `/api/files/recent` | ✅ | **Get Recent Files**: Retrieve recently accessed files (docs, pdf, image only - folders excluded), sorted by most recent interaction first. Includes `lastInteractionType` (VIEW/EDIT) |
+| `GET` | `/api/files/owned` | ✅ | **Get Owned Files**: Retrieve all files owned by the current user (folders excluded), sorted by size. Supports `sortOrder` query parameter (`desc` for largest first, `asc` for smallest first). Default: `desc` |
 | `GET` | `/api/files/shared` | ✅ | **List Shared With Me**: Retrieve all files/folders where the user has **direct** VIEWER or EDITOR permissions (not inherited), and is NOT the owner. Includes `sharedPermissionLevel` |
 | `GET` | `/api/files/:id` | ✅ | **Fetch**: Get full metadata and content of a specific file/folder. Automatically records VIEW interaction |
 | `GET` | `/api/files/:id/download` | ✅ | **Download**: Polymorphic download endpoint. For single files (docs, pdf, image): returns decoded binary with proper Content-Type headers. For folders: returns flattened JSON array of all files recursively with uncompressed content and relative paths |

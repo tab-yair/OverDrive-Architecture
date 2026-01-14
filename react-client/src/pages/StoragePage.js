@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import { useFiles } from '../hooks/useFiles';
 import { useUserChange } from '../hooks/useUserChange';
-import { filesApi, formatBytes } from '../services/api';
+import { useAppEvent } from '../hooks/useAppEvent';
+import { AppEvents } from '../utils/eventManager';
+import { formatBytes } from '../services/api';
 import './Pages.css';
 import './StoragePage.css';
 
@@ -17,6 +20,7 @@ function StoragePage() {
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [sortOrder, setSortOrder] = useState('desc'); // 'desc' = largest first, 'asc' = smallest first
 
     // Clear files when user changes
     useUserChange(() => {
@@ -24,34 +28,59 @@ function StoragePage() {
         setError(null);
     });
 
-    // Fetch files sorted by size
-    useEffect(() => {
-        async function fetchFiles() {
-            if (!token) return;
+    // Fetch files sorted by size using new /api/files/owned endpoint
+    const fetchFiles = useCallback(async () => {
+        if (!token) return;
 
-            setFilesLoading(true);
-            setError(null);
+        setFilesLoading(true);
+        setError(null);
 
-            try {
-                const data = await filesApi.getFiles(token, {
-                    sortBy: 'size',
-                    sortOrder: 'desc'
-                });
-                // Handle both array response and object with files property
-                const fileList = Array.isArray(data) ? data : (data.files || []);
-                // Sort by size descending (largest first)
-                const sortedFiles = fileList.sort((a, b) => (b.size || 0) - (a.size || 0));
-                setFiles(sortedFiles);
-            } catch (err) {
-                console.error('Failed to fetch files:', err);
-                setError(err.message);
-            } finally {
-                setFilesLoading(false);
+        try {
+            const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+            const response = await fetch(`${API_BASE_URL}/api/files/owned?sortOrder=${sortOrder}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch files: ${response.status}`);
             }
-        }
 
+            const data = await response.json();
+            console.log('📊 Storage: Received data from server:', data);
+            console.log('📊 Storage: Total files:', data.length);
+            setFiles(data);
+        } catch (err) {
+            console.error('Failed to fetch files:', err);
+            setError(err.message);
+        } finally {
+            setFilesLoading(false);
+        }
+    }, [token, sortOrder]);
+
+    // Fetch on mount and when token/user changes
+    useEffect(() => {
         fetchFiles();
-    }, [token, user?.id]);
+    }, [fetchFiles]);
+
+    // Listen for files updated events (file upload, delete, rename, etc.)
+    useAppEvent(AppEvents.FILES_UPDATED, () => {
+        console.log('📥 StoragePage: Files updated event - refetching files');
+        fetchFiles();
+    }, [fetchFiles]);
+
+    // Listen for storage updated events (file upload/delete that affects storage)
+    useAppEvent(AppEvents.STORAGE_UPDATED, () => {
+        console.log('📥 StoragePage: Storage updated event - refetching files');
+        fetchFiles();
+    }, [fetchFiles]);
+
+    // Toggle sort order
+    const toggleSortOrder = () => {
+        setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+    };
 
     // Get file icon based on type/mimetype
     const getFileIcon = (file) => {
@@ -115,7 +144,23 @@ function StoragePage() {
 
             {/* Files list */}
             <div className="storage-files-section">
-                <h2 className="storage-files-title">Files using storage</h2>
+                <div className="storage-files-header-wrapper">
+                    <div className="storage-files-header-text">
+                        <h2 className="storage-files-title">Files using storage</h2>
+                    </div>
+                    <button 
+                        className="storage-sort-toggle"
+                        onClick={toggleSortOrder}
+                        title={sortOrder === 'desc' ? 'Sort smallest first' : 'Sort largest first'}
+                    >
+                        <span className="material-symbols-outlined">
+                            {sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'}
+                        </span>
+                        <span className="storage-sort-label">
+                            {sortOrder === 'desc' ? 'Largest first' : 'Smallest first'}
+                        </span>
+                    </button>
+                </div>
 
                 {filesLoading ? (
                     <div className="storage-files-loading">
@@ -135,9 +180,8 @@ function StoragePage() {
                     </div>
                 ) : (
                     <div className="storage-files-list">
-                        <div className="storage-files-header">
+                        <div className="storage-files-table-header">
                             <span className="storage-file-name-header">Name</span>
-                            <span className="storage-file-date-header">Modified</span>
                             <span className="storage-file-size-header">Size</span>
                         </div>
                         {files.map((file) => (
@@ -148,11 +192,8 @@ function StoragePage() {
                                     </span>
                                     <span className="storage-file-name-text">{file.name}</span>
                                 </div>
-                                <span className="storage-file-date">
-                                    {formatDate(file.updatedAt || file.createdAt)}
-                                </span>
                                 <span className="storage-file-size">
-                                    {file.type === 'folder' ? '-' : formatBytes(file.size || 0)}
+                                    {formatBytes(file.size || 0)}
                                 </span>
                             </div>
                         ))}

@@ -17,6 +17,7 @@ import RecentPage from '../pages/RecentPage';
 import StarredPage from '../pages/StarredPage';
 import TrashPage from '../pages/TrashPage';
 import StoragePage from '../pages/StoragePage';
+import SearchPage from '../pages/SearchPage';
 import SettingsPage from '../pages/SettingsPage';
 import GeneralSettingsPage from '../pages/GeneralSettingsPage';
 import AccountSettingsPage from '../pages/AccountSettingsPage';
@@ -82,6 +83,7 @@ function AppRoutes() {
                     <Route path="/starred" element={<StarredPage />} />
                     <Route path="/trash" element={<TrashPage />} />
                     <Route path="/storage" element={<StoragePage />} />
+                    <Route path="/search" element={<SearchPage />} />
 
                     {/* Settings with nested routes */}
                     <Route path="/settings" element={<SettingsPage />}>
