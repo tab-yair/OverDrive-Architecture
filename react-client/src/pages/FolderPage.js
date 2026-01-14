@@ -16,13 +16,14 @@ import './FolderPage.css';
 const FolderPage = () => {
   const { folderId } = useParams();
   const { token, user } = useAuth();
-  const { handleOpen, setCurrentFolderId } = useNavigation();
+  const { handleOpen, setCurrentFolderId, setCurrentFolderPermissionLevel } = useNavigation();
   const filesContext = useFilesContext();
   const { updateFilesInStore, filesMap } = filesContext;
   
   const [folder, setFolder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [effectivePermissionLevel, setEffectivePermissionLevel] = useState('viewer');
 
   // Clear state when user changes
   useUserChange(() => {
@@ -60,6 +61,34 @@ const FolderPage = () => {
       
       // Update current folder ID in context
       setCurrentFolderId(folderId);
+      
+      // Compute and update permission level
+      // First check filesMap for shared permission info (when navigating from shared page)
+      const folderInMap = filesMap.get(folderId);
+      let permLevel = 'viewer';
+      
+      if (data.ownerId === user?.id) {
+        permLevel = 'owner';
+      } else if (folderInMap?.sharedPermissionLevel) {
+        // Use permission from filesMap (e.g., when opening shared folder)
+        permLevel = folderInMap.sharedPermissionLevel.toLowerCase();
+      } else if (data.sharedPermissionLevel) {
+        // Fallback to API response
+        permLevel = data.sharedPermissionLevel.toLowerCase();
+      }
+      
+      setEffectivePermissionLevel(permLevel);
+      setCurrentFolderPermissionLevel(permLevel);
+      
+      console.log('📂 FolderPage: Permission level updated:', {
+        folderId,
+        ownerId: data.ownerId,
+        userId: user?.id,
+        isOwner: data.ownerId === user?.id,
+        folderInMapPermission: folderInMap?.sharedPermissionLevel,
+        apiPermission: data.sharedPermissionLevel,
+        computedPermLevel: permLevel
+      });
       
       // Extract children and store in FilesContext
       const children = data.children || [];
@@ -149,8 +178,8 @@ const FolderPage = () => {
       customLoading={loading}
       customRefetch={fetchFolderData}
       pageContext="Folder"
-      isOwner={true}
-      permissionLevel="owner"
+      isOwner={folder?.ownerId === user?.id}
+      permissionLevel={effectivePermissionLevel}
       loadingMessage="Loading folder..."
       className="folder-page"
     />

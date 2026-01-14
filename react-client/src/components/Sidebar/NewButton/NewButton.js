@@ -13,26 +13,32 @@ import './NewButton.css';
  */
 function NewButton({ parentId = null }) {
     const { token } = useAuth();
-    const { currentFolderId } = useNavigation();
+    const { currentFolderId, currentFolderPermissionLevel } = useNavigation();
     const location = useLocation();
     
-    // Only use currentFolderId if we're actually in a folder page
-    // Check if current route is /folders/:id
+    // Determine if we're in a folder page with limited permissions
     const isInFolderPage = location.pathname.startsWith('/folders/');
+    const isFolderWithViewOnly = isInFolderPage && currentFolderPermissionLevel === 'viewer';
     
-    // Use currentFolderId from context ONLY if:
-    // 1. No explicit parentId provided AND
-    // 2. We're actually inside a folder page
+    // Calculate effective parent ID for file operations
     const effectiveParentId = parentId || (isInFolderPage ? currentFolderId : null);
     
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [showNamePrompt, setShowNamePrompt] = useState(null); // 'folder' | 'file' | null
     const [newName, setNewName] = useState('');
+    const [isDisabled, setIsDisabled] = useState(false);
     const buttonRef = useRef(null);
     const dropdownRef = useRef(null);
     const fileInputRef = useRef(null);
     const nameInputRef = useRef(null);
+
+    // Update disabled state when folder page or permission changes
+    useEffect(() => {
+        const inFolder = location.pathname.startsWith('/folders/');
+        const viewOnly = currentFolderPermissionLevel === 'viewer';
+        setIsDisabled(inFolder && viewOnly);
+    }, [location.pathname, currentFolderPermissionLevel]);
 
     // Close dropdown when clicking outside the button and dropdown
     useEffect(() => {
@@ -227,7 +233,6 @@ function NewButton({ parentId = null }) {
                 onClick={() => setIsOpen(!isOpen)}
                 aria-label="Create new file or folder"
                 aria-expanded={isOpen}
-                disabled={isLoading}
             >
                 {isLoading ? (
                     <span className="material-symbols-outlined spinning">progress_activity</span>
@@ -285,16 +290,31 @@ function NewButton({ parentId = null }) {
                     ) : (
                         // Menu items
                         <>
-                            <button className="new-button-item" onClick={handleNewFolderClick}>
+                            <button 
+                                className={`new-button-item ${isLoading ? 'disabled' : ''} ${isDisabled ? 'disabled' : ''}`} 
+                                onClick={handleNewFolderClick} 
+                                disabled={isLoading || isDisabled}
+                                title={isDisabled ? 'You have view-only access to this folder' : ''}
+                            >
                                 <span className="material-symbols-outlined">create_new_folder</span>
                                 <span>New folder</span>
                             </button>
-                            <button className="new-button-item" onClick={handleNewFileClick}>
+                            <button 
+                                className={`new-button-item ${isLoading ? 'disabled' : ''} ${isDisabled ? 'disabled' : ''}`} 
+                                onClick={handleNewFileClick} 
+                                disabled={isLoading || isDisabled}
+                                title={isDisabled ? 'You have view-only access to this folder' : ''}
+                            >
                                 <span className="material-symbols-outlined">note_add</span>
                                 <span>New text file</span>
                             </button>
                             <div className="new-button-divider" />
-                            <button className="new-button-item" onClick={handleUploadClick}>
+                            <button 
+                                className={`new-button-item ${isLoading ? 'disabled' : ''} ${isDisabled ? 'disabled' : ''}`} 
+                                onClick={handleUploadClick} 
+                                disabled={isLoading || isDisabled}
+                                title={isDisabled ? 'You have view-only access to this folder' : ''}
+                            >
                                 <span className="material-symbols-outlined">upload_file</span>
                                 <span>Upload file</span>
                             </button>

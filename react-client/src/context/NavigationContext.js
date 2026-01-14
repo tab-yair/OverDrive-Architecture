@@ -13,6 +13,7 @@ export const NavigationProvider = ({ children }) => {
   const navigate = useNavigate();
   // Breadcrumbs state removed
   const [currentFolderId, setCurrentFolderId] = useState(null);
+  const [currentFolderPermissionLevel, setCurrentFolderPermissionLevel] = useState('viewer');
 
   /**
    * Clear navigation state when user changes
@@ -88,7 +89,9 @@ export const NavigationProvider = ({ children }) => {
     navigateToFolder,
     // breadcrumbs and updateBreadcrumbs removed
     currentFolderId,
-    setCurrentFolderId
+    setCurrentFolderId,
+    currentFolderPermissionLevel,
+    setCurrentFolderPermissionLevel
   };
 
   return (
