@@ -295,9 +295,15 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                           
                           try {
                             await filesApi.updatePermission(token, fileId, perm.pid, newRole.toUpperCase());
+                            
+                            // Reload the file in case owner changed
+                            const updatedFile = await filesApi.getFile(token, fileId);
+                            filesContext.updateFilesInStore([updatedFile]);
+                            
                             // Reload permissions
                             const perms = await filesApi.getPermissions(token, fileId);
                             setPermissions(perms);
+                            
                             // Trigger file refresh in context
                             notifyFilesUpdated();
                           } catch (err) {
@@ -323,9 +329,15 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                           
                           try {
                             await filesApi.revokePermission(token, fileId, perm.pid);
+                            
+                            // Reload the file in case owner changed
+                            const updatedFile = await filesApi.getFile(token, fileId);
+                            filesContext.updateFilesInStore([updatedFile]);
+                            
                             // Reload permissions
                             const perms = await filesApi.getPermissions(token, fileId);
                             setPermissions(perms);
+                            
                             // Trigger file refresh in context
                             notifyFilesUpdated();
                           } catch (err) {
@@ -339,13 +351,24 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                           
                           try {
                             await filesApi.updatePermission(token, fileId, perm.pid, 'OWNER');
-                            // Reload permissions
+                            
+                            // Reload the file info to get updated owner data from API
+                            const updatedFile = await filesApi.getFile(token, fileId);
+                            filesContext.updateFilesInStore([updatedFile]);
+                            
+                            // Also reload permissions
                             const perms = await filesApi.getPermissions(token, fileId);
                             setPermissions(perms);
-                            // Trigger file refresh in context
+                            
+                            // If ownership transferred to someone else, close the sidebar
+                            // (file will disappear from My Drive since user is no longer owner)
+                            if (updatedFile.ownerId !== user?.id) {
+                              console.log('📤 Ownership transferred - closing sidebar');
+                              onClose();
+                            }
+                            
+                            // Trigger global file refresh for other components
                             notifyFilesUpdated();
-                            // Close modal after transfer
-                            setShowManageAccess(false);
                           } catch (err) {
                             console.error('Failed to transfer ownership:', err);
                             alert('Failed to transfer ownership');
