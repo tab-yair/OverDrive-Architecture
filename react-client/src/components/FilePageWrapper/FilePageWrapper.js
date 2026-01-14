@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useFilesContext } from '../../context/FilesContext';
 import { useDownload } from '../../hooks/useDownload';
 import { useRename } from '../../hooks/useRename';
-import { FileManager, InfoSidebar } from '../FileManagement';
+import { FileManager, InfoSidebar, MoveModal } from '../FileManagement';
 import Breadcrumbs from '../Breadcrumbs/Breadcrumbs';
 import PreviewModal from '../PreviewModal/PreviewModal';
 import TextDocumentViewer from '../TextDocumentViewer/TextDocumentViewer';
@@ -65,6 +65,8 @@ function FilePageWrapper({
     const [previewFile, setPreviewFile] = useState(null);
     const [renameFile_modal, setRenameFile_modal] = useState(null);
     const [shareFile_modal, setShareFile_modal] = useState(null);
+    const [moveModalOpen, setMoveModalOpen] = useState(false);
+    const [moveTargets, setMoveTargets] = useState([]);
 
     console.log('🔄 FilePageWrapper render:', {
       pageContext,
@@ -142,6 +144,38 @@ function FilePageWrapper({
                     console.error('Download failed:', err);
                 });
             }
+            return;
+        }
+
+        // Handle copy action (files only, same folder)
+        if (action === 'copy') {
+            const item = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
+            if (!item) return;
+            if (item.type === 'folder') {
+                console.warn('Copy is available for files only');
+                return;
+            }
+
+            // Server defaults to "Copy of {name}" if newName not provided
+            filesContext.copyFile(item.id, {
+                parentId: item.parentId || null
+            }).then((result) => {
+                if (!result.success) {
+                    const msg = (result.error || '').toLowerCase();
+                    const permissionBlocked = msg.includes('permission');
+                    const friendly = permissionBlocked
+                        ? 'You do not have permission to add files to this folder'
+                        : (result.error || 'Copy failed');
+                    alert(friendly);
+                }
+            }).catch((err) => {
+                const msg = (err?.message || '').toLowerCase();
+                const permissionBlocked = msg.includes('permission');
+                const friendly = permissionBlocked
+                    ? 'You do not have permission to add files to this folder'
+                    : (err?.message || 'Copy failed');
+                alert(friendly);
+            });
             return;
         }
         
@@ -237,6 +271,16 @@ function FilePageWrapper({
                 console.error('[FilePageWrapper] Trash operation failed:', err);
             });
             
+            return;
+        }
+
+        // Handle move action - open destination modal with current selection
+        if (action === 'move') {
+            const filesToMove = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            const validTargets = filesToMove.filter(Boolean);
+            if (validTargets.length === 0) return;
+            setMoveTargets(validTargets);
+            setMoveModalOpen(true);
             return;
         }
         
@@ -353,6 +397,14 @@ function FilePageWrapper({
                 fileId={selectedFileId}
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
+            />
+
+            {/* Move Modal */}
+            <MoveModal
+                isOpen={moveModalOpen}
+                onClose={() => setMoveModalOpen(false)}
+                targets={moveTargets}
+                initialParentId={moveTargets[0]?.parentId || null}
             />
             {/* Preview Modal for images and PDFs */}
             {previewFile && (previewFile.type === 'image' || previewFile.type === 'pdf') && (

@@ -378,6 +378,49 @@ export function FilesProvider({ children }) {
     }, [token, filesMap, updateFilesInStore]);
 
     /**
+     * Copy a file (UI restricts to files, backend supports folders too)
+     */
+    const copyFile = useCallback(async (fileId, options = {}) => {
+        if (!token) return { success: false, error: 'Not authenticated' };
+
+        try {
+            const copied = await filesApi.copyFile(token, fileId, options);
+            updateFilesInStore([copied]);
+
+            // Copy increases storage
+            notifyStorageUpdated();
+            notifyFilesUpdated();
+
+            return { success: true, file: copied, error: null };
+        } catch (error) {
+            const errorMsg = error.message || 'Failed to copy file';
+            return { success: false, error: errorMsg };
+        }
+    }, [token, updateFilesInStore]);
+
+    /**
+     * Move multiple files/folders to a destination parentId (null = root)
+     */
+    const moveFiles = useCallback(async (fileIds, parentId) => {
+        if (!token) return { success: false, error: 'Not authenticated' };
+        if (!Array.isArray(fileIds) || fileIds.length === 0) {
+            return { success: false, error: 'No files selected' };
+        }
+
+        try {
+            const results = await Promise.all(fileIds.map(id => updateFile(id, { parentId })));
+            const failed = results.find(r => !r.success);
+            if (failed) {
+                return { success: false, error: failed.error || 'Move failed' };
+            }
+            return { success: true, error: null };
+        } catch (error) {
+            const errorMsg = error.message || 'Failed to move files';
+            return { success: false, error: errorMsg };
+        }
+    }, [token, updateFile]);
+
+    /**
      * Delete file (move to trash for Owner, remove from view for Editor/Viewer)
      * Server returns { action: 'trashed' | 'hidden' } to indicate what happened
      */
@@ -661,6 +704,8 @@ export function FilesProvider({ children }) {
         deleteFile,
         restoreFile,
         permanentlyDeleteFile,
+        copyFile,
+        moveFiles,
         
         // Cache management
         invalidateEndpoint,

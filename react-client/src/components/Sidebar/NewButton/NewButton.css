@@ -36,6 +36,12 @@
     background-color: var(--bg-hover);
 }
 
+.new-button-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .new-button-item .material-symbols-outlined {
     font-size: 20px;
     color: var(--text-secondary);

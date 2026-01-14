@@ -468,6 +468,39 @@ export const filesApi = {
     },
 
     /**
+     * Search folders only (server-side filter, no client filtering)
+     */
+    async searchFolders(token, query) {
+        const response = await fetch(`${API_BASE_URL}/api/search/${encodeURIComponent(query)}`, {
+            headers: {
+                ...getAuthHeaders(token),
+                'X-Search-In': 'name',
+                'X-Filter-Type': 'folder'
+            }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to search folders');
+        }
+        return response.json();
+    },
+
+    /**
+     * Copy a file (deep copy for folders handled server-side, but UI only exposes files)
+     */
+    async copyFile(token, fileId, options = {}) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/copy`, {
+            method: 'POST',
+            headers: getAuthHeaders(token),
+            body: JSON.stringify(options)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to copy file');
+        }
+        return response.json();
+    },
+
+    /**
      * Gets all permissions for a file/folder
      */
     async getPermissions(token, fileId) {
