@@ -4,6 +4,7 @@
   gap: var(--spacing-sm);
   width: 100%;
   min-width: 0;
+  overflow: visible; /* Allow dropdown menus to extend beyond container */
 }
 
 .perm-row {
@@ -67,7 +68,11 @@
   font-size: 0.85rem;
 }
 
-.perm-dropdown { position: relative; flex-shrink: 0; }
+.perm-dropdown { 
+  position: relative; 
+  flex-shrink: 0;
+  overflow: visible; /* Ensure dropdown can extend beyond bounds */
+}
 .perm-dropdown-toggle {
   background: var(--bg-input);
   color: var(--text-primary);
@@ -95,6 +100,8 @@
 .perm-menu {
   position: absolute;
   right: 0;
+  top: 100%; /* Position directly below toggle button */
+  margin-top: 4px;
   min-width: 180px;
   max-width: 220px;
   background: var(--bg-primary);
@@ -102,7 +109,7 @@
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-elevated);
   padding: var(--spacing-xs);
-  z-index: 100;
+  z-index: 1000; /* Higher z-index to ensure it appears above all content */
 }
 
 .perm-menu-item {
