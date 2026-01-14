@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { filesApi } from '../services/api';
 import { useUserChange } from '../hooks/useUserChange';
@@ -259,7 +259,7 @@ export function FilesProvider({ children }) {
         updateFilesInStore([optimisticFile]);
 
         try {
-            const result = await filesApi.updateFile(token, fileId, updates);
+            await filesApi.updateFile(token, fileId, updates);
             
             // After successful PATCH (204 No Content), fetch fresh data from server
             // This ensures we get server-generated fields like lastEditedAt, lastInteractionType
@@ -371,18 +371,43 @@ export function FilesProvider({ children }) {
             return { success: false, error: 'No files selected' };
         }
 
+        // Build optimistic updates for all files being moved
+        const optimisticUpdates = fileIds
+            .map(id => filesMap.get(id))
+            .filter(Boolean)
+            .map(file => ({ ...file, parentId }));
+        
+        // Apply optimistic updates immediately
+        updateFilesInStore(optimisticUpdates);
+
         try {
-            const results = await Promise.all(fileIds.map(id => updateFile(id, { parentId })));
-            const failed = results.find(r => !r.success);
-            if (failed) {
-                return { success: false, error: failed.error || 'Move failed' };
+            // Execute moves in parallel - each file gets updated individually
+            const results = await Promise.all(
+                fileIds.map(id => filesApi.updateFile(token, id, { parentId }))
+            );
+            
+            // If any move failed, the optimistic update is wrong but we'll refetch
+            const hasFailures = results.some(r => r?.error);
+            if (hasFailures) {
+                // Fetch fresh data for all files being moved to correct any failures
+                const freshFiles = await Promise.all(
+                    fileIds.map(id => filesApi.getFile(token, id))
+                );
+                updateFilesInStore(freshFiles.filter(Boolean));
+                return { success: false, error: 'Some files failed to move' };
             }
+            
+            // Emit events to notify other parts of the app
+            notifyStorageUpdated(); // Might affect storage calculations
+            notifyFilesUpdated();   // Trigger refetch on other pages
+            
             return { success: true, error: null };
         } catch (error) {
             const errorMsg = error.message || 'Failed to move files';
+            console.error('[FilesContext] Move error:', errorMsg);
             return { success: false, error: errorMsg };
         }
-    }, [token, updateFile]);
+    }, [token, filesMap, updateFilesInStore]);
 
     /**
      * Delete file (move to trash for Owner, remove from view for Editor/Viewer)
@@ -586,7 +611,7 @@ export function FilesProvider({ children }) {
                 }
             };
         });
-    }, [filesMap]);
+    }, [filesMap, user?.id]);
 
     /**
      * Get single file from store (for Details Panel - no server interaction)

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import ActionButton from './ActionButton';
 import FileActionMenu from './FileActionMenu';
-import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatSmartDate, formatRecentActivity, getFallbackValue } from './fileUtils';
+import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatRecentActivity, getFallbackValue } from './fileUtils';
 import { useAuth } from '../../context/AuthContext';
 import './FileRow.css';
 

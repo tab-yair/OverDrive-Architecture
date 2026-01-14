@@ -154,8 +154,8 @@ const FileManager = ({
 
   const handleBulkAction = (actionId, files) => {
     if (onAction) {
-      // Special case: 'share' needs all files as array (opens single modal for bulk sharing)
-      if (actionId === 'share') {
+      // Actions that need all files as array (for bulk operations)
+      if (actionId === 'share' || actionId === 'move' || actionId === 'copy') {
         onAction(actionId, files);
       } else {
         // Other actions: call individually (trash, restore, delete, etc.)

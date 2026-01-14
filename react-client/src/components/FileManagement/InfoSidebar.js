@@ -276,7 +276,6 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                           if (!perm) return;
                           
                           // VALIDATION: Check if action is allowed (SSOT)
-                          const targetUser = permissions.find(p => p.userId === userId);
                           const validation = validatePermissionAction(
                             { role: perm.level?.toLowerCase(), isInherited: perm.isInherited },
                             newRole

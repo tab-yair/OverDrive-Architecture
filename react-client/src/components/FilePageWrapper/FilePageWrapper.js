@@ -70,7 +70,6 @@ function FilePageWrapper({
     
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [selectedCount, setSelectedCount] = useState(0);
     const [previewFile, setPreviewFile] = useState(null);
     const [renameFile_modal, setRenameFile_modal] = useState(null);
     const [shareFile_modal, setShareFile_modal] = useState(null);
@@ -326,26 +325,6 @@ function FilePageWrapper({
             
             return;
         }
-        
-        // TODO: Future - Handle permission checks for multi-selection
-        // When selectedCount > 1:
-        // - Check permissions for ALL selected files
-        // - Allow action only if ALL files permit it (most restrictive approach)
-        // Example:
-        // if (selectedCount > 1 && ['delete', 'share', 'move'].includes(action)) {
-        //     const allFiles = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
-        //     const canPerformAction = allFiles.every(file => hasPermission(file, action));
-        //     if (!canPerformAction) {
-        //         console.log('Action blocked - insufficient permissions on some files');
-        //         return;
-        //     }
-        // }
-        
-        // Refetch after actions that modify data
-        const refetchActions = ['move'];
-        if (refetchActions.includes(action)) {
-            setTimeout(() => refetch(), 300);
-        }
     };
 
     if (loading) {
@@ -390,7 +369,6 @@ function FilePageWrapper({
                 onAction={onAction || defaultAction}
                 isOwner={isOwner}
                 permissionLevel={permissionLevel}
-                onSelectionChange={setSelectedCount}
             />
             
             {/* InfoSidebar - Connected to FilesContext (SSOT) */}
@@ -403,7 +381,11 @@ function FilePageWrapper({
             {/* Move Modal */}
             <MoveModal
                 isOpen={moveModalOpen}
-                onClose={() => setMoveModalOpen(false)}
+                onClose={() => {
+                    setMoveModalOpen(false);
+                    // Refetch after move to update the view
+                    setTimeout(() => refetch(), 300);
+                }}
                 targets={moveTargets}
                 initialParentId={moveTargets[0]?.parentId || null}
             />
