@@ -6,7 +6,9 @@
 import { jwtDecode } from "jwt-decode";
 
 // Base URL for the backend server
-const API_BASE_URL = 'http://localhost:3000';
+// Use environment variable if available, fallback to localhost
+// Note: In production Docker, env vars must be set at build time
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 /**
  * Helper to generate authorization headers with Bearer token.
@@ -75,7 +77,13 @@ export const userApi = {
             headers: getAuthHeaders(token)
         });
         if (!response.ok) {
-            throw new Error('Failed to fetch user profile');
+            const errorText = await response.text();
+            console.error(`❌ GET /api/users/${userId} failed:`, {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText
+            });
+            throw new Error(`Failed to fetch user profile: ${response.status} ${response.statusText}`);
         }
         return response.json();
     },
@@ -100,6 +108,26 @@ export const userApi = {
             return { success: true };
         }
 
+        return response.json();
+    },
+
+    /**
+     * Searches for a user by email address.
+     * Returns user ID and basic profile info for sharing.
+     */
+    async searchUserByEmail(token, email) {
+        const response = await fetch(`${API_BASE_URL}/api/users/search?email=${encodeURIComponent(email)}`, {
+            headers: getAuthHeaders(token)
+        });
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error('User not found');
+            }
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to search user');
+        }
+        
         return response.json();
     },
 
@@ -149,7 +177,7 @@ export const storageApi = {
  */
 export const filesApi = {
     /**
-     * Fetches files with optional sorting and parentId filters.
+     * Fetches files with optional sorting, parentId filters, and custom headers.
      */
     async getFiles(token, options = {}) {
         const params = new URLSearchParams();
@@ -160,13 +188,151 @@ export const filesApi = {
         const queryString = params.toString();
         const url = `${API_BASE_URL}/api/files${queryString ? `?${queryString}` : ''}`;
 
-        const response = await fetch(url, {
-            headers: getAuthHeaders(token)
-        });
+        // Merge auth headers with custom filter headers
+        const headers = {
+            ...getAuthHeaders(token),
+            ...(options.headers || {})
+        };
+
+        const response = await fetch(url, { headers });
         if (!response.ok) {
             throw new Error('Failed to fetch files');
         }
         return response.json();
+    },
+
+    /**
+     * Generic file fetcher for endpoints that support filter headers
+     * @private
+     */
+    async _fetchWithFilters(token, endpoint, errorMessage, options = {}) {
+        const headers = {
+            ...getAuthHeaders(token),
+            ...(options.headers || {})
+        };
+
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
+        if (!response.ok) {
+            throw new Error(errorMessage);
+        }
+        return response.json();
+    },
+
+    /**
+     * Fetches a single file by ID (triggers VIEW interaction)
+     * Use this ONLY when user explicitly opens/previews file content
+     * For metadata display (Details Panel), use data from FilesContext
+     */
+    async getFile(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch file');
+        }
+        return response.json();
+    },
+
+    /**
+     * Fetches shared files (where user has direct VIEWER/EDITOR permission, not owner)
+     */
+    async getSharedFiles(token, options = {}) {
+        return this._fetchWithFilters(token, '/api/files/shared', 'Failed to fetch shared files', options);
+    },
+
+    /**
+     * Fetches recently accessed files
+     */
+    async getRecentFiles(token, options = {}) {
+        return this._fetchWithFilters(token, '/api/files/recent', 'Failed to fetch recent files', options);
+    },
+
+    /**
+     * Fetches starred files
+     */
+    async getStarredFiles(token, options = {}) {
+        return this._fetchWithFilters(token, '/api/files/starred', 'Failed to fetch starred files', options);
+    },
+
+    /**
+     * Fetches trash items
+     */
+    async getTrashFiles(token, options = {}) {
+        return this._fetchWithFilters(token, '/api/files/trash', 'Failed to fetch trash', options);
+    },
+
+    /**
+     * Toggles star status for a file
+     */
+    async toggleStar(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/star`, {
+            method: 'POST',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to toggle star');
+        }
+        return response.json();
+    },
+
+    /**
+     * Restores a file from trash
+     */
+    async restoreFromTrash(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/trash/${fileId}/restore`, {
+            method: 'POST',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to restore file');
+        }
+        // 204 No Content
+        return { success: true };
+    },
+
+    /**
+     * Permanently deletes a file from trash
+     */
+    async permanentDelete(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/trash/${fileId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to permanently delete file');
+        }
+        // 204 No Content
+        return { success: true };
+    },
+
+    /**
+     * Empties all trash
+     */
+    async emptyTrash(token) {
+        const response = await fetch(`${API_BASE_URL}/api/files/trash`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to empty trash');
+        }
+        // 204 No Content
+        return { success: true };
+    },
+
+    /**
+     * Restores all items from trash
+     */
+    async restoreAllTrash(token) {
+        const response = await fetch(`${API_BASE_URL}/api/files/trash/restore`, {
+            method: 'POST',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to restore all trash');
+        }
+        // 204 No Content
+        return { success: true };
     },
 
     /**
@@ -182,7 +348,19 @@ export const filesApi = {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.message || 'Failed to create file');
         }
-        return response.json();
+        
+        // Server returns 201 with empty body - extract file ID from Location header
+        if (response.status === 201) {
+            const location = response.headers.get('Location');
+            if (location) {
+                const fileId = location.split('/').pop();
+                return { id: fileId, success: true };
+            }
+        }
+        
+        // Fallback: try to parse JSON (for backwards compatibility)
+        const text = await response.text();
+        return text ? JSON.parse(text) : { success: true };
     },
 
     /**
@@ -204,11 +382,25 @@ export const filesApi = {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.message || 'Failed to upload file');
         }
-        return response.json();
+        
+        // Server returns 201 with empty body - extract file ID from Location header
+        if (response.status === 201) {
+            const location = response.headers.get('Location');
+            if (location) {
+                const fileId = location.split('/').pop();
+                return { id: fileId, success: true };
+            }
+        }
+        
+        // Fallback: try to parse JSON (for backwards compatibility)
+        const text = await response.text();
+        return text ? JSON.parse(text) : { success: true };
     },
 
     /**
      * Fetches details for a specific file.
+     * IMPORTANT: This triggers VIEW interaction and updates lastViewedAt
+     * Use only when user explicitly opens/previews file content
      */
     async getFile(token, fileId) {
         const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
@@ -216,6 +408,46 @@ export const filesApi = {
         });
         if (!response.ok) {
             throw new Error('Failed to fetch file');
+        }
+        return response.json();
+    },
+
+    /**
+     * Updates file metadata (name, parentId) or content (docs only)
+     * Automatically records EDIT interaction for content changes
+     */
+    async updateFile(token, fileId, updates) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(token),
+            body: JSON.stringify(updates)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to update file');
+        }
+        
+        // Check if response has content (200) or is empty (204)
+        if (response.status === 204) {
+            return { success: true };
+        }
+        
+        // Try to parse JSON, return success if empty
+        const text = await response.text();
+        return text ? JSON.parse(text) : { success: true };
+    },
+
+    /**
+     * Deletes a file (moves to trash for owners, hides for viewers/editors)
+     * Returns { success, action, message } where action is 'trashed' or 'hidden'
+     */
+    async deleteFile(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to delete file');
         }
         return response.json();
     },
@@ -231,6 +463,120 @@ export const filesApi = {
             throw new Error('Failed to search files');
         }
         return response.json();
+    },
+
+    /**
+     * Search folders only (server-side filter, no client filtering)
+     */
+    async searchFolders(token, query) {
+        const response = await fetch(`${API_BASE_URL}/api/search/${encodeURIComponent(query)}`, {
+            headers: {
+                ...getAuthHeaders(token),
+                'X-Search-In': 'name',
+                'X-Filter-Type': 'folder'
+            }
+        });
+        if (!response.ok) {
+            throw new Error('Failed to search folders');
+        }
+        return response.json();
+    },
+
+    /**
+     * Copy a file (deep copy for folders handled server-side, but UI only exposes files)
+     */
+    async copyFile(token, fileId, options = {}) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/copy`, {
+            method: 'POST',
+            headers: getAuthHeaders(token),
+            body: JSON.stringify(options)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to copy file');
+        }
+        return response.json();
+    },
+
+    /**
+     * Gets all permissions for a file/folder
+     */
+    async getPermissions(token, fileId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/permissions`, {
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch permissions');
+        }
+        return response.json();
+    },
+
+    /**
+     * Grants a new permission to a user
+     * @param {string} token - JWT token
+     * @param {string} fileId - File/folder ID
+     * @param {string} targetUserId - User ID to grant permission to
+     * @param {string} permissionLevel - VIEWER, EDITOR, or OWNER
+     */
+    async grantPermission(token, fileId, targetUserId, permissionLevel) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/permissions`, {
+            method: 'POST',
+            headers: getAuthHeaders(token),
+            body: JSON.stringify({ targetUserId, permissionLevel })
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to grant permission');
+        }
+        // 201 Created with Location header
+        if (response.status === 201) {
+            const location = response.headers.get('Location');
+            if (location) {
+                const permissionId = location.split('/').pop();
+                return { id: permissionId, success: true };
+            }
+        }
+        return { success: true };
+    },
+
+    /**
+     * Updates an existing permission (including ownership transfer)
+     * @param {string} token - JWT token
+     * @param {string} fileId - File/folder ID
+     * @param {string} permissionId - Permission ID
+     * @param {string} permissionLevel - VIEWER, EDITOR, or OWNER
+     */
+    async updatePermission(token, fileId, permissionId, permissionLevel) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/permissions/${permissionId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(token),
+            body: JSON.stringify({ permissionLevel })
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to update permission');
+        }
+        // 204 No Content
+        return { success: true };
+    },
+
+    /**
+     * Revokes a permission
+     * @param {string} token - JWT token
+     * @param {string} fileId - File/folder ID
+     * @param {string} permissionId - Permission ID
+     */
+    async revokePermission(token, fileId, permissionId) {
+        const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/permissions/${permissionId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(token)
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to revoke permission');
+        }
+        // 204 No Content
+        return { success: true };
     }
 };
 
@@ -245,6 +591,16 @@ export function formatBytes(bytes, decimals = 1) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
+
+/**
+ * Permissions API (alias to filesApi methods for convenience)
+ */
+export const permissionsApi = {
+    getPermissions: filesApi.getPermissions,
+    grantPermission: filesApi.grantPermission,
+    updatePermission: filesApi.updatePermission,
+    revokePermission: filesApi.revokePermission
+};
 
 /**
  * Legacy Support / Default Export

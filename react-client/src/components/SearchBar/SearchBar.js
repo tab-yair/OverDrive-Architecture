@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './SearchBar.css';
 
@@ -73,17 +74,21 @@ function CustomDropdown({ value, options, onChange, placeholder }) {
  * Includes advanced filter panel for filtering by type, date, owner, etc.
  */
 function SearchBar() {
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState({
         type: '',
         owner: '',
+        ownerEmail: '',
         dateModified: '',
         dateStart: '',
         dateEnd: '',
         hasWords: '',
-        itemName: ''
+        itemName: '',
+        sharedWith: '',
+        starred: ''
     });
     const inputRef = useRef(null);
     const filterPanelRef = useRef(null);
@@ -94,16 +99,22 @@ function SearchBar() {
     const typeOptions = [
         { value: '', label: 'Any type' },
         { value: 'folder', label: 'Folders' },
-        { value: 'document', label: 'Documents' },
-        { value: 'image', label: 'Images' },
-        { value: 'video', label: 'Videos' },
+        { value: 'docs', label: 'Documents' },
         { value: 'pdf', label: 'PDFs' },
+        { value: 'image', label: 'Images' }
     ];
 
     const ownerOptions = [
         { value: '', label: 'Anyone' },
         { value: 'me', label: 'Owned by me' },
-        { value: 'others', label: 'Not owned by me' }
+        { value: 'others', label: 'Not owned by me' },
+        { value: 'specific', label: 'Specific person...' }
+    ];
+
+    const starredOptions = [
+        { value: '', label: 'All items' },
+        { value: 'true', label: 'Starred only' },
+        { value: 'false', label: 'Not starred' }
     ];
 
     const dateOptions = [
@@ -138,17 +149,106 @@ function SearchBar() {
     const handleSearch = (e) => {
         e.preventDefault();
 
+        // Validate custom date range
+        if (filters.dateModified === 'custom') {
+            if (filters.dateStart && filters.dateEnd) {
+                const startDate = new Date(filters.dateStart);
+                const endDate = new Date(filters.dateEnd);
+                if (startDate > endDate) {
+                    alert('Start date must be before or equal to end date');
+                    return;
+                }
+            } else if (filters.dateStart || filters.dateEnd) {
+                alert('Please select both start and end dates for custom range');
+                return;
+            }
+        }
+
         // Prevent empty searches when no filters
         const hasFilters = filters.type || filters.owner || filters.dateModified ||
-                          filters.hasWords || filters.itemName;
+                          filters.hasWords || filters.itemName || filters.sharedWith || 
+                          filters.starred || filters.ownerEmail;
         if (!searchQuery.trim() && !hasFilters) {
             return;
         }
 
-        console.log('Searching for:', searchQuery);
-        console.log('With filters:', filters);
+        // Build URL params for search
+        const params = new URLSearchParams();
+        
+        // Determine the search query
+        let query = searchQuery.trim();
+        let searchIn = 'both'; // default
+        
+        if (!query && filters.itemName && filters.hasWords) {
+            // Both item name and content
+            query = filters.itemName;
+            searchIn = 'both';
+            params.set('containsWords', filters.hasWords);
+        } else if (!query && filters.itemName) {
+            // Only item name
+            query = filters.itemName;
+            searchIn = 'name';
+        } else if (!query && filters.hasWords) {
+            // Only content
+            query = filters.hasWords;
+            searchIn = 'content';
+        } else if (!query && hasFilters) {
+            // Other filters only, use wildcard
+            query = '*';
+        } else if (query && filters.hasWords) {
+            // Query + content words
+            searchIn = 'both';
+            params.set('containsWords', filters.hasWords);
+        }
+        
+        if (query) {
+            params.set('q', query);
+            if (filters.itemName || filters.hasWords) {
+                params.set('searchIn', searchIn);
+            }
+        }
 
-        // TODO: Implement server search integration
+        // Add filters as URL params
+        if (filters.type) {
+            params.set('type', filters.type);
+        }
+        if (filters.owner === 'me') {
+            params.set('owner', 'owned');
+        } else if (filters.owner === 'others') {
+            params.set('owner', 'shared');
+        } else if (filters.owner === 'specific' && filters.ownerEmail) {
+            params.set('ownerEmail', filters.ownerEmail);
+        }
+        
+        if (filters.sharedWith) {
+            params.set('sharedWith', filters.sharedWith);
+        }
+        
+        if (filters.starred) {
+            params.set('starred', filters.starred);
+        }
+
+        // Map date filter to API format
+        if (filters.dateModified) {
+            if (filters.dateModified === 'custom') {
+                if (filters.dateStart) params.set('dateStart', filters.dateStart);
+                if (filters.dateEnd) params.set('dateEnd', filters.dateEnd);
+            } else {
+                // Map UI date options to API date categories
+                const dateMapping = {
+                    'today': 'today',
+                    'week': 'last7days',
+                    'month': 'last30days',
+                    'year': 'thisyear'
+                };
+                if (dateMapping[filters.dateModified]) {
+                    params.set('dateCategory', dateMapping[filters.dateModified]);
+                }
+            }
+        }
+
+        // Navigate to search page with params
+        navigate(`/search?${params.toString()}`);
     };
 
     /**
@@ -180,6 +280,10 @@ function SearchBar() {
                 newFilters.dateStart = '';
                 newFilters.dateEnd = '';
             }
+            // Clear owner email if not selecting specific person
+            if (filterName === 'owner' && value !== 'specific') {
+                newFilters.ownerEmail = '';
+            }
             return newFilters;
         });
     };
@@ -191,11 +295,14 @@ function SearchBar() {
         setFilters({
             type: '',
             owner: '',
+            ownerEmail: '',
             dateModified: '',
             dateStart: '',
             dateEnd: '',
             hasWords: '',
-            itemName: ''
+            itemName: '',
+            sharedWith: '',
+            starred: ''
         });
     };
 
@@ -203,7 +310,8 @@ function SearchBar() {
      * Check if any filters are active
      */
     const hasActiveFilters = filters.type || filters.owner || filters.dateModified ||
-                            filters.hasWords || filters.itemName;
+                            filters.hasWords || filters.itemName || filters.sharedWith || 
+                            filters.starred || filters.ownerEmail;
 
     /**
      * Toggle filter panel
@@ -321,6 +429,15 @@ function SearchBar() {
                                 onChange={(value) => handleFilterChange('owner', value)}
                                 placeholder="Anyone"
                             />
+                            {filters.owner === 'specific' && (
+                                <input
+                                    type="email"
+                                    className="search-filter-input search-filter-email"
+                                    placeholder="Enter owner's email..."
+                                    value={filters.ownerEmail}
+                                    onChange={(e) => handleFilterChange('ownerEmail', e.target.value)}
+                                />
+                            )}
                         </div>
 
                         {/* Date Modified Filter */}
@@ -334,6 +451,35 @@ function SearchBar() {
                                 options={dateOptions}
                                 onChange={(value) => handleFilterChange('dateModified', value)}
                                 placeholder="Any time"
+                            />
+                        </div>
+
+                        {/* Starred Filter */}
+                        <div className="search-filter-group">
+                            <label className="search-filter-label">
+                                <span className="material-symbols-outlined">star</span>
+                                Starred
+                            </label>
+                            <CustomDropdown
+                                value={filters.starred}
+                                options={starredOptions}
+                                onChange={(value) => handleFilterChange('starred', value)}
+                                placeholder="All items"
+                            />
+                        </div>
+
+                        {/* Shared With Filter */}
+                        <div className="search-filter-group">
+                            <label className="search-filter-label">
+                                <span className="material-symbols-outlined">share</span>
+                                Shared with
+                            </label>
+                            <input
+                                type="email"
+                                className="search-filter-input"
+                                placeholder="Enter email..."
+                                value={filters.sharedWith}
+                                onChange={(e) => handleFilterChange('sharedWith', e.target.value)}
                             />
                         </div>
 
@@ -458,6 +604,42 @@ function SearchBar() {
                                             type="button"
                                             onClick={() => handleFilterChange('hasWords', '')}
                                             aria-label="Remove words filter"
+                                        >
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </span>
+                                )}
+                                {filters.sharedWith && (
+                                    <span className="search-filter-chip">
+                                        Shared with: {filters.sharedWith}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleFilterChange('sharedWith', '')}
+                                            aria-label="Remove shared with filter"
+                                        >
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </span>
+                                )}
+                                {filters.starred && (
+                                    <span className="search-filter-chip">
+                                        Starred: {filters.starred === 'true' ? 'Yes' : 'No'}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleFilterChange('starred', '')}
+                                            aria-label="Remove starred filter"
+                                        >
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </span>
+                                )}
+                                {filters.ownerEmail && (
+                                    <span className="search-filter-chip">
+                                        Owner: {filters.ownerEmail}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleFilterChange('ownerEmail', '')}
+                                            aria-label="Remove owner email filter"
                                         >
                                             <span className="material-symbols-outlined">close</span>
                                         </button>

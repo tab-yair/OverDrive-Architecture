@@ -1,0 +1,149 @@
+.perm-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  width: 100%;
+  min-width: 0;
+  overflow: visible; /* Allow dropdown menus to extend beyond container */
+}
+
+.perm-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-sm) var(--spacing-md);
+  gap: 8px;
+  min-width: 0;
+}
+
+.perm-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-circle);
+  overflow: hidden;
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.perm-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.perm-avatar-fallback { font-weight: 600; color: var(--text-secondary); }
+
+.perm-user-info { 
+  padding: 0 var(--spacing-sm); 
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  max-width: 150px;
+  overflow: hidden;
+}
+
+.perm-name { 
+  color: var(--text-primary); 
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.perm-username {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.perm-actions { display: flex; justify-content: flex-end; }
+
+.perm-owner-pill {
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.perm-dropdown { 
+  position: relative; 
+  flex-shrink: 0;
+  overflow: visible; /* Ensure dropdown can extend beyond bounds */
+}
+.perm-dropdown-toggle {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: var(--radius-button);
+  padding: 6px 10px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.perm-dropdown-toggle:hover { background: var(--hover-overlay-light); }
+
+/* Inherited permission indicator */
+.perm-dropdown-toggle.perm-inherited {
+  background: var(--bg-input);
+  border: 1px dashed var(--border-color);
+}
+.perm-inherited-icon {
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+.perm-caret { margin-left: 6px; color: var(--text-secondary); }
+
+.perm-menu {
+  position: absolute;
+  right: 0;
+  top: 100%; /* Position directly below toggle button */
+  margin-top: 4px;
+  min-width: 180px;
+  max-width: 220px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-elevated);
+  padding: var(--spacing-xs);
+  z-index: 1000; /* Higher z-index to ensure it appears above all content */
+}
+
+.perm-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--text-primary);
+  padding: 8px;
+  border-radius: var(--radius-button);
+}
+.perm-menu-item:hover { background: var(--hover-overlay-light); }
+
+/* Disabled state: No hover, reduced opacity, no pointer events */
+.perm-disabled { 
+  opacity: 0.5; 
+  cursor: not-allowed;
+  pointer-events: none; /* Prevent any interaction */
+}
+.perm-disabled:hover { 
+  background: transparent !important; /* No hover effect */
+}
+.perm-lock { color: var(--text-secondary); }
+
+/* Tooltip wrapper for disabled inherited permissions */
+.perm-tooltip-wrapper {
+  display: block;
+  cursor: help;
+  pointer-events: auto; /* Allow hover on entire wrapper */
+}
+.perm-tooltip-wrapper .perm-menu-item {
+  /* Button inherits disabled styles, wrapper handles tooltip */
+  width: 100%;
+  pointer-events: none; /* Prevent button interaction */
+}

@@ -135,27 +135,37 @@ class StorageServerClient {
                     responseData += data.toString();
                     
                     // Check if we have a full response (ends with \n)
-                    if (responseData.includes('\n')) {
-                        const parts = responseData.trim().split('\n');
-                        const firstLine = parts[0];
+                    // Important: Must check endsWith, not includes, because JSON-escaped 
+                    // content may contain literal "\\n" characters (two chars: \ + n)
+                    if (responseData.endsWith('\n')) {
+                        cleanup();
+                        this.pool.release(connection);
                         
-                        // Try to parse status code from first line
-                        const statusCode = parseInt(firstLine);
+                        // Remove trailing \n added by C++ send()
+                        const message = responseData.slice(0, -1);
                         
-                        // If valid status code, resolve promise
+                        // Protocol: "STATUS TEXT\n\nCONTENT\n" or "STATUS TEXT\n"
+                        const separatorIndex = message.indexOf('\n\n');
+                        
+                        let statusLine, content;
+                        if (separatorIndex !== -1) {
+                            // Has content
+                            statusLine = message.substring(0, separatorIndex);
+                            content = message.substring(separatorIndex + 2); // +2 to skip \n\n
+                        } else {
+                            // No content (only status with possible single \n)
+                            statusLine = message.replace(/\n$/, '');
+                            content = undefined;
+                        }
+                        
+                        // Parse status code
+                        const statusCode = parseInt(statusLine);
+                        
                         if (!isNaN(statusCode)) {
-                            cleanup();
-                            this.pool.release(connection);
-                            
-                            // Extract content if present
-                            const content = responseData.includes('\n\n') 
-                                ? responseData.split('\n\n')[1].trim() 
-                                : (parts.length > 1 ? parts.slice(1).join('\n') : undefined);
-
                             resolve({
                                 success: statusCode >= 200 && statusCode < 300,
                                 status: statusCode,
-                                statusText: firstLine.replace(/^\d+\s*/, '') || "OK",
+                                statusText: statusLine.replace(/^\d+\s*/, '') || "OK",
                                 data: content
                             });
                         }

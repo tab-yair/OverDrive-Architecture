@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import FileRow from './FileRow';
 import FileCard from './FileCard';
-import ActionButton from './ActionButton';
 import SelectionToolbar from './SelectionToolbar';
 import { getMetadataConfig, applyColumnWidths, groupFilesByTime } from './fileUtils';
 import './FileManager.css';
@@ -44,22 +43,28 @@ import './FileManager.css';
  * @param {Object} props
  * @param {Array} props.files - Array of file objects
  * @param {string} props.pageContext - Current page context ('MyDrive', 'Shared', 'Trash', etc.)
+ * @param {string} props.folderName - Current folder name (optional, for empty folder message)
  * @param {string} props.permissionLevel - User's permission level
  * @param {boolean} props.isOwner - Whether current user is the owner
  * @param {string} props.viewMode - 'list' or 'grid' (default: 'grid')
  * @param {Function} props.onViewModeChange - Callback when view mode changes
  * @param {Function} props.onAction - Callback for file actions
  * @param {Function} props.onFileClick - Callback when file is clicked
+ * @param {Function} props.onFileDoubleClick - Callback when file is double-clicked
+ * @param {Function} props.onSelectionChange - Callback when selection changes (receives count)
  */
 const FileManager = ({
   files = [],
   pageContext = 'MyDrive',
+  folderName = null,
   permissionLevel = 'viewer',
   isOwner = true,
   viewMode = 'grid', // GLOBAL DEFAULT: Grid View for all new pages
   onViewModeChange,
   onAction,
   onFileClick,
+  onFileDoubleClick,
+  onSelectionChange,
 }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const containerRef = useRef(null);
@@ -69,6 +74,13 @@ const FileManager = ({
   useEffect(() => {
     applyColumnWidths(pageContext, containerRef.current);
   }, [pageContext]);
+
+  // Notify parent component when selection changes
+  useEffect(() => {
+    if (onSelectionChange) {
+      onSelectionChange(selectedFiles.length);
+    }
+  }, [selectedFiles, onSelectionChange]);
 
   /**
    * ═══════════════════════════════════════════════════════════════
@@ -101,12 +113,6 @@ const FileManager = ({
     // Keep mixed for Recent/Shared views
     regularFiles = sortedFiles;
   }
-
-  const handleViewToggle = (mode) => {
-    if (onViewModeChange) {
-      onViewModeChange(mode);
-    }
-  };
 
   /**
    * UNIFIED SELECTION HANDLER
@@ -148,8 +154,13 @@ const FileManager = ({
 
   const handleBulkAction = (actionId, files) => {
     if (onAction) {
-      // For bulk actions, call onAction for each file or handle as bulk
-      files.forEach(file => onAction(actionId, file));
+      // Special case: 'share' needs all files as array (opens single modal for bulk sharing)
+      if (actionId === 'share') {
+        onAction(actionId, files);
+      } else {
+        // Other actions: call individually (trash, restore, delete, etc.)
+        files.forEach(file => onAction(actionId, file));
+      }
       
       // After action, might want to clear selection
       if (actionId === 'trash' || actionId === 'deletePermanently' || actionId === 'restore') {
@@ -211,47 +222,46 @@ const FileManager = ({
   };
 
   if (files.length === 0) {
+    // Construct empty message based on context
+    const emptyTitle = pageContext === 'Trash' 
+      ? 'Trash is empty'
+      : pageContext === 'Starred'
+        ? 'No starred files'
+        : pageContext === 'Recent'
+          ? 'No recent files'
+          : 'No files or folders';
+    
+    const emptySubtitle = pageContext === 'Trash'
+      ? 'Items you delete will appear here'
+      : pageContext === 'Starred'
+        ? 'Star files to find them easily'
+        : pageContext === 'Recent'
+          ? 'Your recently accessed files will appear here'
+          : 'Upload files or create folders to get started';
+    
     return (
       <div className="file-manager-empty">
         <img src={`${process.env.PUBLIC_URL}/assets/folder.svg`} alt="" className="empty-icon" />
-        <p className="empty-message">No files or folders</p>
-        <p className="empty-submessage">Upload files or create folders to get started</p>
+        <p className="empty-message">{emptyTitle}</p>
+        <p className="empty-submessage">{emptySubtitle}</p>
       </div>
     );
   }
 
   return (
     <div ref={containerRef} className="file-manager" onClick={handleBackgroundClick}>
-      {/* Selection Toolbar */}
-      {selectedFiles.length > 0 && (
-        <SelectionToolbar
-          selectedFiles={selectedFiles}
-          pageContext={pageContext}
-          permissionLevel={permissionLevel}
-          isOwner={isOwner}
-          onClearSelection={handleClearSelection}
-          onAction={handleBulkAction}
-        />
-      )}
-
-      {/* View Toggle */}
-      <div className="file-manager-header">
-        <div className="view-toggle">
-          <button
-            className={`view-toggle-button ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => handleViewToggle('list')}
-            aria-label="List view"
-          >
-            <span className="material-symbols-outlined">view_list</span>
-          </button>
-          <button
-            className={`view-toggle-button ${viewMode === 'grid' ? 'active' : ''}`}
-            onClick={() => handleViewToggle('grid')}
-            aria-label="Grid view"
-          >
-            <span className="material-symbols-outlined">grid_view</span>
-          </button>
-        </div>
+      {/* Reserved Toolbar Slot - Prevents layout shift */}
+      <div className="selection-toolbar-slot">
+        {selectedFiles.length > 0 && (
+          <SelectionToolbar
+            selectedFiles={selectedFiles}
+            pageContext={pageContext}
+            permissionLevel={permissionLevel}
+            isOwner={isOwner}
+            onClearSelection={handleClearSelection}
+            onAction={handleBulkAction}
+          />
+        )}
       </div>
 
       {/* List View */}
@@ -284,9 +294,11 @@ const FileManager = ({
                     permissionLevel={permissionLevel}
                     isOwner={isOwner}
                     isSelected={isFileSelected(file)}
+                    selectedCount={selectedFiles.length}
                     onSelect={handleFileSelect}
                     onAction={onAction}
                     onClick={handleFileClick}
+                    onDoubleClick={onFileDoubleClick}
                   />
                 ))}
                 
@@ -299,9 +311,11 @@ const FileManager = ({
                     permissionLevel={permissionLevel}
                     isOwner={isOwner}
                     isSelected={isFileSelected(file)}
+                    selectedCount={selectedFiles.length}
                     onSelect={handleFileSelect}
                     onAction={onAction}
                     onClick={handleFileClick}
+                    onDoubleClick={onFileDoubleClick}
                   />
                 ))}
               </>
@@ -309,7 +323,7 @@ const FileManager = ({
               /* Mixed layout for Recent/Shared - with time grouping */
               (() => {
                 if (pageContext === 'Recent' || pageContext === 'Shared') {
-                  const dateField = pageContext === 'Recent' ? 'lastActions' : 'shareDate';
+                  const dateField = pageContext === 'Recent' ? 'activity' : 'shareDate';
                   const timeGroups = groupFilesByTime(regularFiles, dateField);
                   
                   return Object.entries(timeGroups).map(([groupName, groupFiles]) =>
@@ -324,9 +338,11 @@ const FileManager = ({
                             permissionLevel={permissionLevel}
                             isOwner={isOwner}
                             isSelected={isFileSelected(file)}
+                            selectedCount={selectedFiles.length}
                             onSelect={handleFileSelect}
                             onAction={onAction}
                             onClick={handleFileClick}
+                            onDoubleClick={onFileDoubleClick}
                           />
                         ))}
                       </div>
@@ -342,9 +358,11 @@ const FileManager = ({
                       permissionLevel={permissionLevel}
                       isOwner={isOwner}
                       isSelected={isFileSelected(file)}
+                      selectedCount={selectedFiles.length}
                       onSelect={handleFileSelect}
                       onAction={onAction}
                       onClick={handleFileClick}
+                      onDoubleClick={onFileDoubleClick}
                     />
                   ));
                 }
@@ -370,9 +388,11 @@ const FileManager = ({
                       permissionLevel={permissionLevel}
                       isOwner={isOwner}
                       isSelected={isFileSelected(file)}
+                      selectedCount={selectedFiles.length}
                       onSelect={handleFileSelect}
                       onAction={onAction}
                       onClick={handleFileClick}
+                      onDoubleClick={onFileDoubleClick}
                     />
                   ))}
                 </div>
@@ -389,9 +409,11 @@ const FileManager = ({
                       permissionLevel={permissionLevel}
                       isOwner={isOwner}
                       isSelected={isFileSelected(file)}
+                      selectedCount={selectedFiles.length}
                       onSelect={handleFileSelect}
                       onAction={onAction}
                       onClick={handleFileClick}
+                      onDoubleClick={onFileDoubleClick}
                     />
                   ))}
                 </div>
@@ -401,7 +423,7 @@ const FileManager = ({
             /* Mixed layout for Recent/Shared - with time grouping in grid */
             (() => {
               if (pageContext === 'Recent' || pageContext === 'Shared') {
-                const dateField = pageContext === 'Recent' ? 'lastActions' : 'shareDate';
+                const dateField = pageContext === 'Recent' ? 'activity' : 'shareDate';
                 const timeGroups = groupFilesByTime(regularFiles, dateField);
                 
                 return Object.entries(timeGroups).map(([groupName, groupFiles]) =>
@@ -417,9 +439,11 @@ const FileManager = ({
                             permissionLevel={permissionLevel}
                             isOwner={isOwner}
                             isSelected={isFileSelected(file)}
+                            selectedCount={selectedFiles.length}
                             onSelect={handleFileSelect}
                             onAction={onAction}
                             onClick={handleFileClick}
+                            onDoubleClick={onFileDoubleClick}
                           />
                         ))}
                       </div>
@@ -438,9 +462,11 @@ const FileManager = ({
                         permissionLevel={permissionLevel}
                         isOwner={isOwner}
                         isSelected={isFileSelected(file)}
+                        selectedCount={selectedFiles.length}
                         onSelect={handleFileSelect}
                         onAction={onAction}
                         onClick={handleFileClick}
+                        onDoubleClick={onFileDoubleClick}
                       />
                     ))}
                   </div>

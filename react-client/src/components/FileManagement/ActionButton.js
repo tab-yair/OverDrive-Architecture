@@ -20,7 +20,12 @@ const ActionButton = ({ iconSrc, onClick, disabled = false, ariaLabel, className
       aria-label={ariaLabel}
       type="button"
     >
-      <img src={iconSrc} alt="" className={`action-button-icon ${iconClassName}`} />
+      <img 
+        src={iconSrc} 
+        alt="" 
+        className={`action-button-icon ${iconClassName}`}
+        onError={(e) => console.error('❌ Icon failed to load:', iconSrc, e)}
+      />
     </button>
   );
 };

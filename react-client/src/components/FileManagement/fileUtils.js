@@ -112,7 +112,10 @@
  */
 
 // Helper function to get icon path
-const getIconPath = (filename) => `${process.env.PUBLIC_URL}/assets/${filename}`;
+const getIconPath = (filename) => {
+  const path = `${process.env.PUBLIC_URL}/assets/${filename}`;
+  return path;
+};
 
 // Export icon paths
 export const icons = {
@@ -171,7 +174,7 @@ export const formatFileSize = (bytes) => {
  * 
  * Logic:
  * - Today: Display time only in HH:mm format (e.g., "14:06")
- * - Older: Display in "D MMM" format (e.g., "21 Jan", "6 Jan")
+ * - Older: Display in "MMM D, YYYY" format (e.g., "Jan 6, 2025")
  * 
  * @param {string|Date|number} dateString - Date to format (ISO string, Date object, or timestamp)
  * @returns {string} Formatted date string
@@ -212,10 +215,11 @@ export const formatSmartDate = (dateString) => {
     const minutes = dateObj.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   } else {
-    // Older than today: Show "D MMM" format
+    // Older than today: Show "MMM D, YYYY" format
     const day = dateObj.getDate();
     const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
-    return `${day} ${month}`;
+    const year = dateObj.getFullYear();
+    return `${month} ${day}, ${year}`;
   }
 };
 
@@ -251,6 +255,43 @@ export const formatDate = (date) => {
       year: dateObj.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
   }
+};
+
+/**
+ * Format date to full format for details view
+ * Always shows full date with year
+ * Format: "D MMM YYYY" (e.g., "7 Jan 2026")
+ * 
+ * @param {string|Date|number} dateString - Date to format
+ * @returns {string} Formatted date string with year
+ */
+export const formatFullDate = (dateString) => {
+  if (!dateString) return '-';
+  
+  // Handle different input formats
+  let dateObj;
+  try {
+    if (dateString instanceof Date) {
+      dateObj = dateString;
+    } else if (typeof dateString === 'number') {
+      dateObj = new Date(dateString);
+    } else {
+      dateObj = new Date(dateString);
+    }
+    
+    // Validate the date
+    if (isNaN(dateObj.getTime())) {
+      return '-';
+    }
+  } catch (error) {
+    return '-';
+  }
+  
+  // Always show full date with year
+  const day = dateObj.getDate();
+  const month = dateObj.toLocaleDateString('en-US', { month: 'short' });
+  const year = dateObj.getFullYear();
+  return `${day} ${month} ${year}`;
 };
 
 /**
@@ -383,10 +424,15 @@ export const formatRecentActivity = (actionObj) => {
 /**
  * DEFAULT METADATA CONFIGURATION
  * Used by: MyDrive, Starred, and any future views unless overridden
+ * 
+ * NOTE: Field keys MUST match the FilesContext schema (from backend API):
+ * - modifiedAt (not lastModified)
+ * - createdAt (not created)
+ * - ownerId (not owner - but we display owner name)
  */
 const DEFAULT_METADATA = [
   { key: 'owner', label: 'Owner', width: '12%', cssVar: '--col-width-1' },
-  { key: 'lastModified', label: 'Last Modified', width: '18%', cssVar: '--col-width-2', formatter: formatSmartDate },
+  { key: 'modifiedAt', label: 'Last Modified', width: '18%', cssVar: '--col-width-2', formatter: formatSmartDate },
   { key: 'location', label: 'Location', width: '15%', cssVar: '--col-width-3', isLocation: true },
   { key: 'size', label: 'Size', width: '12%', cssVar: '--col-width-4' },
 ];
@@ -394,6 +440,8 @@ const DEFAULT_METADATA = [
 /**
  * METADATA OVERRIDES
  * Only specify what's different from the default
+ * 
+ * NOTE: All field keys aligned with FilesContext/API schema
  */
 const METADATA_OVERRIDES = {
   Shared: [
@@ -410,6 +458,9 @@ const METADATA_OVERRIDES = {
     { key: 'owner', label: 'Owner', width: '12%', cssVar: '--col-width-2' },
     { key: 'size', label: 'Size', width: '10%', cssVar: '--col-width-4' },
     { key: 'originalLocation', label: 'Original Location', width: '15%', cssVar: '--col-width-1', isLocation: true },
+  ],
+  Storage: [
+    { key: 'size', label: 'Size', width: '150px', cssVar: '--col-width-1' },
   ],
 };
 
@@ -463,13 +514,16 @@ export const applyColumnWidths = (pageContext, targetElement) => {
 /**
  * Get fallback value for missing metadata
  * 
+ * NOTE: Keys aligned with FilesContext schema
+ * 
  * @param {string} key - Metadata key
  * @returns {string} Fallback value
  */
 export const getFallbackValue = (key) => {
   const fallbacks = {
     owner: 'Me',
-    lastModified: '---',
+    modifiedAt: '---',
+    createdAt: '---',
     location: 'My Drive',
     size: '---',
     sharer: '---',
@@ -494,7 +548,7 @@ export const getFallbackValue = (key) => {
  * - Older: More than 30 days ago
  * 
  * @param {Array} files - Array of file objects
- * @param {string} dateField - Which date field to use ('lastModified', 'shareDate', 'lastActions')
+ * @param {string} dateField - Which date field to use ('lastModified', 'shareDate', 'lastActions', 'activity')
  * @returns {Object} Grouped files: { Today: [...], Yesterday: [...], ... }
  */
 export const groupFilesByTime = (files, dateField = 'lastModified') => {
@@ -521,7 +575,13 @@ export const groupFilesByTime = (files, dateField = 'lastModified') => {
   files.forEach(file => {
     // Get the date to use for grouping
     let fileDate = null;
-    if (dateField === 'lastActions' && file.lastActions && file.lastActions.length > 0) {
+    if (dateField === 'activity') {
+      // Use the MOST RECENT of lastEditedAt or lastViewedAt (no preference)
+      const editDate = file.lastEditedAt ? new Date(file.lastEditedAt).getTime() : 0;
+      const viewDate = file.lastViewedAt ? new Date(file.lastViewedAt).getTime() : 0;
+      const mostRecent = Math.max(editDate, viewDate);
+      fileDate = mostRecent > 0 ? new Date(mostRecent) : null;
+    } else if (dateField === 'lastActions' && file.lastActions && file.lastActions.length > 0) {
       fileDate = new Date(file.lastActions[0].date);
     } else if (dateField === 'shareDate' && file.shareDate) {
       fileDate = new Date(file.shareDate);
@@ -557,7 +617,16 @@ export const groupFilesByTime = (files, dateField = 'lastModified') => {
       let dateA = null;
       let dateB = null;
 
-      if (dateField === 'lastActions') {
+      if (dateField === 'activity') {
+        // Use the MOST RECENT of lastEditedAt or lastViewedAt (no preference)
+        const aEdit = a.lastEditedAt ? new Date(a.lastEditedAt).getTime() : 0;
+        const aView = a.lastViewedAt ? new Date(a.lastViewedAt).getTime() : 0;
+        dateA = new Date(Math.max(aEdit, aView) || 0);
+        
+        const bEdit = b.lastEditedAt ? new Date(b.lastEditedAt).getTime() : 0;
+        const bView = b.lastViewedAt ? new Date(b.lastViewedAt).getTime() : 0;
+        dateB = new Date(Math.max(bEdit, bView) || 0);
+      } else if (dateField === 'lastActions') {
         dateA = a.lastActions && a.lastActions.length > 0 ? new Date(a.lastActions[0].date) : new Date(0);
         dateB = b.lastActions && b.lastActions.length > 0 ? new Date(b.lastActions[0].date) : new Date(0);
       } else if (dateField === 'shareDate') {
@@ -594,17 +663,19 @@ const ACTION_REGISTRY = {
     iconSrc: icons.info,
     isDanger: false,
     /**
-     * Visibility: Only files can be opened (folders cannot)
+     * Visibility: Only files (folders open via double-click only)
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       if (pageContext === 'Trash') return false;
       return file.type !== 'folder';
     },
     /**
-     * Permission: Everyone can open files they have access to
+     * Permission: Everyone with READ access can open (all permission levels)
+     * Disabled for multiple selection (can only open one file at a time)
      */
-    isEnabled: (file, pageContext) => {
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
+      if (selectedCount > 1) return false;
       return file.type !== 'folder';
     },
   },
@@ -617,13 +688,13 @@ const ACTION_REGISTRY = {
      * Visibility: Both files and folders
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       return pageContext !== 'Trash';
     },
     /**
-     * Permission: Everyone can download
+     * Permission: Everyone with READ access can download (all permission levels)
      */
-    isEnabled: (file, pageContext) => {
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
       return true;
     },
   },
@@ -636,15 +707,17 @@ const ACTION_REGISTRY = {
      * Visibility: Only if NOT already starred
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       if (pageContext === 'Trash') return false;
-      const isStarred = file.starred || pageContext === 'Starred';
+      // Use isStarred (schema-aligned with FilesContext)
+      const isStarred = file.isStarred || pageContext === 'Starred';
       return !isStarred;
     },
     /**
-     * Permission: Everyone can star
+     * Permission: Everyone with READ access can star (all permission levels)
+     * Starring is a user-specific action (README line 1789)
      */
-    isEnabled: (file, pageContext) => {
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
       return true;
     },
   },
@@ -657,15 +730,17 @@ const ACTION_REGISTRY = {
      * Visibility: Only if currently starred
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       if (pageContext === 'Trash') return false;
-      const isStarred = file.starred || pageContext === 'Starred';
+      // Use isStarred (schema-aligned with FilesContext)
+      const isStarred = file.isStarred || pageContext === 'Starred';
       return isStarred;
     },
     /**
-     * Permission: Everyone can unstar
+     * Permission: Everyone with READ access can unstar (all permission levels)
+     * Starring is a user-specific action (README line 1789)
      */
-    isEnabled: (file, pageContext) => {
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
       return true;
     },
   },
@@ -678,15 +753,18 @@ const ACTION_REGISTRY = {
      * Visibility: Both files and folders
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       return pageContext !== 'Trash';
     },
     /**
-     * Permission: Owner or Editor only
+     * Permission: EDITOR or OWNER only (README Permission.js line 20: canWrite: true)
+     * Disabled for multiple selection (can only rename one item at a time)
+     * CRITICAL: Uses permissionLevel parameter (Single Source of Truth)
      */
-    isEnabled: (file, pageContext) => {
-      const permissionLevel = file.permissionLevel || 'viewer';
-      return permissionLevel === 'owner' || permissionLevel === 'editor';
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
+      if (selectedCount > 1) return false;
+      const level = permissionLevel?.toUpperCase();
+      return level === 'OWNER' || level === 'EDITOR';
     },
   },
   
@@ -695,17 +773,18 @@ const ACTION_REGISTRY = {
     iconSrc: icons.copy,
     isDanger: false,
     /**
-     * Visibility: Only files (folders cannot be copied)
+     * Visibility: Only files (folders cannot be copied per README line 1857)
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       if (pageContext === 'Trash') return false;
       return file.type !== 'folder';
     },
     /**
-     * Permission: Everyone can copy files they can access
+     * Permission: Everyone with READ access can copy (README line 1863: "at least VIEWER")
+     * README line 1867: "The user performing the copy becomes the OWNER of the new file"
      */
-    isEnabled: (file, pageContext) => {
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
       return file.type !== 'folder';
     },
   },
@@ -718,15 +797,19 @@ const ACTION_REGISTRY = {
      * Visibility: Both files and folders
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       return pageContext !== 'Trash';
     },
     /**
-     * Permission: Owner only
+     * Permission: EDITOR or OWNER only (README Permission.js line 20: canShare: true for EDITOR)
+     * README line 1743: EDITOR can share but only grant VIEWER/EDITOR, not OWNER
+     * README line 1768: Only current OWNER can transfer ownership via PATCH permission
      */
-    isEnabled: (file, pageContext) => {
-      const permissionLevel = file.permissionLevel || 'viewer';
-      return permissionLevel === 'owner';
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
+      const level = permissionLevel?.toUpperCase();
+      const canShare = level === 'OWNER' || level === 'EDITOR';
+      
+      return canShare;
     },
   },
   
@@ -738,15 +821,16 @@ const ACTION_REGISTRY = {
      * Visibility: Both files and folders
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       return pageContext !== 'Trash';
     },
     /**
-     * Permission: Owner or Editor only
+     * Permission: EDITOR or OWNER only (README Permission.js line 20: canWrite: true)
+     * Move is a PATCH operation changing parentId (README line 67)
      */
-    isEnabled: (file, pageContext) => {
-      const permissionLevel = file.permissionLevel || 'viewer';
-      return permissionLevel === 'owner' || permissionLevel === 'editor';
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
+      const level = permissionLevel?.toUpperCase();
+      return level === 'OWNER' || level === 'EDITOR';
     },
   },
   
@@ -758,14 +842,16 @@ const ACTION_REGISTRY = {
      * Visibility: Both files and folders
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       return pageContext !== 'Trash';
     },
     /**
-     * Permission: Everyone can view details
+     * Permission: Everyone with READ access can view details (all permission levels)
+     * Disabled for multiple selection (can only view details of one item at a time)
      */
-    isEnabled: (file, pageContext) => {
-      return true;
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
+      // Enable when zero or one item is selected; disable only for multi-selection
+      return selectedCount <= 1;
     },
   },
   
@@ -780,15 +866,18 @@ const ACTION_REGISTRY = {
      * Visibility: Both files and folders
      * Available in: Standard pages only (not Trash)
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       return pageContext !== 'Trash';
     },
     /**
-     * Permission: Owner or Editor only
+     * Permission: OWNER, EDITOR, or VIEWER - all can DELETE but with different effects:
+     * - OWNER: Sets isTrashed=true globally (README line 70)
+     * - EDITOR/VIEWER: Sets isHiddenForUser=true locally (README line 70)
+     * All permission levels can remove files from their view
      */
-    isEnabled: (file, pageContext) => {
-      const permissionLevel = file.permissionLevel || 'viewer';
-      return permissionLevel === 'owner' || permissionLevel === 'editor';
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
+      // Everyone with access can delete/remove from their view
+      return true;
     },
   },
   
@@ -799,14 +888,16 @@ const ACTION_REGISTRY = {
     /**
      * Visibility: Trash page only
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       return pageContext === 'Trash';
     },
     /**
-     * Permission: Everyone can restore
+     * Permission: OWNER only (README line 71: "Owner only")
+     * Restore from trash is a privileged operation that affects all users
      */
-    isEnabled: (file, pageContext) => {
-      return true;
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
+      const level = permissionLevel?.toUpperCase();
+      return level === 'OWNER';
     },
   },
   
@@ -817,15 +908,16 @@ const ACTION_REGISTRY = {
     /**
      * Visibility: Trash page only
      */
-    isVisible: (file, pageContext) => {
+    isVisible: (file, pageContext, permissionLevel) => {
       return pageContext === 'Trash';
     },
     /**
-     * Permission: Owner or Editor only
+     * Permission: OWNER only (README line 72: "Owner only")
+     * Permanent deletion is irreversible and affects all users
      */
-    isEnabled: (file, pageContext) => {
-      const permissionLevel = file.permissionLevel || 'viewer';
-      return permissionLevel === 'owner' || permissionLevel === 'editor';
+    isEnabled: (file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
+      const level = permissionLevel?.toUpperCase();
+      return level === 'OWNER';
     },
   },
 };
@@ -834,20 +926,29 @@ const ACTION_REGISTRY = {
  * Evaluate an action for a SINGLE file
  * This is the ONLY function that determines action availability
  * 
+ * SINGLE SOURCE OF TRUTH: All UI components must pass permissionLevel here
+ * 
  * @param {string} actionId - Action identifier (e.g., 'share', 'download')
- * @param {Object} file - File object with type, permissionLevel, isOwner, starred
+ * @param {Object} file - File object with type, isOwner, starred
  * @param {string} pageContext - Page context ('MyDrive', 'Shared', 'Trash', etc.)
+ * @param {number} selectedCount - Number of selected items (default: 1)
+ * @param {string} permissionLevel - User's permission level ('OWNER', 'EDITOR', 'VIEWER')
  * @returns {Object} { isVisible: boolean, isEnabled: boolean, label: string, iconSrc: string, isDanger: boolean }
  */
-export const evaluateAction = (actionId, file, pageContext) => {
+export const evaluateAction = (actionId, file, pageContext, selectedCount = 1, permissionLevel = 'VIEWER') => {
   const action = ACTION_REGISTRY[actionId];
   
   if (!action) {
     return { isVisible: false, isEnabled: false, label: '', iconSrc: '', isDanger: false };
   }
   
-  const isVisible = action.isVisible(file, pageContext);
-  const isEnabled = action.isEnabled(file, pageContext);
+  // Use explicit permissionLevel parameter as Single Source of Truth
+  // Fallback: file.permissionLevel || permissionLevel || 'VIEWER'
+  // Always normalize to uppercase
+  const effectivePermissionLevel = (file.permissionLevel || permissionLevel || 'VIEWER').toUpperCase();
+  
+  const isVisible = action.isVisible(file, pageContext, effectivePermissionLevel);
+  const isEnabled = action.isEnabled(file, pageContext, selectedCount, effectivePermissionLevel);
   const label = typeof action.label === 'function' ? action.label(file) : action.label;
   
   return {
@@ -869,23 +970,31 @@ export const evaluateAction = (actionId, file, pageContext) => {
  * @param {string} actionId - Action identifier
  * @param {Array} files - Array of file objects
  * @param {string} pageContext - Page context
+ * @param {string} permissionLevel - User's permission level ('owner', 'editor', 'viewer')
  * @returns {Object} { isVisible: boolean, isEnabled: boolean, label: string, iconSrc: string, isDanger: boolean }
  */
-export const evaluateBulkAction = (actionId, files, pageContext) => {
+export const evaluateBulkAction = (actionId, files, pageContext, permissionLevel = 'viewer') => {
   if (!files || files.length === 0) {
     return { isVisible: false, isEnabled: false, label: '', iconSrc: '', isDanger: false };
   }
   
+  // CRITICAL: Pass selectedCount AND permissionLevel to properly evaluate multi-selection rules
+  const selectedCount = files.length;
+  
   // Get the base properties from the first file
   const firstFile = files[0];
-  const baseEval = evaluateAction(actionId, firstFile, pageContext);
+  // Use file-specific permission level (critical for Shared page where each file can have different permission)
+  const firstFilePermission = firstFile.sharedPermissionLevel || firstFile.permissionLevel || permissionLevel;
+  const baseEval = evaluateAction(actionId, firstFile, pageContext, selectedCount, firstFilePermission);
   
   // Check if action is visible and enabled for ALL files
   let isVisibleForAll = baseEval.isVisible;
   let isEnabledForAll = baseEval.isEnabled;
   
   for (let i = 1; i < files.length; i++) {
-    const fileEval = evaluateAction(actionId, files[i], pageContext);
+    // CRITICAL: Use each file's specific permission level
+    const filePermission = files[i].sharedPermissionLevel || files[i].permissionLevel || permissionLevel;
+    const fileEval = evaluateAction(actionId, files[i], pageContext, selectedCount, filePermission);
     
     if (!fileEval.isVisible) {
       isVisibleForAll = false;
@@ -951,7 +1060,17 @@ const QUICK_ACTIONS_OVERRIDES = {
  * @param {Object} file - File object
  * @returns {Array} Array of action objects with complete status
  */
-export const getAvailableActions = (pageContext, file) => {
+/**
+ * Get available actions for a file based on page context
+ * Returns actions for the More (⋮) menu
+ * 
+ * @param {string} pageContext - Page context
+ * @param {Object} file - File object
+ * @param {number} selectedCount - Number of selected items (default: 1)
+ * @param {string} permissionLevel - User's permission level ('owner', 'editor', 'viewer')
+ * @returns {Array} Array of action objects
+ */
+export const getAvailableActions = (pageContext, file, selectedCount = 1, permissionLevel = 'viewer') => {
   const isFolder = file.type === 'folder';
   
   // Check for context menu override (e.g., Trash)
@@ -970,7 +1089,7 @@ export const getAvailableActions = (pageContext, file) => {
   // Build the action list using ACTION_REGISTRY
   return actionOrder
     .map(actionId => {
-      const status = evaluateAction(actionId, file, pageContext);
+      const status = evaluateAction(actionId, file, pageContext, selectedCount, permissionLevel);
       return {
         id: actionId,
         label: status.label,
@@ -991,15 +1110,16 @@ export const getAvailableActions = (pageContext, file) => {
  * 
  * @param {string} pageContext - Page context
  * @param {Object} file - File object
+ * @param {string} permissionLevel - User's permission level ('owner', 'editor', 'viewer')
  * @returns {Array} Array of button action objects
  */
-export const getRowActionButtons = (pageContext, file) => {
+export const getRowActionButtons = (pageContext, file, permissionLevel = 'viewer') => {
   // Check for quick actions override (e.g., Trash)
   const buttonActions = QUICK_ACTIONS_OVERRIDES[pageContext] || DEFAULT_QUICK_ACTIONS;
   
   return buttonActions
     .map(actionId => {
-      const status = evaluateAction(actionId, file, pageContext);
+      const status = evaluateAction(actionId, file, pageContext, 1, permissionLevel);
       return {
         id: actionId,
         label: status.label,
@@ -1026,9 +1146,10 @@ export const getRowActionButtons = (pageContext, file) => {
  * 
  * @param {string} pageContext - Page context
  * @param {Array} selectedFiles - Array of selected file objects
+ * @param {string} permissionLevel - User's permission level ('owner', 'editor', 'viewer')
  * @returns {Array} Array of context menu action objects
  */
-export const getBulkMenuActions = (pageContext, selectedFiles) => {
+export const getBulkMenuActions = (pageContext, selectedFiles, permissionLevel = 'viewer') => {
   if (!selectedFiles || selectedFiles.length === 0) {
     return [];
   }
@@ -1040,8 +1161,8 @@ export const getBulkMenuActions = (pageContext, selectedFiles) => {
     // Trash: Same actions for all items regardless of type
     candidateActions = ['restore', 'deletePermanently'];
   } else {
-    // Standard contexts: Combine all possible actions
-    // We'll filter based on what ALL items support
+    // Standard contexts: All possible actions
+    // Single-context actions (open, rename, details) will appear but be disabled when selectedCount > 1
     candidateActions = [
       'open',
       'download',
@@ -1057,7 +1178,7 @@ export const getBulkMenuActions = (pageContext, selectedFiles) => {
   // Apply Intersection Rule: Only include actions that ALL files support
   return candidateActions
     .map(actionId => {
-      const status = evaluateBulkAction(actionId, selectedFiles, pageContext);
+      const status = evaluateBulkAction(actionId, selectedFiles, pageContext, permissionLevel);
       return {
         id: actionId,
         label: status.label,
@@ -1083,15 +1204,16 @@ export const getBulkMenuActions = (pageContext, selectedFiles) => {
  * 
  * @param {string} pageContext - Page context
  * @param {Array} selectedFiles - Array of selected file objects (each with type, permissionLevel, isOwner)
+ * @param {string} permissionLevel - User's permission level ('owner', 'editor', 'viewer')
  * @returns {Array} Array of toolbar action objects with visibility and enabled status
  */
-export const getToolbarActions = (pageContext, selectedFiles) => {
+export const getToolbarActions = (pageContext, selectedFiles, permissionLevel = 'viewer') => {
   if (!selectedFiles || selectedFiles.length === 0) {
     return [];
   }
   
   // Get ALL possible actions from the menu
-  const allMenuActions = getBulkMenuActions(pageContext, selectedFiles);
+  const allMenuActions = getBulkMenuActions(pageContext, selectedFiles, permissionLevel);
   
   // Define which actions appear as quick buttons in the toolbar
   let priorityActionIds;

@@ -7,7 +7,7 @@ A full-stack, distributed file storage system featuring a Node.js Web API layer 
 OverDrive is a networked file storage system featuring:
 - **Web Server (Node.js)**: Handles JWT-based authentication (Gmail-only), permissions, and file metadata.
 - **Storage Server (C++)**: A high-performance engine for file persistence, featuring custom RLE compression and multi-threaded searching.
-- **Security & Validation**: JWT token authentication, strict email validation, password length checks, and owner-only file access.
+- **Security & Validation**: JWT token authentication, strict email validation, strong password requirements (8+ characters with both letters and numbers), and owner-only file access.
 - **RESTful API**: Clean HTTP interface for managing users and files.
 - **User Features**: Starred files and recently accessed file tracking with automatic interaction recording.
 - **Dockerized Microservices**: Seamlessly orchestrated using Docker Compose.
@@ -50,7 +50,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 | Method | Endpoint | Auth Required | Description |
 |:---:|:---|:---:|:---|
-| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, 8+ char password). Fields: `username`, `password`, `firstName`, `profileImage` (required Base64 image), `lastName` (optional, defaults to `null`). **Automatically creates default preferences** |
+| `POST` | `/api/users` | ❌ | **Register**: Create a new account (Gmail only, password: 8+ chars with letters and numbers). Fields: `username`, `password`, `firstName`, `profileImage` (required Base64 image), `lastName` (optional, defaults to `null`). **Automatically creates default preferences** (theme: light, landingPage: home) |
 | `GET` | `/api/users/:id` | ✅ | **Get User Profile**: Retrieve user details. **Owner**: Returns full profile (id, username, firstName, lastName, profileImage, storageUsed, createdAt, modifiedAt). **Non-owner**: Returns limited public profile (id, firstName, lastName, username, profileImage) |
 | `PATCH` | `/api/users/:id` | ✅ | **Update User Profile**: Update user details. Allowed fields: `password`, `firstName`, `lastName`, `profileImage`. Username cannot be changed. Set `lastName` or `profileImage` to `null` to remove them |
 | `GET` | `/api/users/:id/preference` | ✅ | **Get User Preferences**: Retrieve user's preferences (`theme`, `landingPage`). User can only access their own preferences |
@@ -61,6 +61,7 @@ Authorization: Bearer <JWT_TOKEN>
 | `GET` | `/api/files` | ✅ | **List All**: Retrieve all files and folders at root level (/) with user as Viewer|
 | `GET` | `/api/files/starred` | ✅ | **Get Starred Files**: Retrieve all files starred by the current user with metadata (`isStarred`, `lastViewedAt`, `lastEditedAt`) |
 | `GET` | `/api/files/recent` | ✅ | **Get Recent Files**: Retrieve recently accessed files (docs, pdf, image only - folders excluded), sorted by most recent interaction first. Includes `lastInteractionType` (VIEW/EDIT) |
+| `GET` | `/api/files/owned` | ✅ | **Get Owned Files**: Retrieve all files owned by the current user (folders excluded), sorted by size. Supports `sortOrder` query parameter (`desc` for largest first, `asc` for smallest first). Default: `desc` |
 | `GET` | `/api/files/shared` | ✅ | **List Shared With Me**: Retrieve all files/folders where the user has **direct** VIEWER or EDITOR permissions (not inherited), and is NOT the owner. Includes `sharedPermissionLevel` |
 | `GET` | `/api/files/:id` | ✅ | **Fetch**: Get full metadata and content of a specific file/folder. Automatically records VIEW interaction |
 | `GET` | `/api/files/:id/download` | ✅ | **Download**: Polymorphic download endpoint. For single files (docs, pdf, image): returns decoded binary with proper Content-Type headers. For folders: returns flattened JSON array of all files recursively with uncompressed content and relative paths |
@@ -204,7 +205,7 @@ This ensures every user has preferences available immediately after registration
 | Field | Type | Allowed Values | Default | Description |
 |:---:|:---:|:---:|:---:|:---|
 | `userId` | String (UUID) | - | - | Links preference to its owner (1:1 relationship) |
-| `theme` | String | `"light"`, `"dark"` | `"light"` | UI color scheme preference |
+| `theme` | String | `"light"`, `"dark"`, `"system"` | `"light"` | UI color scheme preference (`"system"` uses device default) |
 | `landingPage` | String | `"home"`, `"storage"` | `"home"` | Default page after login |
 
 ### API Usage
@@ -1992,6 +1993,15 @@ OverDrive/
      If the user enters the username without @gmail.com, it is automatically appended.
      
      Normalization is applied: dots (.) and uppercase letters are ignored or converted to lowercase.
+
+- Password Requirements:
+     
+     Minimum 8 characters.
+     
+     Must contain both letters (a-z, A-Z) and numbers (0-9).
+     
+     Applies to both registration and password updates.
+
 - In-Memory Users: User data resets on Web Server restart (unless persistent store is attached).
 - Search Case-Sensitivity: Search is currently case-sensitive.
 

@@ -49,6 +49,43 @@ const createUser = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /api/users/search
+ * Search user by email and return user ID
+ * Used for Share functionality to resolve email to UUID
+ */
+const searchUserByEmail = asyncHandler(async (req, res) => {
+    const { email } = req.query;
+
+    if (!email) {
+        const error = new Error('Email parameter is required');
+        error.status = 400;
+        throw error;
+    }
+
+    try {
+        // Call service to get user by email/username
+        const user = await userService.getUserByUsername({ username: email });
+
+        // Return limited user info for sharing
+        res.status(200).json({
+            id: user.id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            profileImage: user.profileImage
+        });
+    } catch (error) {
+        // User not found
+        if (error.message === 'User not found') {
+            const notFoundError = new Error('User not found');
+            notFoundError.status = 404;
+            throw notFoundError;
+        }
+        throw error;
+    }
+});
+
+/**
  * GET /api/users/:id
  * Get user profile information
  * - Owner: Full profile (id, username, firstName, lastName, profileImage, storageUsed, createdAt, modifiedAt)
@@ -130,6 +167,7 @@ const updateUser = asyncHandler(async (req, res) => {
 
 module.exports = {
     createUser,
+    searchUserByEmail,
     getUserById,
     updateUser
 };

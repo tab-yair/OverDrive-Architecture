@@ -1,0 +1,51 @@
+.file-page {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Breadcrumbs Container - Fixed height to prevent layout shift */
+.file-page-breadcrumbs {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+    overflow: visible; /* Allow dropdown to overflow container */
+    position: relative; /* For dropdown positioning */
+}
+
+.file-page-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    color: var(--text-secondary, #666);
+}
+
+.file-page-loading .material-symbols-outlined {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: var(--primary-color, #1a73e8);
+}
+
+.file-page-loading .spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.file-page-loading p {
+    font-size: 14px;
+    margin: 0;
+}

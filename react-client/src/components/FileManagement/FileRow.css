@@ -63,16 +63,13 @@
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  /* Icons use currentColor from SVG or have proper colors - no filters needed */
+  color: var(--text-secondary);
 }
 
-/* Dark mode - make icons visible */
-[data-theme="dark"] .file-row-icon:not(.folder-icon) {
-  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
-}
-
-/* Folder icon uses its natural color from SVG - gray (#5f6368) */
-.folder-icon {
-  filter: none;
+/* Dark mode - icons automatically adjust via currentColor */
+[data-theme="dark"] .file-row-icon {
+  color: var(--text-secondary);
 }
 
 .file-name-text {
@@ -126,6 +123,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.owner-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-circle);
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .owner-avatar-placeholder {

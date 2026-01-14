@@ -7,6 +7,13 @@
   /* No padding here - each section handles its own spacing */
 }
 
+/* Reserved Toolbar Slot - Prevents layout shift */
+.selection-toolbar-slot {
+  min-height: 60px; /* Matches SelectionToolbar min-height */
+  position: relative;
+  /* Reserved space always present, toolbar fills it when visible */
+}
+
 /* Header with View Toggle */
 .file-manager-header {
   display: flex;

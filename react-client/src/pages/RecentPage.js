@@ -1,29 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { FilePageWrapper } from '../components/FilePageWrapper';
+import { useNavigation } from '../context/NavigationContext';
 import './Pages.css';
 
 /**
  * RecentPage Component
- * Displays recently accessed files
+ * Displays recently accessed files (no folders, sorted by last interaction)
+ * Endpoint: GET /api/files/recent
  */
 function RecentPage() {
+    const { setCurrentFolderId } = useNavigation();
+    
+    // Reset current folder when entering Recent (root level)
+    useEffect(() => {
+        setCurrentFolderId(null);
+    }, [setCurrentFolderId]);
+    
     return (
-        <div className="page recent-page">
-            <h1 className="page-title">Recent</h1>
-            <p className="page-description">
-                Files you've recently opened or modified.
-            </p>
-
-            {/* TODO: Fetch and display recent files from /api/files/recent */}
-            {/* TODO: Show last accessed time */}
-            {/* TODO: Group by date (Today, Yesterday, This week, etc.) */}
-
-            <div className="page-placeholder">
-                <span className="material-symbols-outlined page-placeholder-icon">
-                    schedule
-                </span>
-                <p>Your recently accessed files will appear here</p>
-            </div>
-        </div>
+        <FilePageWrapper
+            endpoint="recent"
+            pageContext="Recent"
+            isOwner={false}
+            permissionLevel="viewer"
+            className="recent-page"
+            loadingMessage="Loading recent files..."
+        />
     );
 }
 

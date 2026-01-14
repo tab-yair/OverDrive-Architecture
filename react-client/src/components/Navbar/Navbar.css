@@ -1,4 +1,4 @@
-/* Navbar Component Styles */
+/* Navbar Component Styles - Single Row */
 
 .navbar {
     position: fixed;
@@ -20,7 +20,7 @@
 .navbar-left {
     display: flex;
     align-items: center;
-    min-width: 256px;
+    min-width: 200px;
 }
 
 /* Center section - Search */

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { storageApi, userApi } from '../services/api';
+import { useAppEvent } from '../hooks/useAppEvent';
+import { AppEvents } from '../utils/eventManager';
 
 // Create the user preferences context
 const UserPreferencesContext = createContext(null);
@@ -76,6 +78,11 @@ export function UserPreferencesProvider({ children }) {
             setStorageInfo(null);
         }
     }, [isAuthenticated, token, refreshStorage]);
+
+    // Listen for storage-updated events (triggered by file upload/delete)
+    useAppEvent(AppEvents.STORAGE_UPDATED, () => {
+        refreshStorage();
+    }, [refreshStorage]);
 
     /**
      * Update a preference

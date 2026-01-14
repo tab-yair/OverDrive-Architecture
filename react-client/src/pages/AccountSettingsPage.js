@@ -8,7 +8,7 @@ import './SettingsPage.css';
  * Account settings: profile, password with Base64 image support
  */
 function AccountSettingsPage() {
-    const { user, token, login } = useAuth();
+    const { user, token, refreshUser, notifyUserUpdate } = useAuth();
     const fileInputRef = useRef(null);
 
     // Profile editing state
@@ -43,14 +43,16 @@ function AccountSettingsPage() {
         return names[0][0].toUpperCase();
     };
 
+    // Handle photo change click
     const handleChangePhotoClick = () => {
         fileInputRef.current?.click();
     };
 
-    // FIXED: Handle file selection and convert to Base64
+    // Handle file selection
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Handle file selection and convert to Base64 to match server requirement
             const reader = new FileReader();
             reader.onloadend = () => {
                 setProfileImage(reader.result);
@@ -59,9 +61,10 @@ function AccountSettingsPage() {
         }
     };
 
+    // Handle edit/save
     const handleEditClick = () => {
         if (isEditing) {
-            // Cancel editing - reset values to original user data
+            // Cancel editing
             setFirstName(user?.displayName?.split(' ')[0] || '');
             setLastName(user?.displayName?.split(' ').slice(1).join(' ') || '');
             setProfileImage(user?.profileImage || null);
@@ -70,6 +73,7 @@ function AccountSettingsPage() {
         setIsEditing(!isEditing);
     };
 
+    // Handle save profile
     const handleSaveProfile = async () => {
         if (!token || !user?.id) return;
 
@@ -82,24 +86,19 @@ function AccountSettingsPage() {
                 lastName: lastName.trim()
             };
 
-            // If profileImage has changed (it's now a Base64 string), include it in updates
             if (profileImage && profileImage !== user?.profileImage) {
                 updates.profileImage = profileImage;
             }
 
             await userApi.updateUser(token, user.id, updates);
 
-            const newDisplayName = lastName.trim()
-                ? `${firstName.trim()} ${lastName.trim()}`
-                : firstName.trim();
+            await refreshUser();
+            
+            // Notify other tabs about the update if the function exists
+            if (notifyUserUpdate) {
+                notifyUserUpdate();
+            }
 
-            const updatedUser = {
-                ...user,
-                displayName: newDisplayName,
-                profileImage: profileImage
-            };
-
-            login(token, updatedUser);
             setIsEditing(false);
         } catch (err) {
             console.error('Failed to update profile:', err);
@@ -109,10 +108,12 @@ function AccountSettingsPage() {
         }
     };
 
+    // Handle password change
     const handlePasswordChange = async () => {
         setPasswordError(null);
         setPasswordSuccess(false);
 
+        // Validation
         if (!currentPassword) {
             setPasswordError('Current password is required');
             return;
@@ -121,7 +122,7 @@ function AccountSettingsPage() {
             setPasswordError('New password is required');
             return;
         }
-        // FIXED: Aligned with server (8 chars minimum based on userService.js)
+        // FIXED: Aligned with server (8 characters minimum)
         if (newPassword.length < 8) {
             setPasswordError('New password must be at least 8 characters');
             return;
@@ -136,6 +137,7 @@ function AccountSettingsPage() {
         try {
             await userApi.updateUser(token, user.id, {
                 password: newPassword
+                // Note: Server should verify currentPassword before allowing change
             });
 
             setPasswordSuccess(true);
@@ -144,10 +146,12 @@ function AccountSettingsPage() {
             setConfirmPassword('');
             setShowPasswordFields(false);
 
+            // Reset visibility states
             setShowCurrentPassword(false);
             setShowNewPassword(false);
             setShowConfirmPassword(false);
 
+            // Clear success message after 3 seconds
             setTimeout(() => setPasswordSuccess(false), 3000);
         } catch (err) {
             console.error('Failed to change password:', err);
@@ -191,7 +195,6 @@ function AccountSettingsPage() {
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                id="profile-upload-input"
                                 accept="image/*"
                                 onChange={handleFileChange}
                                 style={{ display: 'none' }}

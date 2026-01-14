@@ -11,6 +11,48 @@ const { generateId } = require('../utils/idGenerator.js');
 // Handles complex validations, storage-server communication, permission management
 class FileService {
     
+    /**
+     * Helper: Enrich file with owner information object
+     * Transforms ownerId (UUID) into full owner object with displayName, username, avatarUrl
+     * Similar to how sharer is enriched in getSharedFiles
+     */
+    async _enrichWithOwnerInfo(file) {
+        if (!file || !file.ownerId) {
+            return file;
+        }
+
+        const ownerUser = await usersStore.getById(file.ownerId);
+        if (!ownerUser) {
+            // Owner doesn't exist in database - return file as-is
+            return file;
+        }
+
+        // Create owner object
+        const owner = {
+            id: ownerUser.id,
+            username: ownerUser.username,
+            avatarUrl: ownerUser.profileImage || null,
+            firstName: ownerUser.firstName || null,
+            lastName: ownerUser.lastName || null
+        };
+
+        return {
+            ...file,
+            owner
+        };
+    }
+
+    /**
+     * Helper: Enrich multiple files with owner information
+     */
+    async _enrichFilesWithOwnerInfo(files) {
+        if (!files || files.length === 0) {
+            return files;
+        }
+
+        return Promise.all(files.map(file => this._enrichWithOwnerInfo(file)));
+    }
+    
     // Create new file or folder
     async createFile({ name, type, ownerId, parentId = null, size = 0 }) {
         // Basic validation
@@ -212,12 +254,14 @@ class FileService {
             }
 
             // 2. Update parent (move)
+            let parentChange = null;
             if (updates.parentId !== undefined) {
+                parentChange = { oldParentId: file.parentId, newParentId: updates.parentId };
                 const parentUpdates = await this._validateAndUpdateParent(
-                    fileId, 
-                    file, 
-                    updates.parentId, 
-                    updates.name, 
+                    fileId,
+                    file,
+                    updates.parentId,
+                    updates.name,
                     userId
                 );
                 Object.assign(metadataUpdates, parentUpdates);
@@ -231,8 +275,17 @@ class FileService {
             // 4. Update metadata in store with optimistic locking
             const updatedFile = await filesStore.update(fileId, metadataUpdates, expectedModifiedAt);
 
-            // Record edit interaction
-            await userFileMetadataStore.recordEdit(userId, fileId);
+            // After final update, synchronize permissions if parent changed
+            if (parentChange) {
+                const { permissionService } = require('./permissionService');
+                await permissionService.syncPermissionsOnMove(fileId, parentChange.oldParentId, parentChange.newParentId);
+            }
+
+            // Record edit interaction ONLY for files (not folders)
+            // Recent files should only track document interactions (docs, pdf, image)
+            if (file.type !== 'folder') {
+                await userFileMetadataStore.recordEdit(userId, fileId);
+            }
 
             return {
                 success: true,
@@ -294,8 +347,8 @@ class FileService {
     }
 
     // SEARCH - Advanced search with filters
-    // Filters: searchName, searchContent, type, owner, dateRange, sharedWith, isStarred
-    async searchFiles({ searchName = null, searchContent = null, type = null, owner = null, dateRange = null, sharedWith = null, isStarred = null, userId }) {
+    // Filters: searchName, searchContent, type, owner, ownerEmail, dateRange, sharedWith, isStarred
+    async searchFiles({ searchName = null, searchContent = null, type = null, owner = null, ownerEmail = null, dateRange = null, sharedWith = null, isStarred = null, userId }) {
         try {
             // Get all files the user has access to
             const accessibleFileIdsArray = await permissionStore.getAccessibleFileIds(userId);
@@ -388,6 +441,13 @@ class FileService {
                     );
                     if (!hasPermission) continue;
                 }
+                
+                // Filter by specific owner email
+                if (ownerEmail) {
+                    const { usersStore } = require('../models/usersStore');
+                    const ownerUser = await usersStore.getByUsername(ownerEmail);
+                    if (!ownerUser || file.ownerId !== ownerUser.id) continue;
+                }
 
                 // Filter by date range
                 if (dateRange) {
@@ -399,9 +459,12 @@ class FileService {
                 // Filter by sharedWith
                 if (sharedWith) {
                     const permissions = await permissionStore.getByFileId(fileId);
+                    console.log(`Checking sharedWith for file ${fileId}, looking for userId ${sharedWith}`);
+                    console.log('Permissions:', permissions);
                     const hasSharedUser = permissions.some(p => 
                         p.userId === sharedWith && (p.level === 'VIEWER' || p.level === 'EDITOR')
                     );
+                    console.log('Has shared user:', hasSharedUser);
                     if (!hasSharedUser) continue;
                 }
 
@@ -413,17 +476,24 @@ class FileService {
                     if (!isStarred && fileIsStarred) continue;
                 }
 
+                // Get user's effective permission level (strongest between direct and inherited)
+                const { permissionService } = require('./permissionService');
+                const permission = await permissionService._getEffectivePermission(userId, fileId);
+                const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+
                 // Get user metadata
                 const metadata = await userFileMetadataStore.get(userId, fileId);
                 results.push({
                     ...file,
+                    permissionLevel,
                     isStarred: metadata ? metadata.isStarred : false,
                     lastViewedAt: metadata ? metadata.lastViewedAt : null,
                     lastEditedAt: metadata ? metadata.lastEditedAt : null
                 });
             }
 
-            return results;
+            // Enrich all search results with owner information
+            return await this._enrichFilesWithOwnerInfo(results);
         } catch (error) {
             throw new Error(`Search failed: ${error.message}`);
         }
@@ -445,11 +515,27 @@ class FileService {
             
             const hasPermission = await this.checkPermission({ userId, fileId: file.id, action: 'Read' });
             if (hasPermission) {
-                accessibleFiles.push(file);
+                // Get user's effective permission level (strongest between direct and inherited)
+                const { permissionService } = require('./permissionService');
+                const permission = await permissionService._getEffectivePermission(userId, file.id);
+                const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+                
+                // Get user-specific metadata
+                const metadata = await userFileMetadataStore.get(userId, file.id);
+                
+                accessibleFiles.push({
+                    ...file,
+                    permissionLevel,
+                    isStarred: metadata?.isStarred || false,
+                    lastViewedAt: metadata?.lastViewedAt || null,
+                    lastEditedAt: metadata?.lastEditedAt || null,
+                    lastInteractionType: metadata?.lastInteractionType || null
+                });
             }
         }
 
-        return accessibleFiles;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(accessibleFiles);
     }
 
     // Check user permission on file
@@ -504,14 +590,50 @@ class FileService {
             throw new Error("Permission denied");
         }
 
-        // Record view interaction
-        await userFileMetadataStore.recordView(userId, fileId);
+        // Record view interaction ONLY for files (not folders)
+        // Recent files should only track document interactions (docs, pdf, image)
+        if (file.type !== 'folder') {
+            await userFileMetadataStore.recordView(userId, fileId);
+        }
+
+        // Get user's effective permission level (strongest between direct and inherited)
+        const { permissionService } = require('./permissionService');
+        const permission = await permissionService._getEffectivePermission(userId, fileId);
+        const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+
+        // Get user-specific metadata after recording the view (if applicable)
+        // Includes: isStarred, lastViewedAt, lastEditedAt, lastInteractionType, 
+        // viewCount, editCount, createdAt, modifiedAt
+        const metadata = await userFileMetadataStore.get(userId, fileId);
+
+        // Helper to attach all metadata fields including permission level
+        const attachMetadata = (fileObj) => {
+            const result = { ...fileObj };
+            
+            // Add permission level
+            result.permissionLevel = permissionLevel;
+            
+            // Add all user-specific metadata fields if metadata exists
+            if (metadata) {
+                result.isStarred = metadata.isStarred;
+                result.lastViewedAt = metadata.lastViewedAt;
+                result.lastEditedAt = metadata.lastEditedAt;
+                result.lastInteractionType = metadata.lastInteractionType;
+                result.viewCount = metadata.viewCount;
+                result.editCount = metadata.editCount;
+                result.metadataCreatedAt = metadata.createdAt;
+                result.metadataModifiedAt = metadata.modifiedAt;
+            }
+            
+            return result;
+        };
 
         // If it's a folder, return with children metadata (without their content)
         if (file.type === 'folder') {
             const childrenFiles = await filesStore.getByParentId(fileId);
             
             // Filter children by permissions and exclude trashed files
+            // CRITICAL: Attach user metadata to each child (including isStarred)
             const accessibleChildren = [];
             for (const child of childrenFiles) {
                 // Skip files in trash (they should only appear in trash endpoint)
@@ -522,25 +644,48 @@ class FileService {
                 
                 const hasChildPermission = await this.checkPermission({ userId, fileId: child.id, action: 'Read' });
                 if (hasChildPermission) {
-                    // Return only metadata - no content for files, no children for folders
-                    accessibleChildren.push(child);
+                    // Get permission level for child
+                    const { permissionService } = require('./permissionService');
+                    const childPermission = await permissionService._getEffectivePermission(userId, child.id);
+                    const childPermissionLevel = childPermission ? childPermission.level : (child.ownerId === userId ? 'OWNER' : null);
+                    
+                    // Get user metadata for child (including isStarred)
+                    const childMetadata = await userFileMetadataStore.get(userId, child.id);
+                    
+                    // Return child with all metadata attached
+                    accessibleChildren.push({
+                        ...child,
+                        permissionLevel: childPermissionLevel,
+                        isStarred: childMetadata?.isStarred || false,
+                        lastViewedAt: childMetadata?.lastViewedAt || null,
+                        lastEditedAt: childMetadata?.lastEditedAt || null,
+                        lastInteractionType: childMetadata?.lastInteractionType || null
+                    });
                 }
             }
             
-            return {
+            // Enrich children with owner information
+            const enrichedChildren = await this._enrichFilesWithOwnerInfo(accessibleChildren);
+            
+            // Enrich parent folder with owner information
+            const enrichedFolder = await this._enrichWithOwnerInfo(attachMetadata({
                 ...file,
-                children: accessibleChildren
-            };
+                children: enrichedChildren
+            }));
+            
+            return enrichedFolder;
         }
 
         // For files, fetch content from storage-server
         try {
             const storageResponse = await storageClient.get(fileId);
             if (storageResponse.success && storageResponse.data) {
-                return {
+                const fileWithContent = attachMetadata({
                     ...file,
                     content: storageResponse.data
-                };
+                });
+                // Enrich with owner information
+                return await this._enrichWithOwnerInfo(fileWithContent);
             }
         } catch (error) {
             // If file doesn't exist on storage server, continue without content
@@ -548,7 +693,8 @@ class FileService {
         }
 
         // Return file metadata without content if storage fetch failed
-        return file;
+        // Enrich with owner information
+        return await this._enrichWithOwnerInfo(attachMetadata(file));
     }
 
     // Get starred files for user
@@ -570,17 +716,29 @@ class FileService {
                 // Check permission
                 const hasPermission = await this.checkPermission({ userId, fileId: file.id, action: 'Read' });
                 if (hasPermission) {
+                    // Get user's effective permission level (strongest between direct and inherited)
+                    const { permissionService } = require('./permissionService');
+                    const permission = await permissionService._getEffectivePermission(userId, file.id);
+                    const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+                    
                     files.push({
                         ...file,
+                        permissionLevel,
                         isStarred: metadata.isStarred,
                         lastViewedAt: metadata.lastViewedAt,
-                        lastEditedAt: metadata.lastEditedAt
+                        lastEditedAt: metadata.lastEditedAt,
+                        lastInteractionType: metadata.lastInteractionType,
+                        viewCount: metadata.viewCount,
+                        editCount: metadata.editCount,
+                        metadataCreatedAt: metadata.createdAt,
+                        metadataModifiedAt: metadata.modifiedAt
                     });
                 }
             }
         }
         
-        return files;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(files);
     }
 
     // Get recently accessed files for user
@@ -607,18 +765,70 @@ class FileService {
                 // Check permission
                 const hasPermission = await this.checkPermission({ userId, fileId: file.id, action: 'Read' });
                 if (hasPermission) {
+                    // Get user's effective permission level (strongest between direct and inherited)
+                    const { permissionService } = require('./permissionService');
+                    const permission = await permissionService._getEffectivePermission(userId, file.id);
+                    const permissionLevel = permission ? permission.level : (file.ownerId === userId ? 'OWNER' : null);
+                    
                     files.push({
                         ...file,
+                        permissionLevel,
                         isStarred: metadata.isStarred,
                         lastViewedAt: metadata.lastViewedAt,
                         lastEditedAt: metadata.lastEditedAt,
-                        lastInteractionType: metadata.lastInteractionType
+                        lastInteractionType: metadata.lastInteractionType,
+                        viewCount: metadata.viewCount,
+                        editCount: metadata.editCount,
+                        metadataCreatedAt: metadata.createdAt,
+                        metadataModifiedAt: metadata.modifiedAt
                     });
                 }
             }
         }
         
-        return files;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(files);
+    }
+
+    // Get all files owned by user (excluding folders), sorted by size
+    async getOwnedFiles({ userId, sortOrder = 'desc' }) {
+        // Get all files from store
+        const allFiles = await filesStore.getAll();
+        
+        // Filter files owned by user, excluding folders and trash
+        const ownedFiles = [];
+        for (const file of allFiles) {
+            // Skip if not owned by user
+            if (file.ownerId !== userId) {
+                continue;
+            }
+            
+            // Skip folders
+            if (file.type === 'folder') {
+                continue;
+            }
+            
+            // Skip files in trash
+            const inTrash = await this._isInTrash(file.id);
+            if (inTrash) {
+                continue;
+            }
+            
+            ownedFiles.push({
+                ...file,
+                permissionLevel: 'OWNER'
+            });
+        }
+        
+        // Sort by size
+        ownedFiles.sort((a, b) => {
+            const aSize = a.size || 0;
+            const bSize = b.size || 0;
+            return sortOrder === 'desc' ? bSize - aSize : aSize - bSize;
+        });
+        
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(ownedFiles);
     }
 
     // Toggle star status for a file
@@ -766,31 +976,60 @@ class FileService {
         // Get all permissions for this user
         const permissions = await permissionStore.getByUserId(userId);
         
-        // Filter to only VIEWER and EDITOR (not OWNER), and only DIRECT permissions (not inherited)
+        // Filter to only VIEWER and EDITOR (not OWNER), only DIRECT permissions (not inherited),
+        // and exclude locally hidden files (isHiddenForUser=true from Editor/Viewer local hide)
         const sharedPermissions = permissions.filter(p => 
-            (p.level === 'VIEWER' || p.level === 'EDITOR') && !p.isInherited
+            (p.level === 'VIEWER' || p.level === 'EDITOR') && 
+            !p.isInherited &&
+            !p.isHiddenForUser
         );
 
         // Fetch the actual files with metadata
         const files = [];
         for (const permission of sharedPermissions) {
             const file = await filesStore.getById(permission.fileId);
-            if (file && file.ownerId !== userId) {
-                // Get user-specific metadata
-                const metadata = await userFileMetadataStore.get(userId, permission.fileId);
-                
-                // Add permission level and user metadata to file
-                files.push({
-                    ...file,
-                    sharedPermissionLevel: permission.level,
-                    isStarred: metadata?.isStarred || false,
-                    lastViewedAt: metadata?.lastViewedAt || null,
-                    lastEditedAt: metadata?.lastEditedAt || null
-                });
+            
+            // Skip if: file doesn't exist, user is owner, or file is trashed by owner
+            // (isTrashed=true means owner deleted it - only appears in owner's trash, not in Shared)
+            if (!file || file.ownerId === userId || file.isTrashed) {
+                continue;
             }
+            
+            // Get user-specific metadata
+            const metadata = await userFileMetadataStore.get(userId, permission.fileId);
+            
+            // Get sharer information (user who created this permission)
+            let sharer = null;
+            if (permission.createdBy) {
+                const sharerUser = await usersStore.getById(permission.createdBy);
+                if (sharerUser) {
+                    sharer = {
+                        id: sharerUser.id,
+                        username: sharerUser.username,
+                        avatarUrl: sharerUser.profileImage || null
+                    };
+                }
+            }
+            
+            // Add permission level, sharer info, and user metadata to file
+            files.push({
+                ...file,
+                sharedPermissionLevel: permission.level,
+                sharer: sharer,
+                shareDate: permission.createdAt, // When this permission was created
+                isStarred: metadata?.isStarred || false,
+                lastViewedAt: metadata?.lastViewedAt || null,
+                lastEditedAt: metadata?.lastEditedAt || null,
+                lastInteractionType: metadata?.lastInteractionType || null,
+                viewCount: metadata?.viewCount || 0,
+                editCount: metadata?.editCount || 0,
+                metadataCreatedAt: metadata?.createdAt || null,
+                metadataModifiedAt: metadata?.modifiedAt || null
+            });
         }
 
-        return files;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(files);
     }
 
     // ========== TRASH MANAGEMENT ==========
@@ -911,12 +1150,17 @@ class FileService {
                 }
                 
                 if (isTopLevel) {
-                    trashItems.push(file);
+                    // User is always OWNER for trash items (only owners can trash globally)
+                    trashItems.push({
+                        ...file,
+                        permissionLevel: 'OWNER'
+                    });
                 }
             }
         }
         
-        return trashItems;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(trashItems);
     }
 
     /**
@@ -1175,20 +1419,38 @@ class FileService {
             throw new Error(response.error || "Failed to retrieve file from storage");
         }
 
-        const content = response.data || '';
+        let content = response.data || '';
+        
+        // IMPORTANT: Storage may return JSON-escaped string - unescape it
+        if (content.startsWith('"') && content.endsWith('"')) {
+            try {
+                content = JSON.parse(content);
+            } catch (e) {
+                // Ignore parse errors, use content as-is
+            }
+        }
 
         // Decode based on file type
         let buffer;
         let contentType;
         
-        if (file.type === 'image') {
-            // Images: Base64 → Binary
-            buffer = Buffer.from(content, 'base64');
-            contentType = 'image/jpeg'; // Default, could be enhanced to detect image type
-        } else if (file.type === 'pdf') {
-            // PDFs: Base64 → Binary
-            buffer = Buffer.from(content, 'base64');
-            contentType = 'application/pdf';
+        if (file.type === 'image' || file.type === 'pdf') {
+            // Images & PDFs may be stored as data URLs: data:image/png;base64,iVBORw0KG...
+            if (content.startsWith('data:')) {
+                // Extract MIME type and base64 data
+                const match = content.match(/^data:([^;]+);base64,(.+)$/);
+                if (match) {
+                    contentType = match[1]; // e.g., "image/png" or "application/pdf"
+                    const base64Data = match[2];
+                    buffer = Buffer.from(base64Data, 'base64');
+                } else {
+                    throw new Error('Invalid data URL format');
+                }
+            } else {
+                // Plain base64 (legacy format)
+                buffer = Buffer.from(content, 'base64');
+                contentType = file.type === 'pdf' ? 'application/pdf' : 'image/jpeg';
+            }
         } else if (file.type === 'docs') {
             // Docs: Plain text → UTF8
             buffer = Buffer.from(content, 'utf8');

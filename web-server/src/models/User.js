@@ -24,6 +24,12 @@ class User {
         if (!data.password || data.password.length < 8) {
             return "Password must be at least 8 characters";
         }
+        // Validate password contains both numbers and letters
+        const hasNumber = /\d/.test(data.password);
+        const hasLetter = /[a-zA-Z]/.test(data.password);
+        if (!hasNumber || !hasLetter) {
+            return "Password must contain both letters and numbers";
+        }
         if (!data.firstName) {
             return "First name is required";
         }

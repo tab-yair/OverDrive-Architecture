@@ -7,6 +7,9 @@ const { requireAuth } = require('../middleware/auth');
 // POST /api/users - Register new user
 router.post('/', userController.createUser);
 
+// GET /api/users/search - Search user by email (protected)
+router.get('/search', requireAuth, userController.searchUserByEmail);
+
 // GET /api/users/:id - Get user profile (protected)
 router.get('/:id', requireAuth, userController.getUserById);
 
