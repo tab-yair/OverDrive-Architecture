@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import FileRow from './FileRow';
 import FileCard from './FileCard';
-import ActionButton from './ActionButton';
 import SelectionToolbar from './SelectionToolbar';
 import { getMetadataConfig, applyColumnWidths, groupFilesByTime } from './fileUtils';
 import './FileManager.css';
@@ -114,12 +113,6 @@ const FileManager = ({
     // Keep mixed for Recent/Shared views
     regularFiles = sortedFiles;
   }
-
-  const handleViewToggle = (mode) => {
-    if (onViewModeChange) {
-      onViewModeChange(mode);
-    }
-  };
 
   /**
    * UNIFIED SELECTION HANDLER
@@ -271,26 +264,6 @@ const FileManager = ({
             onAction={handleBulkAction}
           />
         )}
-      </div>
-
-      {/* View Toggle */}
-      <div className="file-manager-header">
-        <div className="view-toggle">
-          <button
-            className={`view-toggle-button ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => handleViewToggle('list')}
-            aria-label="List view"
-          >
-            <span className="material-symbols-outlined">view_list</span>
-          </button>
-          <button
-            className={`view-toggle-button ${viewMode === 'grid' ? 'active' : ''}`}
-            onClick={() => handleViewToggle('grid')}
-            aria-label="Grid view"
-          >
-            <span className="material-symbols-outlined">grid_view</span>
-          </button>
-        </div>
       </div>
 
       {/* List View */}

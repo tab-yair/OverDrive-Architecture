@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import useFiles from '../../hooks/useFiles';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
@@ -11,6 +11,7 @@ import PreviewModal from '../PreviewModal/PreviewModal';
 import TextDocumentViewer from '../TextDocumentViewer/TextDocumentViewer';
 import RenameModal from '../RenameModal/RenameModal';
 import ShareModal from '../ShareModal/ShareModal';
+import FileTypeFilter from '../FileTypeFilter';
 import './FilePageWrapper.css';
 
 /**
@@ -31,6 +32,7 @@ import './FilePageWrapper.css';
  * @param {string} props.loadingMessage - Custom loading message (optional)
  * @param {Function} props.onFileClick - Custom file click handler (optional)
  * @param {Function} props.onAction - Custom action handler (optional)
+ * @param {boolean} props.showFilter - Whether to show file type filter (default: true)
  */
 function FilePageWrapper({
     endpoint,
@@ -44,7 +46,8 @@ function FilePageWrapper({
     className = '',
     loadingMessage = 'Loading files...',
     onFileClick,
-    onAction
+    onAction,
+    showFilter = true
 }) {
     // Always call hooks unconditionally (React rule)
     const hookResult = useFiles(endpoint || 'mydrive'); // Provide default to avoid conditional hook call
@@ -58,7 +61,13 @@ function FilePageWrapper({
     const files = customFiles !== undefined ? customFiles : hookResult.files;
     const loading = customLoading !== undefined ? customLoading : hookResult.loading;
     const refetch = customRefetch || hookResult.refetch;
-    const [viewMode, setViewMode] = useState('grid');
+    
+    // Load view mode from localStorage, default to 'grid'
+    const [viewMode, setViewMode] = useState(() => {
+        const saved = localStorage.getItem('fileViewMode');
+        return saved === 'list' || saved === 'grid' ? saved : 'grid';
+    });
+    
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [selectedCount, setSelectedCount] = useState(0);
@@ -67,10 +76,32 @@ function FilePageWrapper({
     const [shareFile_modal, setShareFile_modal] = useState(null);
     const [moveModalOpen, setMoveModalOpen] = useState(false);
     const [moveTargets, setMoveTargets] = useState([]);
+    const [fileTypeFilter, setFileTypeFilter] = useState('all');
+
+    // Save view mode to localStorage whenever it changes
+    useEffect(() => {
+        localStorage.setItem('fileViewMode', viewMode);
+    }, [viewMode]);
+
+    // Filter files by type
+    const filteredFiles = useMemo(() => {
+        if (!files || fileTypeFilter === 'all') return files;
+        return files.filter(file => {
+            // If filtering by folders only, show only folders
+            if (fileTypeFilter === 'folder') {
+                return file.type === 'folder';
+            }
+            // For file type filters (image, pdf, docs), show ONLY matching files (no folders)
+            return file.type === fileTypeFilter;
+        });
+    }, [files, fileTypeFilter]);
 
     console.log('🔄 FilePageWrapper render:', {
       pageContext,
       filesCount: files?.length || 0,
+      filteredCount: filteredFiles?.length || 0,
+      fileTypeFilter,
+      showFilter,
       loading,
       endpoint,
       timestamp: new Date().toISOString()
@@ -378,8 +409,18 @@ function FilePageWrapper({
             {/* Custom header component removed */}
             {headerComponent}
             
+            {/* File Type Filter - Show if enabled */}
+            {showFilter && (
+                <FileTypeFilter
+                    selectedType={fileTypeFilter}
+                    onFilterChange={setFileTypeFilter}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                />
+            )}
+            
             <FileManager
-                files={files}
+                files={filteredFiles}
                 pageContext={pageContext}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
