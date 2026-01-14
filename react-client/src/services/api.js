@@ -79,7 +79,13 @@ export const userApi = {
             headers: getAuthHeaders(token)
         });
         if (!response.ok) {
-            throw new Error('Failed to fetch user profile');
+            const errorText = await response.text();
+            console.error(`❌ GET /api/users/${userId} failed:`, {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText
+            });
+            throw new Error(`Failed to fetch user profile: ${response.status} ${response.statusText}`);
         }
         return response.json();
     },

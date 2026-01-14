@@ -125,6 +125,14 @@
   gap: 8px;
 }
 
+.owner-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-circle);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .owner-avatar-placeholder {
   width: 24px;
   height: 24px;

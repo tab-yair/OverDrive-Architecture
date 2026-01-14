@@ -11,6 +11,48 @@ const { generateId } = require('../utils/idGenerator.js');
 // Handles complex validations, storage-server communication, permission management
 class FileService {
     
+    /**
+     * Helper: Enrich file with owner information object
+     * Transforms ownerId (UUID) into full owner object with displayName, username, avatarUrl
+     * Similar to how sharer is enriched in getSharedFiles
+     */
+    async _enrichWithOwnerInfo(file) {
+        if (!file || !file.ownerId) {
+            return file;
+        }
+
+        const ownerUser = await usersStore.getById(file.ownerId);
+        if (!ownerUser) {
+            // Owner doesn't exist in database - return file as-is
+            return file;
+        }
+
+        // Create owner object
+        const owner = {
+            id: ownerUser.id,
+            username: ownerUser.username,
+            avatarUrl: ownerUser.profileImage || null,
+            firstName: ownerUser.firstName || null,
+            lastName: ownerUser.lastName || null
+        };
+
+        return {
+            ...file,
+            owner
+        };
+    }
+
+    /**
+     * Helper: Enrich multiple files with owner information
+     */
+    async _enrichFilesWithOwnerInfo(files) {
+        if (!files || files.length === 0) {
+            return files;
+        }
+
+        return Promise.all(files.map(file => this._enrichWithOwnerInfo(file)));
+    }
+    
     // Create new file or folder
     async createFile({ name, type, ownerId, parentId = null, size = 0 }) {
         // Basic validation
@@ -440,7 +482,8 @@ class FileService {
                 });
             }
 
-            return results;
+            // Enrich all search results with owner information
+            return await this._enrichFilesWithOwnerInfo(results);
         } catch (error) {
             throw new Error(`Search failed: ${error.message}`);
         }
@@ -481,7 +524,8 @@ class FileService {
             }
         }
 
-        return accessibleFiles;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(accessibleFiles);
     }
 
     // Check user permission on file
@@ -610,20 +654,28 @@ class FileService {
                 }
             }
             
-            return attachMetadata({
+            // Enrich children with owner information
+            const enrichedChildren = await this._enrichFilesWithOwnerInfo(accessibleChildren);
+            
+            // Enrich parent folder with owner information
+            const enrichedFolder = await this._enrichWithOwnerInfo(attachMetadata({
                 ...file,
-                children: accessibleChildren
-            });
+                children: enrichedChildren
+            }));
+            
+            return enrichedFolder;
         }
 
         // For files, fetch content from storage-server
         try {
             const storageResponse = await storageClient.get(fileId);
             if (storageResponse.success && storageResponse.data) {
-                return attachMetadata({
+                const fileWithContent = attachMetadata({
                     ...file,
                     content: storageResponse.data
                 });
+                // Enrich with owner information
+                return await this._enrichWithOwnerInfo(fileWithContent);
             }
         } catch (error) {
             // If file doesn't exist on storage server, continue without content
@@ -631,7 +683,8 @@ class FileService {
         }
 
         // Return file metadata without content if storage fetch failed
-        return attachMetadata(file);
+        // Enrich with owner information
+        return await this._enrichWithOwnerInfo(attachMetadata(file));
     }
 
     // Get starred files for user
@@ -674,7 +727,8 @@ class FileService {
             }
         }
         
-        return files;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(files);
     }
 
     // Get recently accessed files for user
@@ -722,7 +776,8 @@ class FileService {
             }
         }
         
-        return files;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(files);
     }
 
     // Get all files owned by user (excluding folders), sorted by size
@@ -762,7 +817,8 @@ class FileService {
             return sortOrder === 'desc' ? bSize - aSize : aSize - bSize;
         });
         
-        return ownedFiles;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(ownedFiles);
     }
 
     // Toggle star status for a file
@@ -939,7 +995,6 @@ class FileService {
                 if (sharerUser) {
                     sharer = {
                         id: sharerUser.id,
-                        displayName: sharerUser.username, // Use username (email) for "Shared By" column
                         username: sharerUser.username,
                         avatarUrl: sharerUser.profileImage || null
                     };
@@ -963,7 +1018,8 @@ class FileService {
             });
         }
 
-        return files;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(files);
     }
 
     // ========== TRASH MANAGEMENT ==========
@@ -1093,7 +1149,8 @@ class FileService {
             }
         }
         
-        return trashItems;
+        // Enrich all files with owner information
+        return await this._enrichFilesWithOwnerInfo(trashItems);
     }
 
     /**

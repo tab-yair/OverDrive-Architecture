@@ -148,15 +148,15 @@ const FileRow = ({
     if (isSharer) {
       if (file.sharer) {
         return (
-          <div className="metadata-sharer" title={file.sharer.displayName}>
+          <div className="metadata-sharer" title={file.sharer.username}>
             {file.sharer.avatarUrl ? (
               <img src={file.sharer.avatarUrl} alt="" className="sharer-avatar" />
             ) : (
               <div className="sharer-avatar-placeholder">
-                {file.sharer.displayName.charAt(0).toUpperCase()}
+                {file.sharer.username.charAt(0).toUpperCase()}
               </div>
             )}
-            <span>{file.sharer.displayName}</span>
+            <span>{file.sharer.username}</span>
           </div>
         );
       }
@@ -222,15 +222,33 @@ const FileRow = ({
       return formatter(value);
     }
     
-    // Handle owner with avatar
+    // Handle owner with avatar (using owner object from API, same as sharer)
     if (key === 'owner') {
-      // Show "Me" if current user is the owner, otherwise show owner name
-      const displayName = file.ownerId === user?.id ? 'Me' : (value || 'Unknown');
+      // Check if current user is owner
+      const isCurrentUserOwner = file.ownerId === user?.id;
+      
+      // Get display name and avatar
+      const displayName = isCurrentUserOwner 
+        ? 'Me' 
+        : (file.owner?.username || 'Unknown');
+      
+      const avatarUrl = isCurrentUserOwner 
+        ? user?.profileImage 
+        : file.owner?.avatarUrl;
+      
       return (
         <div className="metadata-owner" title={displayName}>
-          <div className="owner-avatar-placeholder">
-            {displayName.charAt(0).toUpperCase()}
-          </div>
+          {avatarUrl ? (
+            <img 
+              src={avatarUrl} 
+              alt={displayName}
+              className="owner-avatar"
+            />
+          ) : (
+            <div className="owner-avatar-placeholder">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <span>{displayName}</span>
         </div>
       );

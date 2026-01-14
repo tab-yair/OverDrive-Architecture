@@ -87,12 +87,12 @@ export function FilesProvider({ children }) {
             
             // Shared files specific
             sharedPermissionLevel: file.sharedPermissionLevel || null, // VIEWER | EDITOR
-            sharer: file.sharer || null, // { displayName, avatarUrl, username } - who shared this file
+            sharer: file.sharer || null, // { id, username, avatarUrl } - who shared this file
             shareDate: file.shareDate || null, // When it was shared with current user
             
-            // Owner info (fetched separately via GET /user/:id)
-            owner: file.owner || null, // Display name (firstName lastName or username)
-            ownerUsername: file.ownerUsername || null, // Username/email
+            // Owner info - now comes directly from API as full object (same structure as sharer)
+            // API enriches all files with owner: {id, username, avatarUrl, firstName, lastName}
+            owner: file.owner || null, // Full owner object from API
             
             // Content (only loaded on explicit fetch)
             content: file.content || null,
@@ -102,7 +102,7 @@ export function FilesProvider({ children }) {
 
     /**
      * Update files map (merges new data with existing)
-     * Preserves endpoint-specific fields (sharer, shareDate) that may not be returned by all endpoints
+     * Preserves endpoint-specific fields (sharer, shareDate, owner) that may not be returned by all endpoints
      * CRITICAL: Always return a NEW Map instance to trigger React re-renders
      */
     const updateFilesInStore = useCallback((files) => {
@@ -121,10 +121,11 @@ export function FilesProvider({ children }) {
                     // Preserve activity timestamps if not provided by new data
                     lastViewedAt: normalized.lastViewedAt ?? existing.lastViewedAt ?? null,
                     lastEditedAt: normalized.lastEditedAt ?? existing.lastEditedAt ?? null,
-                    // Preserve shared-specific fields if not provided (critical for Shared page)
+                    // Preserve shared/owner specific fields if not provided (critical for Shared page)
                     sharer: normalized.sharer ?? existing.sharer ?? null,
                     shareDate: normalized.shareDate ?? existing.shareDate ?? null,
                     sharedPermissionLevel: normalized.sharedPermissionLevel ?? existing.sharedPermissionLevel ?? null,
+                    owner: normalized.owner ?? existing.owner ?? null, // Preserve owner object
                 } : normalized;
 
                 // Check if there are actual changes
@@ -151,58 +152,6 @@ export function FilesProvider({ children }) {
      * Fetch owner information for files and update the store
      * Uses GET /user/:id to get owner details (firstName, lastName, username)
      */
-    const fetchOwnerInfo = useCallback(async (files) => {
-        if (!token || !files || files.length === 0) return;
-
-        // Get unique owner IDs (excluding current user - they know it's "Me")
-        const ownerIds = new Set();
-        files.forEach(file => {
-            if (file.ownerId && file.ownerId !== user?.id && !file.owner) {
-                ownerIds.add(file.ownerId);
-            }
-        });
-
-        console.log('🔍 fetchOwnerInfo:', { 
-            totalFiles: files.length, 
-            uniqueOwners: ownerIds.size,
-            ownerIds: Array.from(ownerIds)
-        });
-
-        // Fetch owner info for each unique owner ID
-        for (const ownerId of ownerIds) {
-            try {
-                console.log(`📞 Fetching owner info for: ${ownerId}`);
-                const ownerUser = await filesApi.getUser(token, ownerId);
-                console.log(`✅ Owner info received:`, ownerUser);
-                
-                if (ownerUser) {
-                    // Build display name from firstName + lastName, fallback to username
-                    const fullName = `${ownerUser.firstName || ''} ${ownerUser.lastName || ''}`.trim();
-                    const owner = fullName || ownerUser.username;
-                    const ownerUsername = ownerUser.username;
-
-                    console.log(`💾 Updating files with owner: ${owner}, username: ${ownerUsername}`);
-
-                    // Update all files owned by this user
-                    setFilesMap(prev => {
-                        const newMap = new Map(prev);
-                        let updatedCount = 0;
-                        for (const [fileId, file] of newMap) {
-                            if (file.ownerId === ownerId) {
-                                newMap.set(fileId, { ...file, owner, ownerUsername });
-                                updatedCount++;
-                            }
-                        }
-                        console.log(`📝 Updated ${updatedCount} files for owner ${ownerId}`);
-                        return newMap;
-                    });
-                }
-            } catch (error) {
-                console.error(`❌ Failed to fetch owner info for ${ownerId}:`, error);
-            }
-        }
-    }, [token, user, filesApi]);
-
     /**
      * Fetch files from endpoint and update store
      * Only triggers VIEW interaction when fetching individual file content
@@ -256,10 +205,6 @@ export function FilesProvider({ children }) {
             });
 
             updateFilesInStore(result || []);
-            
-            // Fetch owner info for files (async, don't wait)
-            fetchOwnerInfo(result || []);
-            
             setLoadedEndpoints(prev => new Set(prev).add(endpoint));
             
             return { files: result || [], error: null };
@@ -271,7 +216,7 @@ export function FilesProvider({ children }) {
         } finally {
             setLoading(prev => ({ ...prev, [cacheKey]: false }));
         }
-    }, [token, updateFilesInStore, fetchOwnerInfo]);
+    }, [token, updateFilesInStore]);
 
     /**
      * Fetch single file with content (triggers VIEW interaction)

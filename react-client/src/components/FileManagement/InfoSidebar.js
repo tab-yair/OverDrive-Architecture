@@ -395,22 +395,31 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
               </div>
             </div>
 
-            {/* Owner */}
+            {/* Owner (using owner object from API, same structure as sharer) */}
             <div className="info-sidebar__detail-row">
               <div className="info-sidebar__detail-label">Owner</div>
               <div className="info-sidebar__detail-value info-sidebar__owner">
                 <div className="info-sidebar__avatar">
-                  {file.ownerAvatar ? (
-                    <img src={file.ownerAvatar} alt={file.owner || 'Me'} />
-                  ) : (
-                    <span>{(file.ownerId === user?.id ? 'Me' : (file.owner || 'Me')).charAt(0).toUpperCase()}</span>
-                  )}
+                  {(() => {
+                    const isCurrentUserOwner = file.ownerId === user?.id;
+                    const avatarUrl = isCurrentUserOwner ? user?.profileImage : file.owner?.avatarUrl;
+                    const displayName = isCurrentUserOwner ? 'Me' : (file.owner?.username || 'Unknown');
+                    const initial = isCurrentUserOwner ? 'M' : displayName.charAt(0).toUpperCase();
+                    
+                    return avatarUrl ? (
+                      <img src={avatarUrl} alt={displayName} />
+                    ) : (
+                      <span>{initial}</span>
+                    );
+                  })()}
                 </div>
                 <div className="info-sidebar__owner-info">
                   {file.ownerId === user?.id ? (
                     <div>Me</div>
                   ) : (
-                    <div title={file.ownerUsername}>{file.owner || file.ownerUsername || 'Unknown'}</div>
+                    <div title={file.owner?.username || 'Unknown'}>
+                      {file.owner?.username || 'Unknown'}
+                    </div>
                   )}
                 </div>
               </div>
