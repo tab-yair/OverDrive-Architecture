@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import ActionButton from './ActionButton';
 import FileActionMenu from './FileActionMenu';
 import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatSmartDate, formatRecentActivity, getFallbackValue } from './fileUtils';
+import { useAuth } from '../../context/AuthContext';
 import './FileRow.css';
 
 /**
@@ -32,6 +33,7 @@ const FileRow = ({
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const menuButtonRef = useRef(null);
+  const { user } = useAuth();
 
   // Helper to get file icon
   const getFileIconSrc = (type) => {
@@ -221,13 +223,15 @@ const FileRow = ({
     }
     
     // Handle owner with avatar
-    if (key === 'owner' && value) {
+    if (key === 'owner') {
+      // Show "Me" if current user is the owner, otherwise show owner name
+      const displayName = file.ownerId === user?.id ? 'Me' : (value || 'Unknown');
       return (
-        <div className="metadata-owner" title={value}>
+        <div className="metadata-owner" title={displayName}>
           <div className="owner-avatar-placeholder">
-            {value.charAt(0).toUpperCase()}
+            {displayName.charAt(0).toUpperCase()}
           </div>
-          <span>{value}</span>
+          <span>{displayName}</span>
         </div>
       );
     }

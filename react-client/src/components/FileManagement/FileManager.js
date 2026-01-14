@@ -161,8 +161,13 @@ const FileManager = ({
 
   const handleBulkAction = (actionId, files) => {
     if (onAction) {
-      // For bulk actions, call onAction for each file or handle as bulk
-      files.forEach(file => onAction(actionId, file));
+      // Special case: 'share' needs all files as array (opens single modal for bulk sharing)
+      if (actionId === 'share') {
+        onAction(actionId, files);
+      } else {
+        // Other actions: call individually (trash, restore, delete, etc.)
+        files.forEach(file => onAction(actionId, file));
+      }
       
       // After action, might want to clear selection
       if (actionId === 'trash' || actionId === 'deletePermanently' || actionId === 'restore') {

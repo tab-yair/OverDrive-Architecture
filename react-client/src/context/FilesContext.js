@@ -90,6 +90,10 @@ export function FilesProvider({ children }) {
             sharer: file.sharer || null, // { displayName, avatarUrl, username } - who shared this file
             shareDate: file.shareDate || null, // When it was shared with current user
             
+            // Owner info (fetched separately via GET /user/:id)
+            owner: file.owner || null, // Display name (firstName lastName or username)
+            ownerUsername: file.ownerUsername || null, // Username/email
+            
             // Content (only loaded on explicit fetch)
             content: file.content || null,
             path: file.path || null
@@ -144,6 +148,48 @@ export function FilesProvider({ children }) {
     }, [normalizeFile]);
 
     /**
+     * Fetch owner information for files and update the store
+     * Uses GET /user/:id to get owner details (firstName, lastName, username)
+     */
+    const fetchOwnerInfo = useCallback(async (files) => {
+        if (!token || !files || files.length === 0) return;
+
+        // Get unique owner IDs (excluding current user - they know it's "Me")
+        const ownerIds = new Set();
+        files.forEach(file => {
+            if (file.ownerId && file.ownerId !== user?.id && !file.owner) {
+                ownerIds.add(file.ownerId);
+            }
+        });
+
+        // Fetch owner info for each unique owner ID
+        for (const ownerId of ownerIds) {
+            try {
+                const ownerUser = await filesApi.getUser(token, ownerId);
+                if (ownerUser) {
+                    // Build display name from firstName + lastName, fallback to username
+                    const fullName = `${ownerUser.firstName || ''} ${ownerUser.lastName || ''}`.trim();
+                    const owner = fullName || ownerUser.username;
+                    const ownerUsername = ownerUser.username;
+
+                    // Update all files owned by this user
+                    setFilesMap(prev => {
+                        const newMap = new Map(prev);
+                        for (const [fileId, file] of newMap) {
+                            if (file.ownerId === ownerId) {
+                                newMap.set(fileId, { ...file, owner, ownerUsername });
+                            }
+                        }
+                        return newMap;
+                    });
+                }
+            } catch (error) {
+                console.error(`Failed to fetch owner info for ${ownerId}:`, error);
+            }
+        }
+    }, [token, user, filesApi]);
+
+    /**
      * Fetch files from endpoint and update store
      * Only triggers VIEW interaction when fetching individual file content
      */
@@ -196,6 +242,10 @@ export function FilesProvider({ children }) {
             });
 
             updateFilesInStore(result || []);
+            
+            // Fetch owner info for files (async, don't wait)
+            fetchOwnerInfo(result || []);
+            
             setLoadedEndpoints(prev => new Set(prev).add(endpoint));
             
             return { files: result || [], error: null };
@@ -207,7 +257,7 @@ export function FilesProvider({ children }) {
         } finally {
             setLoading(prev => ({ ...prev, [cacheKey]: false }));
         }
-    }, [token, updateFilesInStore]);
+    }, [token, updateFilesInStore, fetchOwnerInfo]);
 
     /**
      * Fetch single file with content (triggers VIEW interaction)

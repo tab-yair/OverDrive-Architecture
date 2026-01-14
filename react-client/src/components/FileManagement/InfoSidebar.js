@@ -401,16 +401,16 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
               <div className="info-sidebar__detail-value info-sidebar__owner">
                 <div className="info-sidebar__avatar">
                   {file.ownerAvatar ? (
-                    <img src={file.ownerAvatar} alt={file.owner} />
+                    <img src={file.ownerAvatar} alt={file.owner || 'Me'} />
                   ) : (
-                    <span>{(file.owner || 'Me').charAt(0).toUpperCase()}</span>
+                    <span>{(file.ownerId === user?.id ? 'Me' : (file.owner || 'Me')).charAt(0).toUpperCase()}</span>
                   )}
                 </div>
                 <div className="info-sidebar__owner-info">
-                  {!file.owner ? (
+                  {file.ownerId === user?.id ? (
                     <div>Me</div>
                   ) : (
-                    <div title={file.ownerUsername}>{file.ownerUsername}</div>
+                    <div title={file.ownerUsername}>{file.owner || file.ownerUsername || 'Unknown'}</div>
                   )}
                 </div>
               </div>
