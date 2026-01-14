@@ -370,12 +370,32 @@ function FilePageWrapper({
                     key={previewFile.id}
                     fileId={previewFile.id}
                     fileName={previewFile.name}
-                    permissionLevel={
+                    permissionLevel={(() => {
                         // Determine permission level from file
-                        previewFile.ownerId === user?.id 
-                            ? 'owner' 
-                            : (previewFile.sharedPermissionLevel?.toLowerCase() || permissionLevel)
-                    }
+                        let level;
+                        if (previewFile.ownerId === user?.id) {
+                            level = 'owner';
+                        } else {
+                            // For shared files, use sharedPermissionLevel or permissionLevel
+                            level = previewFile.sharedPermissionLevel?.toLowerCase() 
+                                || previewFile.permissionLevel?.toLowerCase() 
+                                || permissionLevel?.toLowerCase() 
+                                || 'viewer';
+                        }
+                        
+                        console.log('🔐 TextDocumentViewer permission check:', {
+                            fileName: previewFile.name,
+                            ownerId: previewFile.ownerId,
+                            userId: user?.id,
+                            isOwner: previewFile.ownerId === user?.id,
+                            sharedPermissionLevel: previewFile.sharedPermissionLevel,
+                            permissionLevel: previewFile.permissionLevel,
+                            propPermissionLevel: permissionLevel,
+                            finalLevel: level
+                        });
+                        
+                        return level;
+                    })()}
                     onClose={() => setPreviewFile(null)}
                 />
             )}

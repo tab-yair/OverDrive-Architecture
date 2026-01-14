@@ -162,29 +162,43 @@ export function FilesProvider({ children }) {
             }
         });
 
+        console.log('🔍 fetchOwnerInfo:', { 
+            totalFiles: files.length, 
+            uniqueOwners: ownerIds.size,
+            ownerIds: Array.from(ownerIds)
+        });
+
         // Fetch owner info for each unique owner ID
         for (const ownerId of ownerIds) {
             try {
+                console.log(`📞 Fetching owner info for: ${ownerId}`);
                 const ownerUser = await filesApi.getUser(token, ownerId);
+                console.log(`✅ Owner info received:`, ownerUser);
+                
                 if (ownerUser) {
                     // Build display name from firstName + lastName, fallback to username
                     const fullName = `${ownerUser.firstName || ''} ${ownerUser.lastName || ''}`.trim();
                     const owner = fullName || ownerUser.username;
                     const ownerUsername = ownerUser.username;
 
+                    console.log(`💾 Updating files with owner: ${owner}, username: ${ownerUsername}`);
+
                     // Update all files owned by this user
                     setFilesMap(prev => {
                         const newMap = new Map(prev);
+                        let updatedCount = 0;
                         for (const [fileId, file] of newMap) {
                             if (file.ownerId === ownerId) {
                                 newMap.set(fileId, { ...file, owner, ownerUsername });
+                                updatedCount++;
                             }
                         }
+                        console.log(`📝 Updated ${updatedCount} files for owner ${ownerId}`);
                         return newMap;
                     });
                 }
             } catch (error) {
-                console.error(`Failed to fetch owner info for ${ownerId}:`, error);
+                console.error(`❌ Failed to fetch owner info for ${ownerId}:`, error);
             }
         }
     }, [token, user, filesApi]);
