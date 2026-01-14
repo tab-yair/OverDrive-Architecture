@@ -25,9 +25,6 @@ import GetMoreStoragePage from '../pages/GetMoreStoragePage';
 import LoginPage from '../pages/LoginPage';
 import SignupPage from '../pages/SignupPage';
 
-// --- הייבוא החדש עבור הדמו ---
-import FileManagementExample from '../components/FileManagement/FileManagementExample';
-
 import './App.css';
 
 /**
@@ -61,9 +58,6 @@ function AppRoutes() {
 
             {/* Layout wrapper - all routes render inside Layout */}
             <Route element={<Layout />}>
-
-            <Route path="/test" element={<FileManagementExample />} />
-
 
                 {/* Root route - redirect based on auth status */}
                 <Route

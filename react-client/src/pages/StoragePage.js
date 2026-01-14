@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
-import { useFiles } from '../hooks/useFiles';
 import { useUserChange } from '../hooks/useUserChange';
 import { useAppEvent } from '../hooks/useAppEvent';
 import { AppEvents } from '../utils/eventManager';
@@ -14,7 +13,7 @@ import './StoragePage.css';
  * Shows storage usage and files sorted by size
  */
 function StoragePage() {
-    const { token, user } = useAuth();
+    const { token } = useAuth();
     const { storageInfo, storageLoading } = useUserPreferences();
 
     const [files, setFiles] = useState([]);
@@ -49,8 +48,7 @@ function StoragePage() {
             }
 
             const data = await response.json();
-            console.log('📊 Storage: Received data from server:', data);
-            console.log('📊 Storage: Total files:', data.length);
+
             setFiles(data);
         } catch (err) {
             console.error('Failed to fetch files:', err);
@@ -67,13 +65,11 @@ function StoragePage() {
 
     // Listen for files updated events (file upload, delete, rename, etc.)
     useAppEvent(AppEvents.FILES_UPDATED, () => {
-        console.log('📥 StoragePage: Files updated event - refetching files');
         fetchFiles();
     }, [fetchFiles]);
 
     // Listen for storage updated events (file upload/delete that affects storage)
     useAppEvent(AppEvents.STORAGE_UPDATED, () => {
-        console.log('📥 StoragePage: Storage updated event - refetching files');
         fetchFiles();
     }, [fetchFiles]);
 
@@ -98,16 +94,6 @@ function StoragePage() {
         return 'insert_drive_file';
     };
 
-    // Format date
-    const formatDate = (dateString) => {
-        if (!dateString) return '-';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-    };
 
     // Calculate storage values
     const storageUsed = storageInfo?.storageUsed || 0;

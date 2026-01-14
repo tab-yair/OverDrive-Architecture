@@ -25,8 +25,6 @@ export const useRename = () => {
         }
 
         try {
-            console.log(`[useRename] Renaming file ${fileId} to: "${newName}"`);
-            
             // Use FilesContext's updateFile which handles both API call and state update
             const result = await updateFile(fileId, { name: newName.trim() });
 
@@ -35,7 +33,6 @@ export const useRename = () => {
                 return { success: false, error: result.error };
             }
 
-            console.log('[useRename] Rename successful');
             return { success: true };
         } catch (error) {
             console.error('[useRename] Rename error:', error);

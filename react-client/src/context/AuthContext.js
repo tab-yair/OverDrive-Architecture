@@ -97,8 +97,6 @@ export const AuthProvider = ({ children }) => {
     const handleStorageChange = async (e) => {
       // Only respond to our specific event key
       if (e.key === USER_UPDATE_EVENT_KEY && e.newValue) {
-        console.log('🔄 User data updated in another tab, refreshing...');
-        
         try {
           await refreshUser();
         } catch (error) {
@@ -158,8 +156,6 @@ export const AuthProvider = ({ children }) => {
     setTimeout(() => {
       localStorage.removeItem(USER_UPDATE_EVENT_KEY);
     }, 100);
-    
-    console.log('📢 Notified other tabs about user update');
   };
 
   // the context value that will be supplied to any descendants of this provider

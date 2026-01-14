@@ -96,19 +96,7 @@ function FilePageWrapper({
         });
     }, [files, fileTypeFilter]);
 
-    console.log('🔄 FilePageWrapper render:', {
-      pageContext,
-      filesCount: files?.length || 0,
-      filteredCount: filteredFiles?.length || 0,
-      fileTypeFilter,
-      showFilter,
-      loading,
-      endpoint,
-      timestamp: new Date().toISOString()
-    });
-
     const defaultFileClick = (file) => {
-        console.log(`📝 ${pageContext} file clicked:`, file);
         // TODO: Navigate to file details or open file
     };
 
@@ -123,8 +111,6 @@ function FilePageWrapper({
      * - Future: Permission checks based on all selected files (most restrictive)
      */
     const defaultAction = (action, fileOrFiles) => {
-        console.log(`[FilePageWrapper] ${pageContext} action:`, action, 'Files:', fileOrFiles, 'Selected count:', selectedCount);
-        
         // Handle open action - folders navigate, files open in new tab
         if (action === 'open') {
             const item = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
@@ -142,8 +128,6 @@ function FilePageWrapper({
         
         // Handle details action - open InfoSidebar
         if (action === 'details') {
-            console.log('[FilePageWrapper] Details action - selectedCount:', selectedCount);
-            
             // Extract file ID from either object or array
             const fileId = Array.isArray(fileOrFiles) 
                 ? (fileOrFiles.length > 0 ? fileOrFiles[0].id : null)
@@ -152,15 +136,12 @@ function FilePageWrapper({
             if (fileId) {
                 setSelectedFileId(fileId);
                 setIsSidebarOpen(true);
-                console.log('[FilePageWrapper] Sidebar opened - fileId:', fileId);
             }
             return;
         }
         
         // Handle download action
         if (action === 'download') {
-            console.log('[FilePageWrapper] Download action triggered');
-            
             // Handle both single file and multiple files
             if (Array.isArray(fileOrFiles)) {
                 if (fileOrFiles.length > 0) {
@@ -212,8 +193,6 @@ function FilePageWrapper({
         
         // Handle rename action - only for single file selection
         if (action === 'rename') {
-            console.log('[FilePageWrapper] Rename action triggered');
-            
             // Only allow rename when exactly 1 item is selected
             const file = Array.isArray(fileOrFiles) 
                 ? (fileOrFiles.length === 1 ? fileOrFiles[0] : null)
@@ -229,8 +208,6 @@ function FilePageWrapper({
         
         // Handle share action - supports single or multiple files
         if (action === 'share') {
-            console.log('[FilePageWrapper] Share action triggered');
-            
             // Get files to share (single or multiple)
             const filesToShare = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
             
@@ -247,7 +224,6 @@ function FilePageWrapper({
             } else {
                 // Bulk share: open modal for first file
                 // Store remaining files for sequential processing
-                console.log(`[FilePageWrapper] Bulk share initiated: ${filesToShare.length} files`);
                 setShareFile_modal({ ...filesToShare[0], bulkFiles: filesToShare });
             }
             return;
@@ -255,8 +231,6 @@ function FilePageWrapper({
         
         // Handle star/unstar action - works for both single and multiple files
         if (action === 'star' || action === 'unstar') {
-            console.log('[FilePageWrapper] Star/Unstar action triggered:', action);
-            
             // Handle both single file and multiple files
             const filesToToggle = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
             
@@ -269,8 +243,6 @@ function FilePageWrapper({
                 const failures = results.filter(r => !r.success);
                 if (failures.length > 0) {
                     console.error('[FilePageWrapper] Some files failed to toggle star:', failures);
-                } else {
-                    console.log('[FilePageWrapper] All files star toggled successfully');
                 }
             }).catch(err => {
                 console.error('[FilePageWrapper] Star toggle operation failed:', err);
@@ -281,8 +253,6 @@ function FilePageWrapper({
         
         // Handle trash action (delete/remove) - works for both single and multiple files
         if (action === 'trash') {
-            console.log('[FilePageWrapper] Trash action triggered');
-            
             // Handle both single file and multiple files
             const filesToTrash = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
             
@@ -293,8 +263,6 @@ function FilePageWrapper({
                 const failures = results.filter(r => !r.success);
                 if (failures.length > 0) {
                     console.error('[FilePageWrapper] Some files failed to trash:', failures);
-                } else {
-                    console.log('[FilePageWrapper] All files trashed successfully');
                 }
                 // Refetch to update the view
                 setTimeout(() => refetch(), 300);
@@ -317,8 +285,6 @@ function FilePageWrapper({
         
         // Handle restore action - works for both single and multiple files
         if (action === 'restore') {
-            console.log('[FilePageWrapper] Restore action triggered');
-            
             // Handle both single file and multiple files
             const filesToRestore = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
             
@@ -329,8 +295,6 @@ function FilePageWrapper({
                 const failures = results.filter(r => !r.success);
                 if (failures.length > 0) {
                     console.error('[FilePageWrapper] Some files failed to restore:', failures);
-                } else {
-                    console.log('[FilePageWrapper] All files restored successfully');
                 }
                 // Refetch to update the view
                 setTimeout(() => refetch(), 300);
@@ -343,8 +307,6 @@ function FilePageWrapper({
         
         // Handle deletePermanently action - works for both single and multiple files
         if (action === 'deletePermanently') {
-            console.log('[FilePageWrapper] Permanent delete action triggered');
-            
             // Handle both single file and multiple files
             const filesToDelete = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
             
@@ -355,8 +317,6 @@ function FilePageWrapper({
                 const failures = results.filter(r => !r.success);
                 if (failures.length > 0) {
                     console.error('[FilePageWrapper] Some files failed to permanently delete:', failures);
-                } else {
-                    console.log('[FilePageWrapper] All files permanently deleted successfully');
                 }
                 // Refetch to update the view
                 setTimeout(() => refetch(), 300);
@@ -476,17 +436,6 @@ function FilePageWrapper({
                                 || 'viewer';
                         }
                         
-                        console.log('🔐 TextDocumentViewer permission check:', {
-                            fileName: previewFile.name,
-                            ownerId: previewFile.ownerId,
-                            userId: user?.id,
-                            isOwner: previewFile.ownerId === user?.id,
-                            sharedPermissionLevel: previewFile.sharedPermissionLevel,
-                            permissionLevel: previewFile.permissionLevel,
-                            propPermissionLevel: permissionLevel,
-                            finalLevel: level
-                        });
-                        
                         return level;
                     })()}
                     onClose={() => setPreviewFile(null)}
@@ -511,7 +460,6 @@ function FilePageWrapper({
                 <ShareModal
                     file={shareFile_modal}
                     onShare={(fileId, userId, permissionLevel) => {
-                        console.log('[FilePageWrapper] File shared successfully:', { fileId, userId, permissionLevel });
                         // Optionally refetch to show updated permissions
                         // Note: We don't refetch here as the modal shows success message
                     }}

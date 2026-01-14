@@ -57,12 +57,10 @@ export const useFiles = (endpoint, initialFilters = null) => {
         
         if (!isLoaded) {
             // Endpoint not loaded - fetch from server
-            console.log(`🔄 useFiles: Fetching ${endpoint} for user ${user.id} (not loaded)`);
             fetchFiles();
         } else {
             // Endpoint loaded - get from store
             const storeFiles = filesContext.getFilesFromStore(endpoint);
-            console.log(`💾 useFiles: Getting ${endpoint} from store (${storeFiles.length} files)`);
             setFiles(storeFiles);
         }
     }, [user?.id, endpoint, filesContext.loadedEndpoints, fetchFiles, filesContext]);
@@ -77,11 +75,6 @@ export const useFiles = (endpoint, initialFilters = null) => {
         // Update files whenever filesMap changes
         if (filesContext.loadedEndpoints.has(endpoint)) {
             const storeFiles = filesContext.getFilesFromStore(endpoint);
-            console.log(`🔄 useFiles: Map updated, refreshing ${endpoint}`, {
-                filesCount: storeFiles.length,
-                filesMapSize,
-                starredFiles: storeFiles.filter(f => f.isStarred).map(f => ({ id: f.id, name: f.name }))
-            });
             setFiles(storeFiles);
         }
     }, [filesMapSize, endpoint, filesContext]);

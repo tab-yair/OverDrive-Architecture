@@ -19,7 +19,6 @@ export const AppEvents = {
 export function emitEvent(eventName, data = null) {
     const event = new CustomEvent(eventName, { detail: data });
     window.dispatchEvent(event);
-    console.log(`📢 Event emitted: ${eventName}`, data ? `with data:` : '', data || '');
 }
 
 /**

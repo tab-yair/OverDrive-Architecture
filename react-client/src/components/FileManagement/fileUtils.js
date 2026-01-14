@@ -114,7 +114,6 @@
 // Helper function to get icon path
 const getIconPath = (filename) => {
   const path = `${process.env.PUBLIC_URL}/assets/${filename}`;
-  console.log(`🖼️ Icon path generated: ${filename} → ${path}`);
   return path;
 };
 
@@ -137,12 +136,6 @@ export const icons = {
   restore: getIconPath('restore.svg'),
   deleteForever: getIconPath('delete_forever.svg'),
 };
-
-console.log('📦 Icons loaded:', { 
-  PUBLIC_URL: process.env.PUBLIC_URL,
-  iconCount: Object.keys(icons).length,
-  iconNames: Object.keys(icons)
-});
 
 /**
  * Get icon filename based on file type
@@ -813,19 +806,6 @@ const ACTION_REGISTRY = {
       const level = permissionLevel?.toUpperCase();
       const canShare = level === 'OWNER' || level === 'EDITOR';
       
-      // Debug logging for Share action
-      if (pageContext === 'Shared') {
-        console.log('🔐 Share Action isEnabled Debug:', {
-          fileName: file?.name,
-          pageContext,
-          permissionLevelRaw: permissionLevel,
-          permissionLevelUpper: level,
-          canShare,
-          isOwner: level === 'OWNER',
-          isEditor: level === 'EDITOR'
-        });
-      }
-      
       return canShare;
     },
   },
@@ -1003,26 +983,6 @@ export const evaluateBulkAction = (actionId, files, pageContext, permissionLevel
   // Use file-specific permission level (critical for Shared page where each file can have different permission)
   const firstFilePermission = firstFile.sharedPermissionLevel || firstFile.permissionLevel || permissionLevel;
   const baseEval = evaluateAction(actionId, firstFile, pageContext, selectedCount, firstFilePermission);
-  
-  // Debug logging for Share action on Shared page
-  if (actionId === 'share' && pageContext === 'Shared') {
-    console.log('🔍 Bulk Share Action Debug:', {
-      actionId,
-      pageContext,
-      selectedCount,
-      propPermissionLevel: permissionLevel,
-      firstFile: {
-        name: firstFile.name,
-        sharedPermissionLevel: firstFile.sharedPermissionLevel,
-        permissionLevel: firstFile.permissionLevel,
-        effectivePermission: firstFilePermission
-      },
-      baseEval: {
-        isVisible: baseEval.isVisible,
-        isEnabled: baseEval.isEnabled
-      }
-    });
-  }
   
   // Check if action is visible and enabled for ALL files
   let isVisibleForAll = baseEval.isVisible;

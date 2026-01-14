@@ -41,19 +41,11 @@ const Breadcrumbs = () => {
    */
   useEffect(() => {
     const updateBreadcrumbs = async () => {
-      console.log('🍞 Breadcrumbs update triggered:', { 
-        pathname: location.pathname, 
-        folderId,
-        timestamp: new Date().toISOString()
-      });
-
       let rootContext = getRootContext(location.pathname);
       
       // If we're in a folder, determine root context based on ownership
       if (location.pathname.startsWith('/folders') && folderId) {
-        console.log('📂 Building breadcrumb path for folder:', folderId);
         const { path: folderPath, isShared } = await buildBreadcrumbPath(folderId, token, user);
-        console.log('📂 Folder path built:', { folderPath, isShared });
         
         // Set root context based on ownership
         rootContext = isShared 
@@ -61,30 +53,24 @@ const Breadcrumbs = () => {
           : { name: 'My Drive', path: '/mydrive', icon: 'folder' };
         
         const crumbs = [rootContext, ...folderPath];
-        console.log('✅ Breadcrumbs set:', crumbs);
         setBreadcrumbs(crumbs);
         return;
       }
       
       if (!rootContext) {
-        console.log('⚠️ No root context found for path:', location.pathname);
         setBreadcrumbs([]);
         return;
       }
 
       // Start with root context
       const crumbs = [rootContext];
-      console.log('📍 Root context:', rootContext);
 
       // If we're in a folder (non-/folders route), build the full path
       if (folderId && !location.pathname.startsWith('/folders')) {
-        console.log('📂 Building breadcrumb path for folder:', folderId);
         const { path: folderPath } = await buildBreadcrumbPath(folderId, token, user);
-        console.log('📂 Folder path built:', folderPath);
         crumbs.push(...folderPath);
       }
 
-      console.log('✅ Breadcrumbs set:', crumbs);
       setBreadcrumbs(crumbs);
     };
 
@@ -95,11 +81,6 @@ const Breadcrumbs = () => {
    * Handle breadcrumb click navigation
    */
   const handleCrumbClick = (crumb) => {
-    console.log('🧭 Breadcrumb click:', { 
-      from: location.pathname, 
-      to: crumb.path, 
-      crumbName: crumb.name 
-    });
     navigate(crumb.path);
   };
 
@@ -108,8 +89,6 @@ const Breadcrumbs = () => {
    */
   const toggleOverflow = (e) => {
     e.stopPropagation();
-    console.log('Toggle overflow clicked, current state:', showOverflow);
-    console.log('Overflow items:', overflowItems);
     setShowOverflow(!showOverflow);
   };
 
@@ -136,10 +115,7 @@ const Breadcrumbs = () => {
    */
   useEffect(() => {
     const calculateOverflow = () => {
-      console.log('Calculating overflow, breadcrumbs.length:', breadcrumbs.length);
-      
       if (!containerRef.current || breadcrumbs.length <= 3) {
-        console.log('No overflow needed');
         setOverflowItems([]);
         return;
       }
@@ -147,10 +123,8 @@ const Breadcrumbs = () => {
       // For long paths: show [Root] > [...] > [Parent] > [Current]
       if (breadcrumbs.length > 4) {
         const hiddenItems = breadcrumbs.slice(1, -2);
-        console.log('Setting overflow items:', hiddenItems);
         setOverflowItems(hiddenItems);
       } else {
-        console.log('Not enough breadcrumbs for overflow');
         setOverflowItems([]);
       }
     };
@@ -165,13 +139,6 @@ const Breadcrumbs = () => {
   const visibleCrumbs = overflowItems.length > 0
     ? [breadcrumbs[0], ...breadcrumbs.slice(-2)] // Root + last 2
     : breadcrumbs;
-
-  console.log('Rendering breadcrumbs:', {
-    totalBreadcrumbs: breadcrumbs.length,
-    overflowItemsCount: overflowItems.length,
-    visibleCrumbsCount: visibleCrumbs.length,
-    showOverflow
-  });
 
   return (
     <div className="breadcrumbs" ref={containerRef}>

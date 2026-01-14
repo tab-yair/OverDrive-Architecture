@@ -479,67 +479,54 @@ const FileManagementExample = () => {
 
   // Handle file actions
   const handleAction = (actionId, file) => {
-    console.log(`Action triggered: ${actionId}`, file);
-    
     // Implement your action handlers here
     switch (actionId) {
       case 'download':
-        console.log('Downloading file:', file.name);
         // Implement download logic
         // e.g., window.open(`/api/files/${file.id}/download`)
         break;
         
       case 'star':
-        console.log('Starring file:', file.name);
         // Implement star logic
         // e.g., api.starFile(file.id)
         break;
         
       case 'unstar':
-        console.log('Unstarring file:', file.name);
         // Implement unstar logic
         break;
         
       case 'share':
-        console.log('Opening share dialog for:', file.name);
         // Open share dialog
         break;
         
       case 'move':
-        console.log('Opening move dialog for:', file.name);
         // Open move dialog
         break;
         
       case 'rename':
-        console.log('Opening rename dialog for:', file.name);
         // Open rename dialog
         break;
         
       case 'trash':
-        console.log('Moving to trash:', file.name);
         // Implement trash logic
         break;
         
       case 'restore':
-        console.log('Restoring from trash:', file.name);
         // Implement restore logic
         break;
         
       case 'delete':
-        console.log('Permanently deleting:', file.name);
         // Implement permanent delete (with confirmation)
         break;
         
       case 'view':
       case 'details':
-        console.log('Viewing file details:', file.name);
         // Open file details panel with fileId (SSOT pattern)
         setSelectedFileId(file.id);
         setIsSidebarOpen(true);
         break;
         
       case 'copy':
-        console.log('Making a copy of:', file.name);
         // Implement copy logic
         break;
         
@@ -551,11 +538,9 @@ const FileManagementExample = () => {
   // Handle file/folder click
   const handleFileClick = (file) => {
     if (file.type === 'folder') {
-      console.log('Opening folder:', file.name);
       // Navigate into the folder
       // e.g., navigate(`/drive/folder/${file.id}`)
     } else {
-      console.log('Opening file preview:', file.name);
       // Open file preview/viewer
       // e.g., navigate(`/drive/file/${file.id}`)
     }

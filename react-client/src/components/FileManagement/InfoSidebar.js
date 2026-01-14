@@ -39,9 +39,6 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
   // Get file from SSOT - always fresh, synchronized data
   const file = fileId ? filesContext.getFile(fileId) : null;
 
-  // Debug logging
-  console.log('[InfoSidebar] Props:', { fileId, isOpen, hasFile: !!file });
-
   // Load permissions when manage access modal opens
   useEffect(() => {
     const loadPermissions = async () => {
@@ -238,14 +235,12 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
             </div>
             <div className="info-sidebar__modal-content">
               {(() => {
-                console.log('🔍 Modal content render:', { permissionsLoading, permissionsCount: permissions.length, currentUserRole, showManageAccess });
                 return permissionsLoading ? (
                   <div className="info-sidebar__loading">Loading permissions...</div>
                 ) : permissions.length === 0 ? (
                   <div className="info-sidebar__empty">No permissions found</div>
                 ) : (
                   <>
-                    {console.log('✅ Rendering PermissionsManager with:', { permissionsCount: permissions.length, currentUserRole })}
                     <PermissionsManager
                       currentUserRole={currentUserRole}
                       currentUserId={user?.id}
@@ -363,7 +358,6 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                             // If ownership transferred to someone else, close the sidebar
                             // (file will disappear from My Drive since user is no longer owner)
                             if (updatedFile.ownerId !== user?.id) {
-                              console.log('📤 Ownership transferred - closing sidebar');
                               onClose();
                             }
                             

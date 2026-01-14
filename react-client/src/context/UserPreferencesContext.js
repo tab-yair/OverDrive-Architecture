@@ -81,7 +81,6 @@ export function UserPreferencesProvider({ children }) {
 
     // Listen for storage-updated events (triggered by file upload/delete)
     useAppEvent(AppEvents.STORAGE_UPDATED, () => {
-        console.log('[UserPreferences] Storage update event received - refreshing');
         refreshStorage();
     }, [refreshStorage]);
 

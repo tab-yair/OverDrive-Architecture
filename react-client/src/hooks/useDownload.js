@@ -24,8 +24,6 @@ const showDownloadConfirmation = () => {
  */
 const showDetailedFileList = (files) => {
     // For now, just log to console. User already confirmed.
-    console.log(`📋 Complete file list (${files.length} files):`);
-    files.forEach(f => console.log(`  • ${f.displayPath || f.name} (${f.type})`));
     return Promise.resolve(true);
 };
 
@@ -255,8 +253,7 @@ export function useDownload() {
         }
 
         try {
-            console.log(`📦 Preparing download for ${items.length} selected item(s)...`);
-            
+
             // ═══ STEP 1: FLATTEN & BUILD UNIFIED FILE LIST ═══
             const allFiles = [];
             const seenIds = new Set(); // Track file IDs ONLY (not names) to prevent duplicate IDs
@@ -265,7 +262,6 @@ export function useDownload() {
             for (const item of items) {
                 if (item.type === 'folder') {
                     // Recursively fetch folder contents (API returns flattened list)
-                    console.log(`📁 Expanding folder: ${item.name}`);
                     const folderFiles = await fetchFolderContentsRecursive(item.id, item.name);
                     
                     // Add only files with unique IDs (same name with different ID is OK)
@@ -305,10 +301,7 @@ export function useDownload() {
             }
             // If some files exist, silently skip empty folders and continue
 
-            console.log(`✅ Prepared ${allFiles.length} unique file(s) for download`);
-
-            // ═══ STEP 3: EXECUTE SEQUENTIAL DOWNLOAD ═══
-            console.log(`⬇️  Starting download of ${allFiles.length} file(s)...`);
+            // === STEP 3: EXECUTE SEQUENTIAL DOWNLOAD ===
 
             for (let i = 0; i < allFiles.length; i++) {
                 const file = allFiles[i];
@@ -321,14 +314,11 @@ export function useDownload() {
                     
                     // Use type-specific download logic (PDF/Image/Text)
                     await downloadSingleFile(file);
-                    console.log(`  ✓ Downloaded ${i + 1}/${allFiles.length}: ${file.name}`);
                 } catch (error) {
                     console.error(`  ✗ Failed to download: ${file.name}`, error);
                     // Continue with remaining files (don't stop on error)
                 }
             }
-
-            console.log(`🎉 Completed downloading ${allFiles.length} file(s)`);
 
         } catch (error) {
             console.error('❌ Download process failed:', error);

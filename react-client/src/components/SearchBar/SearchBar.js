@@ -172,9 +172,6 @@ function SearchBar() {
             return;
         }
 
-        console.log('Searching for:', searchQuery);
-        console.log('With filters:', filters);
-
         // Build URL params for search
         const params = new URLSearchParams();
         
@@ -220,12 +217,10 @@ function SearchBar() {
         } else if (filters.owner === 'others') {
             params.set('owner', 'shared');
         } else if (filters.owner === 'specific' && filters.ownerEmail) {
-            console.log('Specific owner filter set:', filters.ownerEmail);
             params.set('ownerEmail', filters.ownerEmail);
         }
         
         if (filters.sharedWith) {
-            console.log('SharedWith filter set:', filters.sharedWith);
             params.set('sharedWith', filters.sharedWith);
         }
         

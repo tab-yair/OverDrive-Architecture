@@ -239,8 +239,6 @@ const FileManager = ({
           ? 'Your recently accessed files will appear here'
           : 'Upload files or create folders to get started';
     
-    console.log('📭 Empty state:', { pageContext, emptyTitle });
-    
     return (
       <div className="file-manager-empty">
         <img src={`${process.env.PUBLIC_URL}/assets/folder.svg`} alt="" className="empty-icon" />

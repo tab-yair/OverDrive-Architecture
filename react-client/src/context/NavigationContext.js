@@ -19,7 +19,6 @@ export const NavigationProvider = ({ children }) => {
    * Clear navigation state when user changes
    */
   useUserChange(() => {
-    console.log('🧹 NavigationContext: Clearing navigation state due to user change');
     setCurrentFolderId(null);
     navigate('/mydrive');
   }, [navigate]);
@@ -32,12 +31,6 @@ export const NavigationProvider = ({ children }) => {
    * @param {string} item.name - Display name
    */
   const handleOpen = useCallback((item) => {
-    console.log('🧭 NavigationContext.handleOpen called:', { 
-      item, 
-      currentPath: window.location.pathname,
-      timestamp: new Date().toISOString() 
-    });
-
     if (!item || !item.type) {
       console.error('❌ Invalid item passed to handleOpen:', item);
       return;
@@ -45,17 +38,11 @@ export const NavigationProvider = ({ children }) => {
 
     if (item.type === 'folder') {
       // Navigate to folder view
-      console.log(`📂 Navigating to folder: ${item.name} (${item.id})`);
-      console.log(`   From: ${window.location.pathname} → To: /folders/${item.id}`);
       setCurrentFolderId(item.id);
       navigate(`/folders/${item.id}`);
-      
-      console.log(`✅ Folder navigation completed: ${item.name}`);
     } else {
       // Handle file opening (images, PDFs, docs, etc.)
       // For now, just log - implement preview/download later
-      console.log(`📄 Opening file: ${item.name} (${item.type})`);
-      console.log('⚠️ File preview not implemented yet');
       
       // TODO: Implement file preview modal
       // - For images: show image viewer

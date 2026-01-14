@@ -80,24 +80,12 @@ const FolderPage = () => {
       setEffectivePermissionLevel(permLevel);
       setCurrentFolderPermissionLevel(permLevel);
       
-      console.log('📂 FolderPage: Permission level updated:', {
-        folderId,
-        ownerId: data.ownerId,
-        userId: user?.id,
-        isOwner: data.ownerId === user?.id,
-        folderInMapPermission: folderInMap?.sharedPermissionLevel,
-        apiPermission: data.sharedPermissionLevel,
-        computedPermLevel: permLevel
-      });
-      
       // Extract children and store in FilesContext
       const children = data.children || [];
       
       // Update FilesContext store (parent + children) for InfoSidebar and other components
       const filesToStore = [data, ...children];
       updateFilesInStore(filesToStore);
-      
-      console.log(`📂 Loaded folder: ${data.name} with ${children.length} items`);
 
     } catch (err) {
       console.error('Failed to fetch folder data:', err);
@@ -114,7 +102,6 @@ const FolderPage = () => {
 
   // Listen for file updates and refresh
   useAppEvent(AppEvents.FILES_UPDATED, () => {
-    console.log('📥 FolderPage: Files updated event - refetching folder data');
     fetchFolderData();
   }, [fetchFolderData]);
 
@@ -125,13 +112,6 @@ const FolderPage = () => {
   const filesMapVersion = React.useMemo(() => Date.now(), [filesMapSize]);
   
   const files = React.useMemo(() => {
-    console.log('🔄 FolderPage useMemo - recalculating files list', {
-      folderId,
-      filesMapSize,
-      filesMapVersion,
-      timestamp: new Date().toISOString()
-    });
-    
     if (!folderId) return [];
     
     const allFiles = Array.from(filesMap.values());
@@ -139,12 +119,6 @@ const FolderPage = () => {
     const children = allFiles.filter(f => 
       f.parentId === folderId && !f.isTrashed
     );
-    
-    console.log('📋 Filtered children:', {
-      childrenCount: children.length,
-      childrenIds: children.map(c => c.id),
-      childrenStarred: children.map(c => ({ id: c.id, name: c.name, isStarred: c.isStarred }))
-    });
     
     // Get folder data from filesMap (not local state)
     const currentFolder = filesMap.get(folderId);

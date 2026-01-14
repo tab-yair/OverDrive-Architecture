@@ -46,14 +46,6 @@ const FileRow = ({
     const iconFile = iconMap[type] || 'Docs.svg';
     const iconPath = `${process.env.PUBLIC_URL}/assets/${iconFile}`;
     
-    console.log(`🖼️ FileRow icon request:`, { 
-      fileName: file.name, 
-      fileType: type, 
-      iconFile, 
-      iconPath,
-      PUBLIC_URL: process.env.PUBLIC_URL 
-    });
-    
     return iconPath;
   };
 
@@ -63,19 +55,6 @@ const FileRow = ({
   // For Shared page: file.sharedPermissionLevel or file.permissionLevel
   // For other pages: file.permissionLevel or fallback to prop
   const effectivePermissionLevel = file.sharedPermissionLevel || file.permissionLevel || permissionLevel;
-  
-  // Debug logging for permission level resolution
-  if (pageContext === 'Shared' && (file.sharedPermissionLevel || file.permissionLevel)) {
-    console.log('🔐 FileRow Permission Debug:', {
-      fileName: file.name,
-      pageContext,
-      propPermissionLevel: permissionLevel,
-      fileSharedPermissionLevel: file.sharedPermissionLevel,
-      filePermissionLevel: file.permissionLevel,
-      effectivePermissionLevel,
-      willEnableShare: effectivePermissionLevel === 'OWNER' || effectivePermissionLevel === 'EDITOR'
-    });
-  }
   
   // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
   // It represents actions for THIS specific file, independent of global selection state
@@ -98,8 +77,6 @@ const FileRow = ({
 
   const handleActionClick = (actionId) => (event) => {
     event.stopPropagation();
-    
-    console.log('🎯 FileRow handleActionClick:', { actionId, file: file.name, fileId: file.id });
     
     // No local state update needed - FilesContext will update and trigger re-render
     if (onAction) {

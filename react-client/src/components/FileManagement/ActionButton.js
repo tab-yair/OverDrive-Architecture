@@ -12,14 +12,6 @@ import './ActionButton.css';
  * @param {string} props.iconClassName - Additional CSS classes for icon img
  */
 const ActionButton = ({ iconSrc, onClick, disabled = false, ariaLabel, className = '', iconClassName = '' }) => {
-  console.log('🔘 ActionButton render:', { 
-    iconSrc, 
-    disabled, 
-    ariaLabel,
-    hasIcon: !!iconSrc,
-    iconExists: iconSrc && iconSrc.length > 0
-  });
-
   return (
     <button
       className={`action-button ${className} ${disabled ? 'disabled' : ''}`}
@@ -33,7 +25,6 @@ const ActionButton = ({ iconSrc, onClick, disabled = false, ariaLabel, className
         alt="" 
         className={`action-button-icon ${iconClassName}`}
         onError={(e) => console.error('❌ Icon failed to load:', iconSrc, e)}
-        onLoad={() => console.log('✅ Icon loaded:', iconSrc)}
       />
     </button>
   );

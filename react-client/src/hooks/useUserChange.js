@@ -29,8 +29,6 @@ export function useUserChange(callback, deps = []) {
 
         // Detect user change (including logout: user -> null, login: null -> user, or switch: user1 -> user2)
         if (prevUserId !== currentUserId) {
-            console.log(`👤 useUserChange: User changed from ${prevUserId} to ${currentUserId}`);
-            
             // Update ref for next comparison
             prevUserIdRef.current = currentUserId;
             

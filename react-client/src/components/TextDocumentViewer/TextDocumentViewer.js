@@ -72,7 +72,6 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
         if (!hasUnsavedChanges && !loading && !saving) {
             const currentFile = filesMap.get(fileId);
             if (currentFile && currentFile.content !== undefined && currentFile.content !== originalContent) {
-                console.log('[TextDocumentViewer] Syncing content from server:', currentFile.content);
                 setContent(currentFile.content);
                 setOriginalContent(currentFile.content);
             }
@@ -113,7 +112,6 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
         setError(null);
 
         try {
-            console.log('[TextDocumentViewer] Saving content...');
             // Update file content - this triggers EDIT interaction
             const result = await updateFile(fileId, { content });
 
@@ -121,7 +119,6 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
                 throw new Error(result.error);
             }
 
-            console.log('[TextDocumentViewer] Save successful');
             // Update originalContent to match saved content
             // This will set hasUnsavedChanges to false
             setOriginalContent(content);
@@ -185,7 +182,6 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
 
     // Handle close with optimistic update
     const handleClose = () => {
-        console.log('[TextDocumentViewer] Closing with wasSaved:', wasSaved, 'hasUnsavedChanges:', hasUnsavedChanges);
         // Optimistic update: show the activity immediately
         const currentFile = filesMap.get(fileId);
         if (currentFile) {
@@ -199,11 +195,6 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
                 lastInteractionType: isEdit ? 'EDIT' : 'VIEW',
                 ...(isEdit && { lastEditedAt: now })
             };
-            console.log('[TextDocumentViewer] Updating file with optimistic data:', {
-                lastViewedAt: optimisticFile.lastViewedAt,
-                lastInteractionType: optimisticFile.lastInteractionType,
-                lastEditedAt: optimisticFile.lastEditedAt
-            });
             updateFilesInStore([optimisticFile]);
         }
         

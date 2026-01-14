@@ -10,8 +10,6 @@ import { jwtDecode } from "jwt-decode";
 // Note: In production Docker, env vars must be set at build time
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
-console.log('🌐 API Base URL:', API_BASE_URL);
-
 /**
  * Helper to generate authorization headers with Bearer token.
  * @param {string} token - JWT token

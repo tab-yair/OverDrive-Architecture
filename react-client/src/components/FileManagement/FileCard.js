@@ -44,14 +44,6 @@ const FileCard = ({
     const iconFile = iconMap[type] || 'Docs.svg';
     const iconPath = `${process.env.PUBLIC_URL}/assets/${iconFile}`;
     
-    console.log(`🖼️ FileCard icon request:`, { 
-      fileName: file.name, 
-      fileType: type, 
-      iconFile, 
-      iconPath,
-      PUBLIC_URL: process.env.PUBLIC_URL 
-    });
-    
     return iconPath;
   };
 

@@ -77,12 +77,9 @@ function SearchPage() {
             Object.entries(filterMappings).forEach(([paramName, headerName]) => {
                 const value = searchParams.get(paramName);
                 if (value) {
-                    console.log(`Setting header ${headerName} = ${value}`);
                     headers[headerName] = value;
                 }
             });
-
-            console.log('🔍 Performing search:', { query, headers });
 
             // Call search API
             const response = await fetch(`${API_BASE_URL}/api/search/${encodeURIComponent(query)}`, {
@@ -94,11 +91,9 @@ function SearchPage() {
             }
 
             const data = await response.json();
-            console.log('🔍 Search results:', data);
 
             // Handle both array response and object with files property
             const resultsArray = Array.isArray(data) ? data : (data.files || []);
-            console.log('🔍 Results array:', resultsArray.length, 'items');
 
             // Transform data to match expected file format
             const transformedFiles = resultsArray.map(file => ({

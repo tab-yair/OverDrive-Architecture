@@ -31,7 +31,6 @@ export function FilesProvider({ children }) {
      * Clear all files when user changes (login/logout/user switch)
      */
     useUserChange(() => {
-        console.log('🧹 FilesContext: Clearing all files due to user change');
         setFilesMap(new Map());
         setLoadedEndpoints(new Set());
         setLoading({});
@@ -42,7 +41,6 @@ export function FilesProvider({ children }) {
      * Listen for files updated events and invalidate cache
      */
     useAppEvent(AppEvents.FILES_UPDATED, () => {
-        console.log('📥 FilesContext: Files updated event - invalidating all endpoints for refetch');
         setLoadedEndpoints(new Set());
     });
 
@@ -131,13 +129,6 @@ export function FilesProvider({ children }) {
                 // Check if there are actual changes
                 if (!existing || JSON.stringify(existing) !== JSON.stringify(merged)) {
                     hasChanges = true;
-                    console.log('📝 FilesContext: File updated in store', {
-                        id: file.id,
-                        name: file.name,
-                        isStarred: merged.isStarred,
-                        wasStarred: existing?.isStarred,
-                        changed: !existing || existing.isStarred !== merged.isStarred
-                    });
                 }
 
                 newMap.set(file.id, merged);
@@ -157,15 +148,7 @@ export function FilesProvider({ children }) {
      * Only triggers VIEW interaction when fetching individual file content
      */
     const fetchFiles = useCallback(async (endpoint, filters = {}) => {
-        console.log('📁 FilesContext.fetchFiles called:', { 
-          endpoint, 
-          filters, 
-          hasToken: !!token,
-          timestamp: new Date().toISOString()
-        });
-
         if (!token) {
-            console.log('⚠️ No token available, returning empty files');
             return { files: [], error: null };
         }
 
@@ -176,8 +159,6 @@ export function FilesProvider({ children }) {
         try {
             let result;
             const filterHeaders = filters.headers || {};
-
-            console.log(`🔄 Fetching from endpoint: ${endpoint}`);
 
             switch (endpoint) {
                 case 'mydrive':
@@ -198,11 +179,6 @@ export function FilesProvider({ children }) {
                 default:
                     throw new Error(`Unknown endpoint: ${endpoint}`);
             }
-
-            console.log(`✅ Files fetched from ${endpoint}:`, { 
-              count: result?.length || 0,
-              files: result?.slice(0, 3).map(f => ({ id: f.id, name: f.name, type: f.type }))
-            });
 
             updateFilesInStore(result || []);
             setLoadedEndpoints(prev => new Set(prev).add(endpoint));
@@ -300,7 +276,6 @@ export function FilesProvider({ children }) {
             // CRITICAL FIX: If file name changed and file is starred, invalidate starred cache
             // This ensures the Starred page shows the updated name without needing F5
             if (updates.name !== undefined && (originalFile.isStarred || freshFile?.isStarred)) {
-                console.log('📝 File renamed and is starred - invalidating starred cache');
                 setLoadedEndpoints(prev => {
                     const newSet = new Set(prev);
                     newSet.delete('starred');
@@ -330,23 +305,12 @@ export function FilesProvider({ children }) {
      * Toggle star (optimistic update)
      */
     const toggleStar = useCallback(async (fileId) => {
-        console.log('⭐ toggleStar called:', { fileId, hasToken: !!token, filesMapSize: filesMap.size });
-        
         if (!token) return { success: false, error: 'Not authenticated' };
 
         const originalFile = filesMap.get(fileId);
         if (!originalFile) {
-            console.error('❌ toggleStar: File not found in filesMap!', { 
-                fileId, 
-                availableIds: Array.from(filesMap.keys()) 
-            });
             return { success: false, error: 'File not found' };
         }
-
-        console.log('✅ toggleStar: File found, toggling star', { 
-            fileId, 
-            currentStar: originalFile.isStarred 
-        });
 
         // Optimistic toggle
         const optimisticFile = { ...originalFile, isStarred: !originalFile.isStarred };
@@ -492,12 +456,6 @@ export function FilesProvider({ children }) {
             try {
                 const freshFile = await filesApi.getFile(token, fileId);
                 if (freshFile) {
-                    console.log('✅ Restored file fresh data:', {
-                        id: freshFile.id,
-                        name: freshFile.name,
-                        isStarred: freshFile.isStarred,
-                        isTrashed: freshFile.isTrashed
-                    });
                     updateFilesInStore([freshFile]);
                 }
             } catch (fetchError) {
@@ -513,7 +471,6 @@ export function FilesProvider({ children }) {
             
             // Invalidate starred cache if file is starred (so it appears in starred page)
             if (originalFile.isStarred) {
-                console.log('⭐ Restored file was starred - invalidating starred cache');
                 setLoadedEndpoints(prev => {
                     const newSet = new Set(prev);
                     newSet.delete('starred');
@@ -680,7 +637,6 @@ export function FilesProvider({ children }) {
      * Clear all files from store (used on logout/user change)
      */
     const clearAllFiles = useCallback(() => {
-        console.log('🧹 Clearing all files from FilesContext');
         setFilesMap(new Map());
         setLoadedEndpoints(new Set());
         setLoading({});
