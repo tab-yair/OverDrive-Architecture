@@ -2,7 +2,8 @@
 
 .storage-page {
     padding: 24px;
-    max-width: 900px;
+    max-width: 100%;
+    width: 100%;
 }
 
 /* Storage overview section */
@@ -118,15 +119,14 @@
 
 /* Files list */
 .storage-files-list {
-    max-height: calc(100vh - 400px);
-    overflow-y: auto;
+    /* No max-height to avoid unnecessary scrollbar */
 }
 
 .storage-files-table-header {
     display: grid;
-    grid-template-columns: 1fr 120px;
-    gap: 16px;
-    padding: 12px 20px;
+    grid-template-columns: 1fr 150px;
+    gap: 32px;
+    padding: 12px 32px;
     background-color: var(--bg-secondary);
     font-size: 12px;
     font-weight: 500;
@@ -138,12 +138,13 @@
 
 .storage-file-row {
     display: grid;
-    grid-template-columns: 1fr 120px;
-    gap: 16px;
-    padding: 12px 20px;
+    grid-template-columns: 1fr 150px;
+    gap: 32px;
+    padding: 12px 32px;
     align-items: center;
     border-bottom: 1px solid var(--border-color);
     transition: background-color 0.2s ease;
+    cursor: pointer;
 }
 
 .storage-file-row:last-child {
@@ -152,6 +153,11 @@
 
 .storage-file-row:hover {
     background-color: var(--bg-hover);
+}
+
+.storage-file-size-header,
+.storage-file-size {
+    text-align: right;
 }
 
 .storage-file-name {

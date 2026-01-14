@@ -190,7 +190,7 @@ function SearchPage() {
             customLoading={loading}
             customRefetch={performSearch}
             headerComponent={<SearchHeader />}
-            pageContext="Search"
+            pageContext="MyDrive"
             isOwner={false}
             permissionLevel="viewer"
             className="search-page"
