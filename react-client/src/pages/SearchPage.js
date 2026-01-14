@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FilePageWrapper } from '../components/FilePageWrapper';
 import { useNavigation } from '../context/NavigationContext';
@@ -15,7 +15,6 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
  */
 function SearchPage() {
     const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
     const { token } = useAuth();
     const { setCurrentFolderId } = useNavigation();
     
@@ -64,17 +63,21 @@ function SearchPage() {
             const filterMappings = {
                 'type': 'x-filter-type',
                 'owner': 'x-filter-owner',
+                'ownerEmail': 'x-filter-owner-email',
                 'searchIn': 'x-search-in',
                 'starred': 'x-filter-starred',
                 'dateCategory': 'x-filter-date-category',
                 'dateStart': 'x-filter-date-start',
-                'dateEnd': 'x-filter-date-end'
+                'dateEnd': 'x-filter-date-end',
+                'sharedWith': 'x-filter-shared-with',
+                'containsWords': 'x-filter-contains-words'
             };
 
             // Add filter headers if present in URL
             Object.entries(filterMappings).forEach(([paramName, headerName]) => {
                 const value = searchParams.get(paramName);
                 if (value) {
+                    console.log(`Setting header ${headerName} = ${value}`);
                     headers[headerName] = value;
                 }
             });

@@ -347,8 +347,8 @@ class FileService {
     }
 
     // SEARCH - Advanced search with filters
-    // Filters: searchName, searchContent, type, owner, dateRange, sharedWith, isStarred
-    async searchFiles({ searchName = null, searchContent = null, type = null, owner = null, dateRange = null, sharedWith = null, isStarred = null, userId }) {
+    // Filters: searchName, searchContent, type, owner, ownerEmail, dateRange, sharedWith, isStarred
+    async searchFiles({ searchName = null, searchContent = null, type = null, owner = null, ownerEmail = null, dateRange = null, sharedWith = null, isStarred = null, userId }) {
         try {
             // Get all files the user has access to
             const accessibleFileIdsArray = await permissionStore.getAccessibleFileIds(userId);
@@ -441,6 +441,13 @@ class FileService {
                     );
                     if (!hasPermission) continue;
                 }
+                
+                // Filter by specific owner email
+                if (ownerEmail) {
+                    const { usersStore } = require('../models/usersStore');
+                    const ownerUser = await usersStore.getByUsername(ownerEmail);
+                    if (!ownerUser || file.ownerId !== ownerUser.id) continue;
+                }
 
                 // Filter by date range
                 if (dateRange) {
@@ -452,9 +459,12 @@ class FileService {
                 // Filter by sharedWith
                 if (sharedWith) {
                     const permissions = await permissionStore.getByFileId(fileId);
+                    console.log(`Checking sharedWith for file ${fileId}, looking for userId ${sharedWith}`);
+                    console.log('Permissions:', permissions);
                     const hasSharedUser = permissions.some(p => 
                         p.userId === sharedWith && (p.level === 'VIEWER' || p.level === 'EDITOR')
                     );
+                    console.log('Has shared user:', hasSharedUser);
                     if (!hasSharedUser) continue;
                 }
 
