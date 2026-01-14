@@ -151,7 +151,12 @@ function NewButton({ parentId = null }) {
             setIsOpen(false);
         } catch (error) {
             console.error('Failed to upload file:', error);
-            alert('Failed to upload file: ' + error.message);
+            const message = (error?.message || '').toLowerCase();
+            const permissionBlocked = message.includes('permission');
+            const friendlyMessage = permissionBlocked
+                ? 'You only have view access to this folder and cannot add files. Request edit permission from the owner.'
+                : 'Failed to upload file: ' + (error?.message || 'Unknown error');
+            alert(friendlyMessage);
         } finally {
             setIsLoading(false);
             // Reset file input
@@ -193,7 +198,12 @@ function NewButton({ parentId = null }) {
             setNewName('');
         } catch (error) {
             console.error('Failed to create:', error);
-            alert('Failed to create: ' + error.message);
+            const message = (error?.message || '').toLowerCase();
+            const permissionBlocked = message.includes('permission');
+            const friendlyMessage = permissionBlocked
+                ? 'You only have view access to this folder and cannot add files or folders. Request edit permission from the owner.'
+                : 'Failed to create: ' + (error?.message || 'Unknown error');
+            alert(friendlyMessage);
         } finally {
             setIsLoading(false);
         }
