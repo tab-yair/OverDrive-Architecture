@@ -459,6 +459,9 @@ const METADATA_OVERRIDES = {
     { key: 'size', label: 'Size', width: '10%', cssVar: '--col-width-4' },
     { key: 'originalLocation', label: 'Original Location', width: '15%', cssVar: '--col-width-1', isLocation: true },
   ],
+  Storage: [
+    { key: 'size', label: 'Size', width: '150px', cssVar: '--col-width-1' },
+  ],
 };
 
 /**

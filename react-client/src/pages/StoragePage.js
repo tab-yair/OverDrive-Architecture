@@ -5,6 +5,9 @@ import { useUserChange } from '../hooks/useUserChange';
 import { useAppEvent } from '../hooks/useAppEvent';
 import { AppEvents } from '../utils/eventManager';
 import { formatBytes } from '../services/api';
+import { FileManager } from '../components/FileManagement';
+import { useNavigation } from '../context/NavigationContext';
+import { useDownload } from '../hooks/useDownload';
 import './Pages.css';
 import './StoragePage.css';
 
@@ -15,6 +18,8 @@ import './StoragePage.css';
 function StoragePage() {
     const { token } = useAuth();
     const { storageInfo, storageLoading } = useUserPreferences();
+    const { handleOpen } = useNavigation();
+    const { downloadFile } = useDownload();
 
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(true);
@@ -78,20 +83,27 @@ function StoragePage() {
         setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
     };
 
-    // Get file icon based on type/mimetype
-    const getFileIcon = (file) => {
-        if (file.type === 'folder') return 'folder';
-        const mimeType = file.mimeType || '';
-        if (mimeType.startsWith('image/')) return 'image';
-        if (mimeType.startsWith('video/')) return 'movie';
-        if (mimeType.startsWith('audio/')) return 'audio_file';
-        if (mimeType.includes('pdf')) return 'picture_as_pdf';
-        if (mimeType.includes('document') || mimeType.includes('word')) return 'description';
-        if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'table_chart';
-        if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'slideshow';
-        if (mimeType.includes('zip') || mimeType.includes('archive')) return 'folder_zip';
-        if (mimeType.includes('text')) return 'article';
-        return 'insert_drive_file';
+    // Handle file actions
+    const handleFileAction = (action, fileOrFiles) => {
+        if (action === 'open') {
+            const item = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
+            if (item) {
+                if (item.type === 'folder') {
+                    handleOpen(item);
+                } else {
+                    downloadFile(item.id, item.name);
+                }
+            }
+        }
+    };
+
+    // Handle double-click - open file/folder
+    const handleFileDoubleClick = (file) => {
+        if (file.type === 'folder') {
+            handleOpen(file);
+        } else {
+            downloadFile(file.id, file.name);
+        }
     };
 
 
@@ -165,25 +177,16 @@ function StoragePage() {
                         <p className="storage-files-empty-hint">Upload files to see them here</p>
                     </div>
                 ) : (
-                    <div className="storage-files-list">
-                        <div className="storage-files-table-header">
-                            <span className="storage-file-name-header">Name</span>
-                            <span className="storage-file-size-header">Size</span>
-                        </div>
-                        {files.map((file) => (
-                            <div key={file.id || file._id} className="storage-file-row">
-                                <div className="storage-file-name">
-                                    <span className="material-symbols-outlined storage-file-icon">
-                                        {getFileIcon(file)}
-                                    </span>
-                                    <span className="storage-file-name-text">{file.name}</span>
-                                </div>
-                                <span className="storage-file-size">
-                                    {formatBytes(file.size || 0)}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                    <FileManager
+                        files={files}
+                        pageContext="Storage"
+                        viewMode="list"
+                        onViewModeChange={() => {}}
+                        onFileDoubleClick={handleFileDoubleClick}
+                        onAction={handleFileAction}
+                        isOwner={true}
+                        permissionLevel="owner"
+                    />
                 )}
             </div>
         </div>
