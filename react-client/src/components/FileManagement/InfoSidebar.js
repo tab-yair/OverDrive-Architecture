@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import './InfoSidebar.css';
-import { formatFileSize, formatSmartDate, icons } from './fileUtils';
+import { formatFileSize, formatSmartDate, icons, getLocationDisplayName } from './fileUtils';
 import PermissionsManager from '../PermissionsManager/PermissionsManager';
 import { useFilesContext } from '../../context/FilesContext';
 import { useAuth } from '../../context/AuthContext';
@@ -407,7 +407,7 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                   alt="folder" 
                   className="info-sidebar__location-icon"
                 />
-                {file.location ? (file.location.isRoot ? 'My Drive' : file.location.parentName) : 'My Drive'}
+                {getLocationDisplayName(file)}
               </div>
             </div>
 

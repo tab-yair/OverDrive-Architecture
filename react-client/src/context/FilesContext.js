@@ -181,6 +181,31 @@ export function FilesProvider({ children }) {
             }
 
             updateFilesInStore(result || []);
+
+            // CRITICAL: Load missing parent folders so getFilesFromStore can compute canAccessParent
+            // This is essential after Move operations where files now have new parentIds
+            // without their parent folders being in the store yet
+            const parentIds = new Set();
+            if (result) {
+                result.forEach(file => {
+                    if (file.parentId && !filesMap.has(file.parentId)) {
+                        parentIds.add(file.parentId);
+                    }
+                });
+            }
+
+            if (parentIds.size > 0) {
+                try {
+                    const parentFolders = await Promise.all(
+                        Array.from(parentIds).map(id => filesApi.getFile(token, id))
+                    );
+                    updateFilesInStore(parentFolders.filter(Boolean));
+                } catch (err) {
+                    console.warn('[FilesContext] Failed to load some parent folders:', err);
+                    // Not critical - location will show folder name as "Unknown Folder"
+                }
+            }
+
             setLoadedEndpoints(prev => new Set(prev).add(endpoint));
             
             return { files: result || [], error: null };
@@ -192,7 +217,7 @@ export function FilesProvider({ children }) {
         } finally {
             setLoading(prev => ({ ...prev, [cacheKey]: false }));
         }
-    }, [token, updateFilesInStore]);
+    }, [token, updateFilesInStore, filesMap]);
 
     /**
      * Fetch single file with content (triggers VIEW interaction)
@@ -397,6 +422,31 @@ export function FilesProvider({ children }) {
                 return { success: false, error: 'Some files failed to move' };
             }
             
+            // CRITICAL: Fetch fresh data from server to ensure location is correct
+            // This is essential because getFile() computes location dynamically
+            // and we need the parent folder to be in the store for that computation
+            const freshFiles = await Promise.all(
+                fileIds.map(id => filesApi.getFile(token, id))
+            );
+            
+            // Update store with fresh data - ensures location is correctly computed
+            // when getFile() looks up the parent folder in filesMap
+            updateFilesInStore(freshFiles.filter(Boolean));
+            
+            // CRITICAL: Fetch parent folder if not already in store
+            // This ensures getFile() can compute location correctly
+            if (parentId && !filesMap.has(parentId)) {
+                try {
+                    const parentFolder = await filesApi.getFile(token, parentId);
+                    if (parentFolder) {
+                        updateFilesInStore([parentFolder]);
+                    }
+                } catch (err) {
+                    console.warn('[FilesContext] Failed to load parent folder:', err);
+                    // Not critical - location will show folder name as "Unknown Folder"
+                }
+            }
+            
             // Emit events to notify other parts of the app
             notifyStorageUpdated(); // Might affect storage calculations
             notifyFilesUpdated();   // Trigger refetch on other pages
@@ -591,24 +641,33 @@ export function FilesProvider({ children }) {
         return filtered.map(file => {
             if (file.parentId) {
                 const parent = filesMap.get(file.parentId);
+                
+                // Check if user can access the parent folder
+                const canAccessParent = parent && (
+                    parent.ownerId === user?.id || 
+                    (parent.sharedPermissionLevel && ['editor', 'owner'].includes(parent.sharedPermissionLevel.toLowerCase()))
+                );
+                
                 return {
                     ...file,
                     location: {
                         parentId: file.parentId,
                         parentName: parent?.name || file.location?.parentName || 'Unknown Folder',
                         isRoot: false
-                    }
+                    },
+                    canAccessParent: !!canAccessParent
                 };
             }
             
-            // Root level files
+            // Root level files - always accessible
             return {
                 ...file,
                 location: {
                     parentId: null,
                     parentName: file.location?.parentName || null,
                     isRoot: true
-                }
+                },
+                canAccessParent: true
             };
         });
     }, [filesMap, user?.id]);
@@ -627,26 +686,36 @@ export function FilesProvider({ children }) {
         // Compute location on-the-fly from parent folder in store
         if (file.parentId) {
             const parent = filesMap.get(file.parentId);
+            
+            // Check if user can access the parent folder
+            // User can access if: they own it OR it's shared with editor/owner permission
+            const canAccessParent = parent && (
+                parent.ownerId === user?.id || 
+                (parent.sharedPermissionLevel && ['editor', 'owner'].includes(parent.sharedPermissionLevel.toLowerCase()))
+            );
+            
             return {
                 ...file,
                 location: {
                     parentId: file.parentId,
                     parentName: parent?.name || 'Unknown Folder',
                     isRoot: false
-                }
+                },
+                canAccessParent: !!canAccessParent
             };
         }
         
-        // Root level files (parentId = null)
+        // Root level files (parentId = null) - always accessible
         return {
             ...file,
             location: {
                 parentId: null,
                 parentName: null,
                 isRoot: true
-            }
+            },
+            canAccessParent: true
         };
-    }, [filesMap]);
+    }, [filesMap, user?.id]);
 
     /**
      * Invalidate cache and force refetch
