@@ -128,3 +128,15 @@
   background: transparent !important; /* No hover effect */
 }
 .perm-lock { color: var(--text-secondary); }
+
+/* Tooltip wrapper for disabled inherited permissions */
+.perm-tooltip-wrapper {
+  display: block;
+  cursor: help;
+  pointer-events: auto; /* Allow hover on entire wrapper */
+}
+.perm-tooltip-wrapper .perm-menu-item {
+  /* Button inherits disabled styles, wrapper handles tooltip */
+  width: 100%;
+  pointer-events: none; /* Prevent button interaction */
+}

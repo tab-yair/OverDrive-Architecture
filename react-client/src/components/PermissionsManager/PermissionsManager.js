@@ -69,20 +69,6 @@ export default function PermissionsManager({ currentUserRole = 'owner', currentU
    * - Cannot remove inherited permissions (🔒)
    * - Cannot downgrade inherited permissions (🔒)
    */
-  const isActionAllowed = (actionKey) => {
-    // VIEWER: Cannot manage any permissions
-    if (currentUserRole === 'viewer') return false;
-    
-    // EDITOR: Can manage permissions (setRole, removeAccess) but not transfer ownership
-    if (currentUserRole === 'editor') {
-      return actionKey !== 'transfer';
-    }
-    
-    // OWNER: Can do everything
-    return true;
-  };
-
-  const isOwnerViewer = currentUserRole === 'owner';
 
   const options = [
     { key: 'viewer', label: 'Viewer' },
@@ -164,7 +150,6 @@ export default function PermissionsManager({ currentUserRole = 'owner', currentU
     <div className="perm-container" ref={containerRef}>
       {users.map((user) => {
         const isOwnerRow = user.role === 'owner';
-        const showDropdown = !isOwnerRow;
         const isMenuOpen = openMenuId === user.id;
 
         return (
@@ -202,20 +187,40 @@ export default function PermissionsManager({ currentUserRole = 'owner', currentU
                         // SINGLE SOURCE OF TRUTH - one function decides everything
                         const permission = checkActionPermission(user, opt.key);
                         const classes = `perm-menu-item ${permission.disabled ? 'perm-disabled' : ''}`;
+                        
+                        // Show tooltip only for inherited permission restrictions (not other restrictions)
+                        const isInheritedRestriction = permission.tooltip === 'Cannot remove inherited permission' || 
+                                                      permission.tooltip === 'Cannot downgrade inherited permission';
+                        const showTooltip = permission.disabled && isInheritedRestriction;
+                        const tooltipText = showTooltip ? "Inherited permissions cannot be downgraded" : "";
 
-                        return (
+                        const menuButton = (
                           <button
                             key={opt.key}
                             className={classes}
                             onClick={() => handleAction(user, opt.key)}
                             disabled={permission.disabled}
-                            data-tooltip={permission.tooltip}
                             role="menuitem"
                           >
                             {permission.disabled && <span className="perm-lock" aria-hidden>🔒</span>}
                             <span>{opt.label}</span>
                           </button>
                         );
+
+                        // Wrap disabled inherited items with tooltip
+                        if (showTooltip) {
+                          return (
+                            <span
+                              key={opt.key}
+                              className="perm-tooltip-wrapper"
+                              title={tooltipText}
+                            >
+                              {menuButton}
+                            </span>
+                          );
+                        }
+
+                        return menuButton;
                       })}
                     </div>
                   )}
