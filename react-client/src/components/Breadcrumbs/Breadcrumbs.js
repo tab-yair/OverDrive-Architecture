@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { buildBreadcrumbPath } from '../../utils/breadcrumbsUtils';
 import './Breadcrumbs.css';
 
 /**
@@ -36,50 +37,6 @@ const Breadcrumbs = () => {
   };
 
   /**
-   * Build breadcrumb path by traversing parent folders
-   * Returns { path: [...], isShared: boolean }
-   */
-  const buildBreadcrumbPath = async (currentFolderId) => {
-    if (!token || !currentFolderId || !user) return { path: [], isShared: false };
-
-    const path = [];
-    let folderId = currentFolderId;
-    let isShared = false;
-
-    try {
-      // Traverse up the folder hierarchy
-      while (folderId) {
-        const response = await fetch(`http://localhost:3000/api/files/${folderId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) break;
-
-        const folder = await response.json();
-        
-        // Check if this folder is shared (not owned by current user)
-        if (folder.ownerId !== user.id || folder.sharedPermissionLevel) {
-          isShared = true;
-        }
-        
-        // Add folder to path (we'll reverse it later)
-        path.unshift({
-          id: folder.id,
-          name: folder.name,
-          path: `/folders/${folder.id}`
-        });
-
-        // Move to parent
-        folderId = folder.parentId;
-      }
-    } catch (error) {
-      console.error('Failed to build breadcrumb path:', error);
-    }
-
-    return { path, isShared };
-  };
-
-  /**
    * Update breadcrumbs when location or folderId changes
    */
   useEffect(() => {
@@ -95,7 +52,7 @@ const Breadcrumbs = () => {
       // If we're in a folder, determine root context based on ownership
       if (location.pathname.startsWith('/folders') && folderId) {
         console.log('📂 Building breadcrumb path for folder:', folderId);
-        const { path: folderPath, isShared } = await buildBreadcrumbPath(folderId);
+        const { path: folderPath, isShared } = await buildBreadcrumbPath(folderId, token, user);
         console.log('📂 Folder path built:', { folderPath, isShared });
         
         // Set root context based on ownership
@@ -122,7 +79,7 @@ const Breadcrumbs = () => {
       // If we're in a folder (non-/folders route), build the full path
       if (folderId && !location.pathname.startsWith('/folders')) {
         console.log('📂 Building breadcrumb path for folder:', folderId);
-        const { path: folderPath } = await buildBreadcrumbPath(folderId);
+        const { path: folderPath } = await buildBreadcrumbPath(folderId, token, user);
         console.log('📂 Folder path built:', folderPath);
         crumbs.push(...folderPath);
       }

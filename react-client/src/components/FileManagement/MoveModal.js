@@ -1,92 +1,73 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import './MoveModal.css';
 import { useAuth } from '../../context/AuthContext';
 import { filesApi } from '../../services/api';
 import { useFilesContext } from '../../context/FilesContext';
+import { buildBreadcrumbPath } from '../../utils/breadcrumbsUtils';
 
 function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { moveFiles } = useFilesContext();
 
-  const [folders, setFolders] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [currentFolderId, setCurrentFolderId] = useState(initialParentId);
-  const [breadcrumbs, setBreadcrumbs] = useState([{ id: null, name: 'My Drive' }]);
-  const [selectedDestination, setSelectedDestination] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchExecuted, setSearchExecuted] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState(null);
+  const [selectedBreadcrumbs, setSelectedBreadcrumbs] = useState([]);
   const [error, setError] = useState(null);
 
-  const effectiveDestination = useMemo(() => {
-    if (selectedDestination !== null && selectedDestination !== undefined) return selectedDestination;
-    if (currentFolderId !== undefined) return currentFolderId || null;
-    return null;
-  }, [selectedDestination, currentFolderId]);
+  // Handle search - triggered only on Enter key
+  const handleSearch = async () => {
+    const query = searchTerm.trim();
+    if (query.length === 0) {
+      setSearchResults([]);
+      setSearchExecuted(false);
+      return;
+    }
 
-  const loadFolder = useCallback(async (folderId = null, path = [{ id: null, name: 'My Drive' }]) => {
-    if (!token) return;
-    setLoading(true);
+    // Clear previous selection and breadcrumbs when starting new search
+    setSelectedFolder(null);
+    setSelectedBreadcrumbs([]);
+    setSearchLoading(true);
+    setSearchExecuted(true);
     setError(null);
+
     try {
-      const result = await filesApi.getFiles(token, { parentId: folderId });
-      const onlyFolders = (result || []).filter((f) => f.type === 'folder' && !f.isTrashed);
-      setFolders(onlyFolders);
-      setCurrentFolderId(folderId);
-      setBreadcrumbs(path);
-      setSearchResults([]);
-      setSearchTerm('');
-      setSelectedDestination(folderId);
+      const results = await filesApi.searchFolders(token, query);
+      const foldersOnly = (results || []).filter((f) => f.type === 'folder' && !f.isTrashed);
+      setSearchResults(foldersOnly);
     } catch (err) {
-      setError(err.message || 'Failed to load folders');
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    if (isOpen) {
-      loadFolder(initialParentId, [{ id: null, name: 'My Drive' }]);
-    }
-  }, [isOpen, initialParentId, loadFolder]);
-
-  useEffect(() => {
-    let timeout;
-    if (searchTerm.trim().length > 0) {
-      setSearchLoading(true);
-      timeout = setTimeout(async () => {
-        try {
-          const res = await filesApi.searchFolders(token, searchTerm.trim());
-          const foldersOnly = (res || []).filter((f) => f.type === 'folder' && !f.isTrashed);
-          setSearchResults(foldersOnly);
-        } catch (err) {
-          setError(err.message || 'Failed to search folders');
-        } finally {
-          setSearchLoading(false);
-        }
-      }, 250);
-    } else {
+      setError(err.message || 'Search failed');
       setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
     }
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [searchTerm, token]);
-
-  const handleFolderClick = (folder) => {
-    const newPath = [...breadcrumbs, { id: folder.id, name: folder.name }];
-    loadFolder(folder.id, newPath);
   };
 
-  const handleBreadcrumbClick = (index) => {
-    const crumb = breadcrumbs[index];
-    const newPath = breadcrumbs.slice(0, index + 1);
-    loadFolder(crumb.id, newPath);
+  // Handle folder selection from search results
+  const handleFolderSelect = async (folder) => {
+    setSelectedFolder(folder);
+    // Build breadcrumb path for selected folder using shared function
+    const { path: folderPath, isShared } = await buildBreadcrumbPath(folder.id, token, user);
+    
+    // Set root context based on ownership (same logic as Breadcrumbs component)
+    const rootContext = isShared 
+      ? { id: null, name: 'Shared with me' }
+      : { id: null, name: 'My Drive' };
+    
+    const breadcrumbs = [rootContext, ...folderPath];
+    setSelectedBreadcrumbs(breadcrumbs);
   };
 
   const handleConfirm = async () => {
     if (!targets || targets.length === 0) return;
-    const destination = effectiveDestination;
+    if (!selectedFolder) {
+      alert('Please select a destination folder');
+      return;
+    }
+
+    const destination = selectedFolder.id;
     const idsToMove = targets
       .map((t) => t.id)
       .filter((id) => id !== undefined && id !== null);
@@ -115,66 +96,77 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
 
   if (!isOpen) return null;
 
-  const listToRender = searchTerm.trim().length > 0 ? searchResults : folders;
-
   return (
     <div className="move-modal-overlay" onClick={onClose}>
       <div className="move-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
         <div className="move-modal__header">
           <h3>Select destination folder</h3>
           <button className="move-modal__close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
+        {/* Search Section */}
         <div className="move-modal__search">
           <input
             type="text"
-            placeholder="Search folder"
+            placeholder="Search for a folder..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch();
+              }
+            }}
           />
           {searchLoading && <span className="move-modal__loader">…</span>}
         </div>
 
+        {/* Results List */}
         <div className="move-modal__list">
-          {loading ? (
-            <div className="move-modal__empty">Loading folders…</div>
+          {searchLoading ? (
+            <div className="move-modal__empty">Searching folders...</div>
           ) : error ? (
             <div className="move-modal__empty error">{error}</div>
-          ) : listToRender.length === 0 ? (
-            <div className="move-modal__empty">No folders found</div>
+          ) : !searchExecuted ? (
+            <div className="move-modal__empty">Type folder name and press Enter to search</div>
+          ) : searchResults.length === 0 ? (
+            <div className="move-modal__empty">No folder found matching "{searchTerm}"</div>
           ) : (
-            listToRender.map((folder) => (
+            searchResults.map((folder) => (
               <button
                 key={folder.id}
-                className={`move-modal__row ${effectiveDestination === folder.id ? 'selected' : ''}`}
-                onClick={() => setSelectedDestination(folder.id)}
-                onDoubleClick={() => handleFolderClick(folder)}
+                className={`move-modal__row ${selectedFolder?.id === folder.id ? 'selected' : ''}`}
+                onClick={() => handleFolderSelect(folder)}
               >
                 <span className="material-symbols-outlined">folder</span>
                 <span className="move-modal__name">{folder.name}</span>
-                <span className="move-modal__hint">Double-click to enter</span>
               </button>
             ))
           )}
         </div>
 
-        <div className="move-modal__breadcrumbs">
-          {breadcrumbs.map((crumb, idx) => (
-            <span key={crumb.id ?? 'root'}>
-              <button className="crumb" onClick={() => handleBreadcrumbClick(idx)}>
-                {crumb.name}
-              </button>
-              {idx < breadcrumbs.length - 1 && <span className="crumb-sep">/</span>}
-            </span>
-          ))}
-        </div>
+        {/* Breadcrumbs Footer - shown only when folder is selected */}
+        {selectedFolder && selectedBreadcrumbs.length > 0 && (
+          <div className="move-modal__breadcrumbs-footer">
+            <div className="move-modal__breadcrumbs-label">Destination path:</div>
+            <div className="move-modal__breadcrumbs">
+              {selectedBreadcrumbs.map((crumb, idx) => (
+                <React.Fragment key={crumb.id ?? 'root'}>
+                  <span className="crumb">{crumb.name}</span>
+                  {idx < selectedBreadcrumbs.length - 1 && <span className="crumb-sep"> &gt; </span>}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        )}
 
+        {/* Action Buttons */}
         <div className="move-modal__actions">
           <button className="btn" onClick={onClose}>Cancel</button>
           <button
             className="btn primary"
             onClick={handleConfirm}
-            disabled={targets.length === 0 || loading}
+            disabled={!selectedFolder || targets.length === 0}
           >
             Move here
           </button>

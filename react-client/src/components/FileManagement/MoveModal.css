@@ -60,6 +60,8 @@
   flex: 1;
   overflow: auto;
   padding: 8px 16px;
+  min-height: 200px;
+  max-height: 400px;
 }
 
 .move-modal__row {
@@ -72,6 +74,7 @@
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .move-modal__row:hover {
@@ -86,6 +89,7 @@
 .move-modal__name {
   flex: 1;
   text-align: left;
+  font-size: 14px;
 }
 
 .move-modal__hint {
@@ -94,37 +98,46 @@
 }
 
 .move-modal__empty {
-  padding: 24px;
+  padding: 48px 24px;
   text-align: center;
   color: var(--text-secondary, #777);
+  font-size: 14px;
 }
 
 .move-modal__empty.error {
-  color: #d12;
+  color: var(--error-color, #d32f2f);
+}
+
+/* Breadcrumbs Footer Section */
+.move-modal__breadcrumbs-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color, #e5e5e5);
+  background: var(--bg-secondary, #f9f9f9);
+}
+
+.move-modal__breadcrumbs-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+  margin-bottom: 6px;
 }
 
 .move-modal__breadcrumbs {
-  padding: 10px 16px;
-  border-top: 1px solid var(--border-color, #e5e5e5);
-  border-bottom: 1px solid var(--border-color, #e5e5e5);
-  font-size: 13px;
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 4px;
-  align-items: center;
+  font-size: 14px;
 }
 
 .move-modal__breadcrumbs .crumb {
-  background: transparent;
-  border: none;
   color: var(--text-primary, #111);
-  cursor: pointer;
-  padding: 0;
-  font-size: 13px;
+  font-weight: 500;
 }
 
-.crumb-sep {
-  color: var(--text-secondary, #777);
+.move-modal__breadcrumbs .crumb-sep {
+  color: var(--text-secondary, #999);
+  margin: 0 2px;
 }
 
 .move-modal__actions {
@@ -152,3 +165,4 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
