@@ -12,9 +12,10 @@ import './ShareModal.css';
  * - User selects permission level (Viewer, Editor, Owner)
  * - For Owner: Creates permission via POST then transfers via PATCH
  * - For Viewer/Editor: Creates permission via POST
+ * - Supports bulk sharing: shares multiple files with the same user/permission
  * 
  * @param {Object} props
- * @param {Object} props.file - File object { id, name, type }
+ * @param {Object} props.file - File object { id, name, type, bulkFiles?: Array }
  * @param {Function} props.onShare - Callback when share is successful: (fileId, userId, permissionLevel) => void
  * @param {Function} props.onClose - Callback to close the modal
  */
@@ -25,7 +26,13 @@ const ShareModal = ({ file, onShare, onClose }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
+    const [currentFileIndex, setCurrentFileIndex] = useState(0);
     const inputRef = useRef(null);
+    
+    // Extract bulk files if present
+    const isBulkShare = file?.bulkFiles && file.bulkFiles.length > 1;
+    const filesToShare = isBulkShare ? file.bulkFiles : [file];
+    const currentFile = filesToShare[currentFileIndex];
 
     // Auto-focus email input on mount
     useEffect(() => {
@@ -95,49 +102,62 @@ const ShareModal = ({ file, onShare, onClose }) => {
                 return;
             }
 
-            // Step 2: Handle permission based on level
-            if (permissionLevel === 'OWNER') {
-                // OWNER cannot be granted via POST - we need to:
-                // 1. First create a permission (EDITOR or VIEWER)
-                // 2. Then transfer ownership via PATCH
-                
-                // Create initial permission as EDITOR
-                const permissionResult = await filesApi.grantPermission(
-                    token,
-                    file.id,
-                    targetUser.id,
-                    'EDITOR'
-                );
+            // Step 2: Share current file (or all files if bulk)
+            const shareFile = async (fileToShare) => {
+                if (permissionLevel === 'OWNER') {
+                    // OWNER cannot be granted via POST - we need to:
+                    // 1. First create a permission (EDITOR or VIEWER)
+                    // 2. Then transfer ownership via PATCH
+                    
+                    // Create initial permission as EDITOR
+                    const permissionResult = await filesApi.grantPermission(
+                        token,
+                        fileToShare.id,
+                        targetUser.id,
+                        'EDITOR'
+                    );
 
-                if (!permissionResult.success || !permissionResult.id) {
-                    throw new Error('Failed to create permission for ownership transfer');
+                    if (!permissionResult.success || !permissionResult.id) {
+                        throw new Error(`Failed to create permission for ${fileToShare.name}`);
+                    }
+
+                    // Transfer ownership via PATCH
+                    await filesApi.updatePermission(
+                        token,
+                        fileToShare.id,
+                        permissionResult.id,
+                        'OWNER'
+                    );
+                } else {
+                    // VIEWER or EDITOR: Create permission via POST
+                    await filesApi.grantPermission(
+                        token,
+                        fileToShare.id,
+                        targetUser.id,
+                        permissionLevel
+                    );
                 }
 
-                // Transfer ownership via PATCH
-                await filesApi.updatePermission(
-                    token,
-                    file.id,
-                    permissionResult.id,
-                    'OWNER'
-                );
+                // Notify parent component
+                if (onShare) {
+                    onShare(fileToShare.id, targetUser.id, permissionLevel);
+                }
+            };
 
-                setSuccessMessage(`Ownership transferred to ${targetUser.firstName} ${targetUser.lastName || ''}`);
-            } else {
-                // VIEWER or EDITOR: Create permission via POST
-                await filesApi.grantPermission(
-                    token,
-                    file.id,
-                    targetUser.id,
-                    permissionLevel
-                );
-
-                const levelText = permissionLevel === 'EDITOR' ? 'Editor' : 'Viewer';
-                setSuccessMessage(`Shared with ${targetUser.firstName} ${targetUser.lastName || ''} as ${levelText}`);
+            // Share all files
+            for (const fileToShare of filesToShare) {
+                await shareFile(fileToShare);
             }
 
-            // Notify parent component
-            if (onShare) {
-                onShare(file.id, targetUser.id, permissionLevel);
+            // Success message
+            const levelText = permissionLevel === 'OWNER' 
+                ? 'Owner' 
+                : (permissionLevel === 'EDITOR' ? 'Editor' : 'Viewer');
+            
+            if (isBulkShare) {
+                setSuccessMessage(`Shared ${filesToShare.length} items with ${targetUser.firstName} ${targetUser.lastName || ''} as ${levelText}`);
+            } else {
+                setSuccessMessage(`Shared with ${targetUser.firstName} ${targetUser.lastName || ''} as ${levelText}`);
             }
 
             // Clear form
@@ -170,7 +190,10 @@ const ShareModal = ({ file, onShare, onClose }) => {
             <div className="share-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="share-modal__header">
                     <h3 className="share-modal__title">
-                        Share "{file.name}"
+                        {isBulkShare 
+                            ? `Share ${filesToShare.length} items`
+                            : `Share "${currentFile.name}"`
+                        }
                     </h3>
                     <button
                         className="share-modal__close-btn"
@@ -183,6 +206,12 @@ const ShareModal = ({ file, onShare, onClose }) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="share-modal__form">
+                    {isBulkShare && (
+                        <div className="share-modal__warning">
+                            Sharing {filesToShare.length} files/folders with the same permissions
+                        </div>
+                    )}
+                    
                     <div className="share-modal__input-group">
                         <label htmlFor="email-input" className="share-modal__label">
                             Email Address

@@ -162,19 +162,28 @@ function FilePageWrapper({
             return;
         }
         
-        // Handle share action - only for single file selection
+        // Handle share action - supports single or multiple files
         if (action === 'share') {
             console.log('[FilePageWrapper] Share action triggered');
             
-            // Only allow share when exactly 1 item is selected
-            const file = Array.isArray(fileOrFiles) 
-                ? (fileOrFiles.length === 1 ? fileOrFiles[0] : null)
-                : fileOrFiles;
+            // Get files to share (single or multiple)
+            const filesToShare = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
             
-            if (file) {
-                setShareFile_modal(file);
+            if (filesToShare.length === 0) {
+                console.warn('[FilePageWrapper] No files to share');
+                return;
+            }
+            
+            // For bulk sharing: share each file separately
+            // The ShareModal handles one file at a time
+            // We'll process them sequentially
+            if (filesToShare.length === 1) {
+                setShareFile_modal(filesToShare[0]);
             } else {
-                console.warn('[FilePageWrapper] Share requires exactly 1 file selected');
+                // Bulk share: open modal for first file
+                // Store remaining files for sequential processing
+                console.log(`[FilePageWrapper] Bulk share initiated: ${filesToShare.length} files`);
+                setShareFile_modal({ ...filesToShare[0], bulkFiles: filesToShare });
             }
             return;
         }
@@ -358,6 +367,7 @@ function FilePageWrapper({
             {/* Text Document Viewer for docs */}
             {previewFile && previewFile.type === 'docs' && (
                 <TextDocumentViewer
+                    key={previewFile.id}
                     fileId={previewFile.id}
                     fileName={previewFile.name}
                     permissionLevel={

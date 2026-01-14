@@ -81,11 +81,11 @@ function NewButton({ parentId = null }) {
         const file = e.target.files?.[0];
         if (!file || !token) return;
 
-        // Check file size (15MB limit)
-        const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB in bytes
+        // Check file size (10MB limit)
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
         if (file.size > MAX_FILE_SIZE) {
             const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-            alert(`File is too large (${fileSizeMB}MB). Maximum allowed size is 15MB.`);
+            alert(`File is too large (${fileSizeMB}MB). Maximum allowed size is 10MB.`);
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }

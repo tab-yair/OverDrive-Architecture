@@ -299,8 +299,14 @@ export function FilesProvider({ children }) {
                 });
             }
             
-            // Emit FILES_UPDATED event so all pages (including nested folders) can refresh
-            notifyFilesUpdated();
+            // CRITICAL FIX: Don't invalidate all endpoints for content updates
+            // Content updates (save) should NOT trigger full page refetches
+            // The filesMap is already updated optimistically above (line 277-290)
+            // Only notify for non-content updates that affect file lists (name, parentId, etc.)
+            if (updates.content === undefined) {
+                // Emit FILES_UPDATED event so all pages (including nested folders) can refresh
+                notifyFilesUpdated();
+            }
             
             return { success: true, error: null };
         } catch (error) {
@@ -515,7 +521,10 @@ export function FilesProvider({ children }) {
         let filtered = allFiles;
         
         if (endpoint === 'mydrive') {
-            filtered = allFiles.filter(f => !f.isTrashed && f.parentId === null);
+            // CRITICAL FIX: Only show files owned by current user
+            // Before: showed all files with parentId=null (including shared files!)
+            // After: filter by ownerId to ensure only user's own files appear
+            filtered = allFiles.filter(f => !f.isTrashed && f.parentId === null && f.ownerId === user?.id);
         } else if (endpoint === 'shared') {
             filtered = allFiles.filter(f => f.sharedPermissionLevel && !f.isTrashed);
         } else if (endpoint === 'recent') {

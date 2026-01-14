@@ -65,6 +65,9 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
     }, [fileId, fetchFileContent]);
 
     // Sync content from filesMap when file updates from server (after save)
+    // CRITICAL FIX: Use filesMap.size as dependency instead of filesMap to prevent flickering
+    // This prevents re-running when filesMap reference changes but size stays same
+    const filesMapSize = filesMap.size;
     useEffect(() => {
         if (!hasUnsavedChanges && !loading && !saving) {
             const currentFile = filesMap.get(fileId);
@@ -74,7 +77,7 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
                 setOriginalContent(currentFile.content);
             }
         }
-    }, [filesMap, fileId, hasUnsavedChanges, loading, saving, originalContent]);
+    }, [filesMapSize, fileId, hasUnsavedChanges, loading, saving, originalContent, filesMap]);
 
     // Track changes
     useEffect(() => {
