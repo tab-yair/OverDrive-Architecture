@@ -349,6 +349,38 @@ export const formatRecentActivity = (actionObj) => {
 
 /**
  * ═══════════════════════════════════════════════════════════════════
+ * LOCATION DISPLAY - SINGLE SOURCE OF TRUTH (SSOT)
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * Unified function for calculating location display text.
+ * Used by both FileRow and InfoSidebar to ensure consistency.
+ * 
+ * Rules:
+ * 1. If file is at root (parentId = null): "My Drive"
+ * 2. If user has no access to parent folder: "Shared with me"
+ * 3. Otherwise: Show parent folder name
+ * 
+ * @param {Object} file - File object with location data and canAccessParent flag
+ * @returns {string} Display text for location
+ */
+export const getLocationDisplayName = (file) => {
+  // If file is at root level
+  const locationData = file.location || file.originalLocation;
+  if (!locationData || locationData.isRoot) {
+    return 'My Drive';
+  }
+
+  // If no access to parent folder, show "Shared with me"
+  if (file.parentId && !file.canAccessParent) {
+    return 'Shared with me';
+  }
+
+  // Otherwise show parent folder name
+  return locationData.parentName || 'Unknown Folder';
+};
+
+/**
+ * ═══════════════════════════════════════════════════════════════════
  * ARCHITECTURAL REFACTOR: "ACTION REGISTRY" PATTERN
  * ═══════════════════════════════════════════════════════════════════
  * 

@@ -56,6 +56,32 @@
   color: var(--text-secondary, #666);
 }
 
+.move-modal__my-drive-btn {
+  border: 1px solid var(--border-color, #ddd);
+  background: var(--bg-secondary, #f8f8f8);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-primary, #111);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  height: 40px;
+}
+
+.move-modal__my-drive-btn:hover {
+  background: var(--accent-color, #4a90e2);
+  color: #fff;
+  border-color: var(--accent-color, #4a90e2);
+}
+
+.move-modal__my-drive-text {
+  font-weight: 500;
+}
+
 .move-modal__list {
   flex: 1;
   overflow: auto;
@@ -84,6 +110,18 @@
 .move-modal__row.selected {
   border-color: var(--accent-color, #4a90e2);
   background: rgba(74, 144, 226, 0.1);
+}
+
+.move-modal__row.my-drive {
+  font-weight: 500;
+  color: var(--accent-color, #4a90e2);
+  margin-bottom: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color, #e5e5e5);
+}
+
+.move-modal__row.my-drive:hover {
+  background: rgba(74, 144, 226, 0.05);
 }
 
 .move-modal__name {

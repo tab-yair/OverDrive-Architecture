@@ -15,7 +15,6 @@ const PreviewModal = ({ fileId, fileName, fileType, onClose }) => {
     const { fetchFileContent } = useFilesContext();
     
     const isImage = fileType === 'image';
-    const isPdf = fileType === 'pdf';
 
     useEffect(() => {
         const fetchFile = async () => {
@@ -71,6 +70,7 @@ const PreviewModal = ({ fileId, fileName, fileType, onClose }) => {
                 URL.revokeObjectURL(blobUrl);
             }
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fileId, fetchFileContent]);
 
     // Handle Escape key

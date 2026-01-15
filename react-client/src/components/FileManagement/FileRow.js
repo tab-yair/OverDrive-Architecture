@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import ActionButton from './ActionButton';
 import FileActionMenu from './FileActionMenu';
-import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatSmartDate, formatRecentActivity, getFallbackValue } from './fileUtils';
+import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatRecentActivity, getFallbackValue, getLocationDisplayName } from './fileUtils';
 import { useAuth } from '../../context/AuthContext';
+import { useFilesContext } from '../../context/FilesContext';
 import './FileRow.css';
 
 /**
@@ -19,7 +20,7 @@ import './FileRow.css';
  * @param {Function} props.onClick - Callback when row is clicked
  */
 const FileRow = ({ 
-  file, 
+  file: fileProp, 
   pageContext = 'MyDrive', 
   permissionLevel = 'viewer', 
   isOwner = true, 
@@ -34,6 +35,11 @@ const FileRow = ({
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const menuButtonRef = useRef(null);
   const { user } = useAuth();
+  const filesContext = useFilesContext();
+  
+  // CRITICAL: Always use fresh data from FilesContext like InfoSidebar does
+  // This ensures location is computed with the latest parent folder data
+  const file = filesContext.getFile(fileProp.id) || fileProp;
 
   // Helper to get file icon
   const getFileIconSrc = (type) => {
@@ -168,11 +174,12 @@ const FileRow = ({
     if (isLocation) {
       const locationData = file.location || file.originalLocation;
       if (locationData) {
-        const locationName = locationData.isRoot ? 'My Drive' : locationData.parentName;
+        // Use SSOT function from fileUtils for location display
+        const displayName = getLocationDisplayName(file);
         return (
-          <div className="metadata-location" title={locationName}>
+          <div className="metadata-location" title={displayName}>
             <img src={`${process.env.PUBLIC_URL}/assets/folder.svg`} alt="" className="location-icon" />
-            <span>{locationName}</span>
+            <span>{displayName}</span>
           </div>
         );
       }

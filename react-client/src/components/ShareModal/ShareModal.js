@@ -26,7 +26,7 @@ const ShareModal = ({ file, onShare, onClose }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
-    const [currentFileIndex, setCurrentFileIndex] = useState(0);
+    const [currentFileIndex] = useState(0);
     const inputRef = useRef(null);
     
     // Extract bulk files if present

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import './InfoSidebar.css';
-import { formatFileSize, formatSmartDate, icons } from './fileUtils';
+import { formatFileSize, formatSmartDate, icons, getLocationDisplayName } from './fileUtils';
 import PermissionsManager from '../PermissionsManager/PermissionsManager';
 import { useFilesContext } from '../../context/FilesContext';
 import { useAuth } from '../../context/AuthContext';
@@ -276,7 +276,6 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                           if (!perm) return;
                           
                           // VALIDATION: Check if action is allowed (SSOT)
-                          const targetUser = permissions.find(p => p.userId === userId);
                           const validation = validatePermissionAction(
                             { role: perm.level?.toLowerCase(), isInherited: perm.isInherited },
                             newRole
@@ -408,7 +407,7 @@ const InfoSidebar = ({ fileId, isOpen, onClose }) => {
                   alt="folder" 
                   className="info-sidebar__location-icon"
                 />
-                {file.location ? (file.location.isRoot ? 'My Drive' : file.location.parentName) : 'My Drive'}
+                {getLocationDisplayName(file)}
               </div>
             </div>
 
