@@ -92,18 +92,25 @@ export const userApi = {
      * Updates user profile fields (password, names, image).
      */
     async updateUser(token, userId, updates) {
+        const payload = { ...updates };
+        
         const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
             method: 'PATCH',
             headers: getAuthHeaders(token),
-            body: JSON.stringify(updates)
+            body: JSON.stringify(payload)
         });
         
         if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.message || 'Failed to update user profile');
+            // Look for 'error' field instead of 'message' to match the server response
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error || errorData.message || 'Failed to update user profile';
+            
+            // Create a custom error object that carries the server's error data
+            const error = new Error(errorMessage);
+            error.response = { data: errorData }; 
+            throw error;
         }
 
-        // No content returned on success
         if (response.status === 204) {
             return { success: true };
         }

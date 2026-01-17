@@ -30,22 +30,33 @@ const createUser = asyncHandler(async (req, res) => {
     // Normalize optional fields: set to null if not provided
     const normalizedLastName = lastName !== undefined ? lastName : null;
 
-    // Call service to create user
-    const user = await userService.createUser({ 
-        username, 
-        password, 
-        firstName, 
-        lastName: normalizedLastName, 
-        profileImage 
-    });
+    try {
+        // Call service to create user
+        const user = await userService.createUser({ 
+            username, 
+            password, 
+            firstName, 
+            lastName: normalizedLastName, 
+            profileImage 
+        });
 
-    // Automatically create default preferences for the new user
-    await preferenceService.createDefaultPreference(user.id);
+        // Automatically create default preferences for the new user
+        await preferenceService.createDefaultPreference(user.id);
 
-    // Return 201 Created with user (without password for security)
-    res.status(201)
-       .location(`/api/users/${user.id}`)
-       .json(user);
+        // Return 201 Created with user (without password for security)
+        res.status(201)
+           .location(`/api/users/${user.id}`)
+           .json(user);
+    } catch (err) {
+        // Handle password validation errors
+        if (err.message && err.message.includes('Password must contain')) {
+            return res.status(400).json({ 
+                error: 'Password must contain both letters and numbers and contain minimum 8 characters' 
+            });
+        }
+        // Re-throw other errors to be handled by errorHandler middleware
+        throw err;
+    }
 });
 
 /**
@@ -150,15 +161,15 @@ const updateUser = asyncHandler(async (req, res) => {
         throw error;
     }
 
-    const { password, firstName, lastName, profileImage, preferences, ...extraFields } = req.body;
+    const { password, currentPassword, firstName, lastName, profileImage, preferences, ...extraFields } = req.body;
 
     // Check for unexpected fields (username cannot be updated)
-    const allowedFields = ['password', 'firstName', 'lastName', 'profileImage', 'preferences'];
+    const allowedFields = ['password', 'currentPassword', 'firstName', 'lastName', 'profileImage', 'preferences'];
     const receivedFields = Object.keys(req.body);
     const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
     
     if (invalidFields.length > 0) {
-        const error = new Error(`Invalid fields: ${invalidFields.join(', ')}. Only password, firstName, lastName, profileImage, and preferences can be updated`);
+        const error = new Error(`Invalid fields: ${invalidFields.join(', ')}. Only password, currentPassword, firstName, lastName, profileImage, and preferences can be updated`);
         error.status = 400;
         throw error;
     }
@@ -170,6 +181,31 @@ const updateUser = asyncHandler(async (req, res) => {
         throw error;
     }
 
+    // If password is being changed, currentPassword must be provided for verification
+    if (password !== undefined && !currentPassword) {
+        const error = new Error('Current password is required to change password');
+        error.status = 400;
+        throw error;
+    }
+
+    // If password is being changed, verify current password first
+    if (password !== undefined) {
+        try {
+            // Get the user's email for authentication
+            const user = await userService.getUserById({ userId: id });
+            const username = user.username;
+
+            // Authenticate with current password
+            const authenticatedUser = await userService.authenticate({ username, password: currentPassword });
+            if (!authenticatedUser) {
+                return res.status(401).json({ error: 'Incorrect current password' });
+            }
+        } catch (authErr) {
+            // If authentication fails for any reason, it's an incorrect password
+            return res.status(401).json({ error: 'Incorrect current password' });
+        }
+    }
+
     // Build updates object with only provided fields
     const updates = {};
     if (password !== undefined) updates.password = password;
@@ -178,27 +214,38 @@ const updateUser = asyncHandler(async (req, res) => {
     if (profileImage !== undefined) updates.profileImage = profileImage;
     if (preferences !== undefined) updates.preferences = preferences;
 
-    // Call service to update user
-    await userService.updateUser({ userId: id, updates });
+    try {
+        // Call service to update user
+        await userService.updateUser({ userId: id, updates });
 
-    // If preferences were updated, also update the Preference table
-    // Preferences come as { theme, landingPage } from frontend
-    if (preferences !== undefined) {
-        const preferenceUpdates = {};
-        if (preferences.theme !== undefined) preferenceUpdates.theme = preferences.theme;
-        if (preferences.landingPage !== undefined) preferenceUpdates.landingPage = preferences.landingPage;
-        
-        if (Object.keys(preferenceUpdates).length > 0) {
-            await preferenceService.updateUserPreference({
-                userId: id,
-                updates: preferenceUpdates,
-                requestingUserId: id
+        // If preferences were updated, also update the Preference table
+        // Preferences come as { theme, landingPage } from frontend
+        if (preferences !== undefined) {
+            const preferenceUpdates = {};
+            if (preferences.theme !== undefined) preferenceUpdates.theme = preferences.theme;
+            if (preferences.landingPage !== undefined) preferenceUpdates.landingPage = preferences.landingPage;
+            
+            if (Object.keys(preferenceUpdates).length > 0) {
+                await preferenceService.updateUserPreference({
+                    userId: id,
+                    updates: preferenceUpdates,
+                    requestingUserId: id
+                });
+            }
+        }
+
+        // Return 204 No Content
+        res.status(204).end();
+    } catch (err) {
+        // Handle password validation errors from service
+        if (err.message && err.message.includes('Password must contain')) {
+            return res.status(400).json({ 
+                error: 'Password must contain both letters and numbers and contain minimum 8 characters' 
             });
         }
+        // Re-throw other errors to be handled by errorHandler middleware
+        throw err;
     }
-
-    // Return 204 No Content
-    res.status(204).end();
 });
 
 module.exports = {

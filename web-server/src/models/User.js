@@ -22,14 +22,13 @@ class User {
         if (!emailResult.valid) {
             return `Invalid email: ${emailResult.reason}`;
         }
-        if (!data.password || data.password.length < 8) {
-            return "Password must be at least 8 characters";
+        if (!data.password) {
+            return "Password is required";
         }
-        // Validate password contains both numbers and letters
-        const hasNumber = /\d/.test(data.password);
-        const hasLetter = /[a-zA-Z]/.test(data.password);
-        if (!hasNumber || !hasLetter) {
-            return "Password must contain both letters and numbers";
+        // Validate password strength: minimum 8 characters with at least one letter and one number
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        if (!passwordRegex.test(data.password)) {
+            return "Password must contain both letters and numbers (minimum 8 characters)";
         }
         if (!data.firstName) {
             return "First name is required";

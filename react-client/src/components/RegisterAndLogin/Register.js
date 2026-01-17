@@ -54,9 +54,10 @@ function Register() {
             return;
         }
 
-        // 2. Password Length Validation - Aligned with Server (8 chars)
-        if (formData.password.length < 8) {
-            setError('Password must be at least 8 characters');
+        // 2. Password Strength Validation - minimum 8 chars with letters and numbers
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        if (!passwordRegex.test(formData.password)) {
+            setError('Password must contain both letters and numbers and contain minimum 8 characters');
             return;
         }
 
@@ -74,7 +75,15 @@ function Register() {
             // Navigate to login with a success message in state
             navigate('/login', { state: { message: 'Account created! Please sign in.' } });
         } catch (err) {
-            setError(err.message || 'Registration failed.');
+            // Extract specific error message from server response
+            let errorMessage = err.message || 'Registration failed.';
+            
+            // If the error object has more detailed information, use it
+            if (err.response?.data?.error) {
+                errorMessage = err.response.data.error;
+            }
+            
+            setError(errorMessage);
         }
     };
 
