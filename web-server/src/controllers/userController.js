@@ -88,7 +88,7 @@ const searchUserByEmail = asyncHandler(async (req, res) => {
 /**
  * GET /api/users/:id
  * Get user profile information
- * - Owner: Full profile (id, username, firstName, lastName, profileImage, storageUsed, createdAt, modifiedAt)
+ * - Owner: Full profile (id, username, firstName, lastName, profileImage, storageUsed, createdAt, modifiedAt, preferences)
  * - Non-owner: Limited profile (id, firstName, lastName, username, profileImage)
  */
 const getUserById = asyncHandler(async (req, res) => {
@@ -98,9 +98,28 @@ const getUserById = asyncHandler(async (req, res) => {
     // Call service to get user
     const user = await userService.getUserById({ userId: id });
 
-    // If requester is the owner, return full profile
+    // If requester is the owner, return full profile with preferences
     if (id === requestingUserId) {
-        res.status(200).json(user);
+        // Fetch preferences and merge into user object
+        const preference = await preferenceService.getUserPreference({ 
+            userId: id, 
+            requestingUserId: id 
+        });
+        
+        // Convert Preference model to user preferences format
+        // Map: landingPage -> startPage
+        const userPreferences = {
+            theme: preference?.theme || 'system',
+            startPage: preference?.landingPage || 'home'
+        };
+        
+        // Include preferences in the response
+        const userWithPreferences = {
+            ...user,
+            preferences: userPreferences
+        };
+        
+        res.status(200).json(userWithPreferences);
         return;
     }
 
@@ -118,7 +137,7 @@ const getUserById = asyncHandler(async (req, res) => {
 
 /**
  * PATCH /api/users/:id
- * Update user profile information
+ * Update user profile information and/or preferences
  */
 const updateUser = asyncHandler(async (req, res) => {
     const { id } = req.params;
@@ -131,22 +150,22 @@ const updateUser = asyncHandler(async (req, res) => {
         throw error;
     }
 
-    const { password, firstName, lastName, profileImage, ...extraFields } = req.body;
+    const { password, firstName, lastName, profileImage, preferences, ...extraFields } = req.body;
 
     // Check for unexpected fields (username cannot be updated)
-    const allowedFields = ['password', 'firstName', 'lastName', 'profileImage'];
+    const allowedFields = ['password', 'firstName', 'lastName', 'profileImage', 'preferences'];
     const receivedFields = Object.keys(req.body);
     const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
     
     if (invalidFields.length > 0) {
-        const error = new Error(`Invalid fields: ${invalidFields.join(', ')}. Only password, firstName, lastName, and profileImage can be updated`);
+        const error = new Error(`Invalid fields: ${invalidFields.join(', ')}. Only password, firstName, lastName, profileImage, and preferences can be updated`);
         error.status = 400;
         throw error;
     }
 
     // At least one field must be provided
-    if (password === undefined && firstName === undefined && lastName === undefined && profileImage === undefined) {
-        const error = new Error('At least one field (password, firstName, lastName, profileImage) must be provided');
+    if (password === undefined && firstName === undefined && lastName === undefined && profileImage === undefined && preferences === undefined) {
+        const error = new Error('At least one field (password, firstName, lastName, profileImage, preferences) must be provided');
         error.status = 400;
         throw error;
     }
@@ -157,9 +176,26 @@ const updateUser = asyncHandler(async (req, res) => {
     if (firstName !== undefined) updates.firstName = firstName;
     if (lastName !== undefined) updates.lastName = lastName;
     if (profileImage !== undefined) updates.profileImage = profileImage;
+    if (preferences !== undefined) updates.preferences = preferences;
 
     // Call service to update user
     await userService.updateUser({ userId: id, updates });
+
+    // If preferences were updated, also update the Preference table
+    // Preferences come as { theme, landingPage } from frontend
+    if (preferences !== undefined) {
+        const preferenceUpdates = {};
+        if (preferences.theme !== undefined) preferenceUpdates.theme = preferences.theme;
+        if (preferences.landingPage !== undefined) preferenceUpdates.landingPage = preferences.landingPage;
+        
+        if (Object.keys(preferenceUpdates).length > 0) {
+            await preferenceService.updateUserPreference({
+                userId: id,
+                updates: preferenceUpdates,
+                requestingUserId: id
+            });
+        }
+    }
 
     // Return 204 No Content
     res.status(204).end();

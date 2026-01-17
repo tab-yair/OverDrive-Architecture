@@ -27,8 +27,13 @@ export function useUserChange(callback, deps = []) {
         const currentUserId = user?.id || null;
         const prevUserId = prevUserIdRef.current;
 
-        // Detect user change (including logout: user -> null, login: null -> user, or switch: user1 -> user2)
+        // ONLY trigger if ID changed AND we have preference data (if logged in)
+        const isLoggingIn = !prevUserId && currentUserId;
+        const hasPrefs = user?.preferences !== undefined;
+
         if (prevUserId !== currentUserId) {
+            if (isLoggingIn && !hasPrefs) return; // Wait for prefs
+            
             // Update ref for next comparison
             prevUserIdRef.current = currentUserId;
             
@@ -36,7 +41,7 @@ export function useUserChange(callback, deps = []) {
             callbackRef.current();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, ...deps]);
+    }, [user?.id, JSON.stringify(user?.preferences), ...deps]);
 }
 
 export default useUserChange;

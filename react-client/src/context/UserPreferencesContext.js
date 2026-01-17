@@ -12,13 +12,8 @@ const UserPreferencesContext = createContext(null);
  * Manages user preferences and storage info
  */
 export function UserPreferencesProvider({ children }) {
-    const { user, token, isAuthenticated } = useAuth();
-
-    // User preferences state
-    const [preferences, setPreferences] = useState({
-        theme: 'system',
-        startPage: 'home'
-    });
+    const { user, token, isAuthenticated, refreshUser, notifyUserUpdate } = useAuth();
+    const [preferences, setPreferences] = useState({ theme: 'system', startPage: 'home' });
 
     // Storage info state
     const [storageInfo, setStorageInfo] = useState(null);
@@ -26,18 +21,20 @@ export function UserPreferencesProvider({ children }) {
     const [storageError, setStorageError] = useState(null);
 
     // Load preferences when user logs in
+    // Prioritize server preferences (landingPage from Preference table)
     useEffect(() => {
-        if (isAuthenticated && user?.id) {
-            const savedPrefs = userApi.getPreferences(user.id);
-            setPreferences(savedPrefs);
-        } else {
-            // Reset to defaults when logged out
-            setPreferences({
-                theme: 'system',
-                startPage: 'home'
-            });
+        if (isAuthenticated && user) {
+            if (user.preferences) {
+                const serverStartPage = user.preferences.landingPage || user.preferences.startPage || 'home';
+                setPreferences({
+                    theme: user.preferences.theme || 'system',
+                    startPage: serverStartPage
+                });
+            } 
+        } else if (!isAuthenticated) {
+            setPreferences({ theme: 'system', startPage: 'home' });
         }
-    }, [isAuthenticated, user?.id]);
+    }, [isAuthenticated, user]);
 
     // Fetch storage info when authenticated
     const refreshStorage = useCallback(async () => {
@@ -86,20 +83,33 @@ export function UserPreferencesProvider({ children }) {
 
     /**
      * Update a preference
-     * @param {string} key - Preference key
+     * Maps frontend startPage to backend landingPage
+     * @param {string} key - Preference key (theme or startPage)
      * @param {any} value - Preference value
      */
-    const updatePreference = useCallback((key, value) => {
-        if (!isAuthenticated || !user?.id) return;
+    const updatePreference = useCallback(async (key, value) => {
+        if (!isAuthenticated || !user?.id || !token) return;
 
-        setPreferences(prev => {
-            const updated = { ...prev, [key]: value };
-            // TODO: Replace localStorage with API call when server implements
-            // PATCH /api/users/:id/preferences
-            userApi.updatePreferences(user.id, { [key]: value });
-            return updated;
-        });
-    }, [isAuthenticated, user?.id]);
+        // Store previous preferences for rollback
+        const previousPrefs = preferences;
+        
+        // Update local state IMMEDIATELY for optimistic UI - radio button reacts instantly
+        const newPrefs = { ...preferences, [key]: value };
+        setPreferences(newPrefs);
+
+        try {
+            // Send to API - will be mapped to landingPage on backend
+            await userApi.updatePreferences(token, user.id, newPrefs);
+            
+            // Refresh user data to ensure state is in sync
+            if (refreshUser) await refreshUser();
+            if (notifyUserUpdate) notifyUserUpdate();
+        } catch (err) {
+            console.error("Failed to update preferences:", err);
+            // Revert optimistic update on error
+            setPreferences(previousPrefs);
+        }
+    }, [isAuthenticated, user?.id, token, preferences, refreshUser, notifyUserUpdate]);
 
     // Context value to provide to consumers
     const value = {

@@ -24,8 +24,12 @@ const Login = () => {
     try {
       const { token, userId } = await apiService.login(username, password);
       const userProfile = await apiService.getUserProfile(token, userId);
+      
       login(token, userProfile);
-      navigate('/home');
+
+      // Let AuthContext handle the redirect based on preferences
+      console.log('Login successful. AuthContext will handle redirect.');
+      navigate('/');
     } catch (err) {
       setError(err.message);
     }

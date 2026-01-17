@@ -1,7 +1,7 @@
 const { EmailValidator } = require('./EmailValidator.js');
 
 class User {
-    constructor(id, username, password, firstName, lastName = null, profileImage) {
+    constructor(id, username, password, firstName, lastName = null, profileImage, preferences = null) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -12,6 +12,7 @@ class User {
         const now = new Date().toISOString();
         this.createdAt = now;
         this.modifiedAt = now;
+        this.preferences = preferences || { theme: 'system', startPage: 'home' };
     }
     
     // Basic user data validation
@@ -49,6 +50,10 @@ class User {
     static toSafeObject(user) {
         if (!user) return null;
         const { password, ...safeUser } = user;
+        // Ensure preferences are included
+        if (!safeUser.preferences) {
+            safeUser.preferences = { theme: 'system', startPage: 'home' };
+        }
         return Object.freeze(safeUser); // now immutable
     }
 }

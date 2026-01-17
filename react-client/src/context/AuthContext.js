@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
           setToken(savedToken);
           setUser(normalizedUser);
         } catch (error) {
-          // Token is invalid or expired, clear it
+          // If token is invalid or expired, clear it
           console.error('Failed to restore session:', error);
           localStorage.removeItem('token');
           setToken(null);
@@ -57,11 +57,8 @@ export const AuthProvider = ({ children }) => {
     if (!userData || typeof userData !== 'object') return null;
 
     const normalized = { ...userData };
-    
-    // Ensure id field exists
     normalized.id = normalized.id || normalized.userId || normalized._id;
     
-    // Ensure displayName exists
     if (!normalized.displayName) {
       normalized.displayName = `${normalized.firstName || ''} ${normalized.lastName || ''}`.trim();
     }
@@ -95,7 +92,6 @@ export const AuthProvider = ({ children }) => {
     if (!token || !user?.id) return;
 
     const handleStorageChange = async (e) => {
-      // Only respond to our specific event key
       if (e.key === USER_UPDATE_EVENT_KEY && e.newValue) {
         try {
           await refreshUser();
@@ -105,9 +101,7 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    // Listen to storage events (fired when localStorage changes in OTHER tabs)
     window.addEventListener('storage', handleStorageChange);
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -120,10 +114,12 @@ export const AuthProvider = ({ children }) => {
   const login = (newToken, userData) => {
     const normalizedUser = normalizeUserData(userData);
 
+    Object.keys(localStorage).forEach(key => {
+        if (key.includes('preferences')) localStorage.removeItem(key);
+    });
+
     setToken(newToken);
     setUser(normalizedUser);
-    
-    // Only save token to localStorage
     localStorage.setItem('token', newToken);
   };
 
@@ -132,13 +128,10 @@ export const AuthProvider = ({ children }) => {
    * Uses setTimeout to ensure state clears before navigation
    */
   const logout = useCallback(() => {
-    // Clear state first
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
     
-    // Navigate after state update completes
-    // This prevents race condition with ProtectedRoute
     setTimeout(() => {
       navigate('/');
     }, 0);
@@ -149,16 +142,12 @@ export const AuthProvider = ({ children }) => {
    * Call this after any PATCH/PUT to user data
    */
   const notifyUserUpdate = () => {
-    // Set a timestamp in localStorage to trigger storage event in other tabs
     localStorage.setItem(USER_UPDATE_EVENT_KEY, Date.now().toString());
-    
-    // Clean up after a short delay to avoid cluttering localStorage
     setTimeout(() => {
       localStorage.removeItem(USER_UPDATE_EVENT_KEY);
     }, 100);
   };
 
-  // the context value that will be supplied to any descendants of this provider
   const value = {
     token,
     user,
@@ -167,12 +156,11 @@ export const AuthProvider = ({ children }) => {
     refreshUser,
     notifyUserUpdate,
     loading,
-    isAuthenticated: !!token // converts the token to a boolean (true/false)
+    isAuthenticated: !!token
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {/* don't render children until we've checked localStorage */}
       {!loading && children}
     </AuthContext.Provider>
   );

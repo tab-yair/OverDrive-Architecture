@@ -15,7 +15,7 @@ class Preference {
         }
 
         // Validate landingPage
-        const validLandingPages = ['home', 'storage'];
+        const validLandingPages = ['home', 'storage', 'mydrive'];
         if (!validLandingPages.includes(landingPage)) {
             throw new Error(`Invalid landingPage: ${landingPage}. Must be one of: ${validLandingPages.join(', ')}`);
         }
@@ -44,7 +44,7 @@ class Preference {
 
         // Validate landingPage if provided
         if (landingPage !== undefined) {
-            const validLandingPages = ['home', 'storage'];
+            const validLandingPages = ['home', 'storage', 'mydrive'];
             if (!validLandingPages.includes(landingPage)) {
                 return `Invalid landingPage: ${landingPage}. Must be one of: ${validLandingPages.join(', ')}`;
             }

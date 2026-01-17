@@ -1,13 +1,14 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
-import { UserPreferencesProvider } from '../context/UserPreferencesContext';
+import { UserPreferencesProvider, useUserPreferences } from '../context/UserPreferencesContext';
 import { FilesProvider } from '../context/FilesContext';
 import { NavigationProvider } from '../context/NavigationContext';
 import Layout from '../components/Layout/Layout';
 import ProtectedRoute from '../components/ProtectedRoute/ProtectedRoute';
 
-// Page imports - Keep the Page wrappers to maintain our Portal logic
+// Page imports
 import GuestLandingPage from '../pages/GuestLandingPage';
 import HomePage from '../pages/HomePage';
 import MyDrivePage from '../pages/MyDrivePage';
@@ -22,41 +23,56 @@ import SettingsPage from '../pages/SettingsPage';
 import GeneralSettingsPage from '../pages/GeneralSettingsPage';
 import AccountSettingsPage from '../pages/AccountSettingsPage';
 import GetMoreStoragePage from '../pages/GetMoreStoragePage';
-import LoginPage from '../pages/LoginPage'; // Fixed: Use the Page wrapper
-import SignupPage from '../pages/SignupPage'; // Fixed: Use the Page wrapper
-
-// Keep the test component from your HEAD
+import LoginPage from '../pages/LoginPage';
+import SignupPage from '../pages/SignupPage';
 import FileManagementExample from '../components/FileManagement/FileManagementExample';
 
 import './App.css';
 
 function AppRoutes() {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, loading, user } = useAuth();
+    const { preferences } = useUserPreferences();
+    const navigate = useNavigate();
+    const location = useLocation();
 
-    if (loading) {
-        return null;
-    }
+    // Logic for preferred landing page
+    const landingPage = user?.preferences?.landingPage || 
+                        user?.preferences?.startPage || 
+                        preferences?.startPage || 
+                        'home';
+    const userHomePath = landingPage === 'mydrive' ? '/mydrive' : '/home';
+
+    // Smart Redirect Effect: Handles initial landing on auth pages
+    useEffect(() => {
+        if (!loading && isAuthenticated) {
+            const authPaths = ['/', '/login', '/signup'];
+            if (authPaths.includes(location.pathname)) {
+                navigate(userHomePath, { replace: true });
+            }
+        }
+    }, [isAuthenticated, loading, userHomePath, location.pathname, navigate]);
+
+    if (loading) return null;
 
     return (
         <Routes>
-            {/* AUTH ROUTES */}
+            {/* Auth Pages */}
+            <Route 
+                path="/" 
+                element={isAuthenticated ? <Navigate to={userHomePath} replace /> : <GuestLandingPage />} 
+            />
             <Route 
                 path="/login" 
-                element={isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />} 
+                element={isAuthenticated ? <Navigate to={userHomePath} replace /> : <LoginPage />} 
             />
             <Route 
                 path="/signup" 
-                element={isAuthenticated ? <Navigate to="/home" replace /> : <SignupPage />} 
+                element={isAuthenticated ? <Navigate to={userHomePath} replace /> : <SignupPage />} 
             />
 
-            {/* MAIN APP ROUTES - Nested inside Layout */}
+            {/* MAIN APP ROUTES */}
             <Route element={<Layout />}>
                 <Route path="/test" element={<FileManagementExample />} />
-
-                <Route
-                    path="/"
-                    element={isAuthenticated ? <Navigate to="/home" replace /> : <GuestLandingPage />}
-                />
 
                 <Route element={<ProtectedRoute />}>
                     <Route path="/home" element={<HomePage />} />
@@ -76,9 +92,10 @@ function AppRoutes() {
                     </Route>
                 </Route>
 
+                {/* Catch-all route */}
                 <Route
                     path="*"
-                    element={isAuthenticated ? <Navigate to="/home" replace /> : <Navigate to="/" replace />}
+                    element={isAuthenticated ? <Navigate to={userHomePath} replace /> : <Navigate to="/" replace />}
                 />
             </Route>
         </Routes>

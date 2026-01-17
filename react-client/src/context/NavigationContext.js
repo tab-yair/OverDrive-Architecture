@@ -11,17 +11,16 @@ const NavigationContext = createContext();
  */
 export const NavigationProvider = ({ children }) => {
   const navigate = useNavigate();
-  // Breadcrumbs state removed
   const [currentFolderId, setCurrentFolderId] = useState(null);
   const [currentFolderPermissionLevel, setCurrentFolderPermissionLevel] = useState('viewer');
-
+  const { user } = useAuth();
   /**
    * Clear navigation state when user changes
    */
   useUserChange(() => {
     setCurrentFolderId(null);
-    navigate('/mydrive');
-  }, [navigate]);
+    // Navigation is handled by App.js and Login.js, not here
+  }, []);
 
   /**
    * Central handleOpen function - dispatches based on item type
@@ -32,7 +31,7 @@ export const NavigationProvider = ({ children }) => {
    */
   const handleOpen = useCallback((item) => {
     if (!item || !item.type) {
-      console.error('❌ Invalid item passed to handleOpen:', item);
+      console.error('Invalid item passed to handleOpen:', item);
       return;
     }
 

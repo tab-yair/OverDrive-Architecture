@@ -146,11 +146,32 @@ export const userApi = {
         return { theme: 'system', startPage: 'home' };
     },
 
-    updatePreferences(userId, preferences) {
-        const current = this.getPreferences(userId);
-        const updated = { ...current, ...preferences };
-        localStorage.setItem(`preferences_${userId}`, JSON.stringify(updated));
-        return updated;
+    updatePreferences: async (token, userId, preferences) => {
+        // Build payload with preferences object containing theme and landingPage
+        const payload = {
+            preferences: {
+                theme: preferences.theme || 'system',
+                landingPage: preferences.startPage || 'home'
+            }
+        };
+        
+        console.log('Payload being sent:', payload);
+        
+        const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(token),
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.log('Server Error:', errorData);
+            throw new Error(errorData.message || 'Failed to update preferences');
+        }
+        
+        // Store scoped to user ID to prevent data leakage
+        localStorage.setItem(`preferences_${userId}`, JSON.stringify(preferences));
+        return preferences;
     }
 };
 
