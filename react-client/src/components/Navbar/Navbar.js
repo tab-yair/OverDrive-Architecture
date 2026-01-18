@@ -50,10 +50,6 @@ function Navbar() {
             <div className="navbar-right">
                 {isAuthenticated ? (
                     <>
-                        {/* New button (top bar) */}
-                        <div className="navbar-new-btn-wrapper">
-                            <NewButton />
-                        </div>
                         {/* Theme toggle button */}
                         <button
                             className="navbar-icon-btn"
