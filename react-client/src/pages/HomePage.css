@@ -1,0 +1,101 @@
+.home-page {
+    max-width: 1000px; 
+    margin: 0 auto;
+    padding-bottom: 60px;
+    box-sizing: border-box;
+}
+
+.home-header-section {
+    margin-bottom: 40px;
+    text-align: left;
+}
+
+.home-header-section .page-title {
+    font-size: 32px;
+    margin-bottom: 12px;
+}
+
+/* Grid for Action Cards */
+.home-quick-actions {
+    display: grid;
+    /* Responsive grid that adjusts based on screen size without breaking width */
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+    margin-bottom: 64px;
+    width: 100%;
+}
+
+.action-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-card:hover {
+    background-color: var(--bg-hover);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-elevated);
+    border-color: var(--accent-color);
+}
+
+.action-icon {
+    font-size: 36px !important;
+    color: var(--accent-color);
+}
+
+.action-info h3 {
+    margin: 0;
+    font-size: 17px;
+    color: var(--text-primary);
+}
+
+.action-info p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* Showcase Section - Clean and professional info display */
+.home-content-showcase {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.showcase-text h3 {
+    font-size: 22px;
+    color: var(--accent-color);
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.showcase-text p {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    max-width: 850px;
+    margin: 0;
+}
+
+.showcase-divider {
+    height: 1px;
+    background: linear-gradient(to right, var(--border-color), transparent);
+    width: 100%;
+}
+
+/* Ensure responsiveness for smaller screens */
+@media (max-width: 768px) {
+    .home-header-section .page-title {
+        font-size: 26px;
+    }
+    
+    .home-quick-actions {
+        grid-template-columns: 1fr;
+    }
+}
