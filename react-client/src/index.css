@@ -123,20 +123,33 @@
     --bg-primary: #202124;
     --bg-secondary: #292a2d;
     --bg-sidebar: #292a2d;
+    --bg-tertiary: #35363a;           /* For elevated panels (filter, details) */
     --bg-hover: #3c4043;
     --bg-input: #303134;
     --text-primary: #e8eaed;
     --text-secondary: #9aa0a6;
+    --text-tertiary: #80868b;
     --border-color: #5f6368;
+    --border-subtle: rgba(255, 255, 255, 0.1);  /* Subtle border for elevation */
     --accent-color: #8ab4f8;
     --accent-hover: #aecbfa;
     --accent-light: #303134;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-    --shadow-elevated: 0 2px 6px rgba(0, 0, 0, 0.6);
-    --danger-color: #f28b82;
-    --danger-hover: #ee675c;
+    --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --danger-color: #F28B82;          /* Professional desaturated red */
+    --danger-hover: #E2726E;          /* Accessible darker red */
     --success-color: #81c995;
     --warning-color: #fdd663;
+    
+    /* Dark mode hover overlays */
+    --hover-overlay-light: rgba(232, 234, 237, 0.08);
+    --hover-overlay-medium: rgba(232, 234, 237, 0.12);
+    --hover-overlay-danger: rgba(242, 139, 130, 0.12);
+    --hover-overlay-danger-active: rgba(242, 139, 130, 0.18);
+    
+    /* Icon filter for dark mode - converts black to white/off-white */
+    --icon-filter: brightness(0) saturate(100%) invert(93%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(92%);
+    --icon-filter-secondary: brightness(0) saturate(100%) invert(70%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(90%);
 }
 
 /* Reset and base styles */
@@ -324,4 +337,81 @@ input:focus {
 
 .btn .material-symbols-outlined {
     font-size: 20px;
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+ * GLOBAL THEME TRANSITIONS
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Ensures all themed components transition smoothly between light/dark modes.
+ * Fixes inconsistent transition timing across components.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Universal smooth transition for themed properties */
+*,
+*::before,
+*::after {
+    transition-property: background-color, color, border-color, box-shadow, fill, stroke, filter;
+    transition-duration: 0.2s;
+    transition-timing-function: ease-in-out;
+}
+
+/* Preserve animation-specific transitions */
+.file-action-menu,
+.custom-dropdown-menu,
+.search-filter-panel {
+    transition: background-color 0.2s ease-in-out, 
+                color 0.2s ease-in-out, 
+                border-color 0.2s ease-in-out, 
+                box-shadow 0.2s ease-in-out,
+                opacity 0.15s ease-out,
+                transform 0.15s ease-out;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * GLOBAL DARK MODE ICON STYLING
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Ensures all file type icons and action icons are visible in dark mode.
+ * Icons transition from black in light mode to white/off-white in dark mode.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* File type icons - general class targeting */
+[data-theme="dark"] img.file-icon,
+[data-theme="dark"] img.file-card-icon,
+[data-theme="dark"] img.file-row-icon,
+[data-theme="dark"] img.folder-icon,
+[data-theme="dark"] .file-type-icon img,
+[data-theme="dark"] .info-sidebar__file-icon,
+[data-theme="dark"] .info-sidebar__location-icon {
+    filter: var(--icon-filter);
+}
+
+/* Material icons should use currentColor for theme awareness */
+[data-theme="dark"] .material-symbols-outlined {
+    color: inherit;
+}
+
+/* Ensure action button icons are visible in dark mode */
+[data-theme="dark"] .action-button-icon:not(.star-icon):not(.starred) {
+    filter: var(--icon-filter);
+}
+
+/* Star icons should maintain their gold color */
+.star-icon.starred,
+.action-button.starred .action-button-icon {
+    filter: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * DARK MODE DANGER/TRASH STYLING  
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Uses professional desaturated red (#F28B82) instead of harsh red.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"] .danger,
+[data-theme="dark"] .file-action-menu-item.danger,
+[data-theme="dark"] .file-action-menu-item.danger .file-action-menu-label {
+    color: var(--danger-color);
+}
+
+[data-theme="dark"] .file-action-menu-item.danger .file-action-menu-icon {
+    filter: brightness(0) saturate(100%) invert(73%) sepia(44%) saturate(594%) hue-rotate(314deg) brightness(101%) contrast(91%);
 }

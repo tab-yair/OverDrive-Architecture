@@ -24,7 +24,7 @@
 
 /* Modal Container */
 .rename-modal {
-    background: white;
+    background: var(--bg-primary, white);
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     width: 90%;
@@ -32,6 +32,16 @@
     max-height: 90vh;
     overflow: auto;
     animation: slideUp 0.3s ease-out;
+    transition: background-color 0.2s ease-in-out, 
+                border-color 0.2s ease-in-out, 
+                box-shadow 0.2s ease-in-out;
+}
+
+/* Dark mode elevation */
+[data-theme="dark"] .rename-modal {
+    background: var(--bg-tertiary, #35363a);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 
+                inset 0 1px 0 var(--border-subtle, rgba(255, 255, 255, 0.1));
 }
 
 @keyframes slideUp {
@@ -51,13 +61,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 20px 24px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .rename-modal__title {
     font-size: 20px;
     font-weight: 600;
-    color: #202124;
+    color: var(--text-primary, #202124);
     margin: 0;
 }
 
@@ -65,7 +75,7 @@
     background: none;
     border: none;
     font-size: 24px;
-    color: #5f6368;
+    color: var(--text-secondary, #5f6368);
     cursor: pointer;
     padding: 4px 8px;
     border-radius: 4px;
@@ -73,8 +83,8 @@
 }
 
 .rename-modal__close-btn:hover:not(:disabled) {
-    background: #f1f3f4;
-    color: #202124;
+    background: var(--bg-hover, #f1f3f4);
+    color: var(--text-primary, #202124);
 }
 
 .rename-modal__close-btn:disabled {
@@ -95,7 +105,7 @@
     display: block;
     font-size: 14px;
     font-weight: 500;
-    color: #5f6368;
+    color: var(--text-secondary, #5f6368);
     margin-bottom: 8px;
 }
 
@@ -103,19 +113,21 @@
     width: 100%;
     padding: 10px 12px;
     font-size: 14px;
-    border: 1px solid #dadce0;
+    border: 1px solid var(--border-color, #dadce0);
     border-radius: 4px;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color 0.2s ease-in-out;
     box-sizing: border-box;
+    background: var(--bg-primary, white);
+    color: var(--text-primary, #202124);
 }
 
 .rename-modal__input:focus {
-    border-color: #1a73e8;
+    border-color: var(--accent-color, #1a73e8);
 }
 
 .rename-modal__input:disabled {
-    background: #f1f3f4;
+    background: var(--bg-hover, #f1f3f4);
     cursor: not-allowed;
 }
 
@@ -148,22 +160,27 @@
 }
 
 .rename-modal__btn--cancel {
-    background: white;
-    color: #1a73e8;
-    border: 1px solid #dadce0;
+    background: var(--bg-primary, white);
+    color: var(--accent-color, #1a73e8);
+    border: 1px solid var(--border-color, #dadce0);
 }
 
 .rename-modal__btn--cancel:hover:not(:disabled) {
-    background: #f8f9fa;
+    background: var(--bg-hover, #f8f9fa);
 }
 
 .rename-modal__btn--save {
-    background: #1a73e8;
+    background: var(--accent-color, #1a73e8);
     color: white;
 }
 
 .rename-modal__btn--save:hover:not(:disabled) {
-    background: #1765cc;
+    background: var(--accent-hover, #1765cc);
+}
+
+/* Dark mode button text color fix */
+[data-theme="dark"] .rename-modal__btn--save {
+    color: #202124;
 }
 
 .rename-modal__btn:disabled {
@@ -171,7 +188,21 @@
     opacity: 0.5;
 }
 
-/* Dark Mode Support */
+/* Dark Mode Support using data-theme */
+[data-theme="dark"] .rename-modal__header {
+    border-bottom-color: var(--border-subtle, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme="dark"] .rename-modal__input {
+    background: var(--bg-secondary, #292a2d);
+    border-color: var(--border-color, #5f6368);
+}
+
+[data-theme="dark"] .rename-modal__input:disabled {
+    background: var(--bg-hover, #3c4043);
+}
+
+/* Legacy prefers-color-scheme fallback */
 @media (prefers-color-scheme: dark) {
     .rename-modal {
         background: #202124;

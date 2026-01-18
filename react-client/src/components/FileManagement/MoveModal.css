@@ -18,6 +18,38 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: background-color 0.2s ease-in-out, 
+              border-color 0.2s ease-in-out, 
+              box-shadow 0.2s ease-in-out;
+}
+
+/* Dark mode elevation */
+[data-theme="dark"] .move-modal {
+  background: var(--bg-tertiary, #35363a);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 
+              inset 0 1px 0 var(--border-subtle, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme="dark"] .move-modal__header {
+  border-bottom-color: var(--border-subtle, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme="dark"] .move-modal__search {
+  border-bottom-color: var(--border-subtle, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme="dark"] .move-modal__search input {
+  background: var(--bg-secondary, #292a2d);
+  color: var(--text-primary, #e8eaed);
+}
+
+[data-theme="dark"] .move-modal__breadcrumbs-footer {
+  background: var(--bg-secondary, #292a2d);
+  border-top-color: var(--border-subtle, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme="dark"] .move-modal__actions .btn.primary {
+  color: #202124;
 }
 
 .move-modal__header {

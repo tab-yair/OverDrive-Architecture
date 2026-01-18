@@ -63,13 +63,15 @@
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  transition: filter 0.2s ease-in-out;
   /* Icons use currentColor from SVG or have proper colors - no filters needed */
   color: var(--text-secondary);
 }
 
-/* Dark mode - icons automatically adjust via currentColor */
+/* Dark mode - file type icons should be white/off-white */
 [data-theme="dark"] .file-row-icon {
   color: var(--text-secondary);
+  filter: var(--icon-filter, brightness(0) saturate(100%) invert(93%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(92%)) !important;
 }
 
 .file-name-text {

@@ -11,6 +11,18 @@
   padding: 8px 0;
   z-index: 1000;
   animation: menuFadeIn 0.15s ease-out;
+  transition: background-color 0.2s ease-in-out, 
+              border-color 0.2s ease-in-out, 
+              box-shadow 0.2s ease-in-out;
+}
+
+/* Dark mode - elevated panel styling */
+[data-theme="dark"] .file-action-menu {
+  background-color: var(--bg-tertiary, #35363a);
+  border-color: var(--border-subtle, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 
+              0 16px 32px rgba(0, 0, 0, 0.4),
+              inset 0 1px 0 var(--border-subtle, rgba(255, 255, 255, 0.1));
 }
 
 @keyframes menuFadeIn {
@@ -57,11 +69,11 @@
 
 /* Danger actions (Move to Trash, Remove, Delete Permanently) */
 .file-action-menu-item.danger {
-  color: #d93025;
+  color: var(--danger-color, #d93025);
 }
 
 .file-action-menu-item.danger .file-action-menu-label {
-  color: #d93025;
+  color: var(--danger-color, #d93025);
 }
 
 .file-action-menu-item.danger:hover:not(.disabled) {
@@ -72,30 +84,36 @@
   background-color: var(--hover-overlay-danger-active);
 }
 
-/* Danger action icons should be red */
+/* Danger action icons - light mode (harsh red) */
 .file-action-menu-item.danger .file-action-menu-icon {
   filter: brightness(0) saturate(100%) invert(27%) sepia(93%) saturate(3181%) hue-rotate(349deg) brightness(92%) contrast(92%);
 }
 
+/* Danger action icons - dark mode (desaturated professional red #F28B82) */
 [data-theme="dark"] .file-action-menu-item.danger .file-action-menu-icon {
-  filter: brightness(0) saturate(100%) invert(42%) sepia(73%) saturate(2719%) hue-rotate(345deg) brightness(98%) contrast(91%);
+  filter: brightness(0) saturate(100%) invert(73%) sepia(44%) saturate(594%) hue-rotate(314deg) brightness(101%) contrast(91%);
 }
 
 .file-action-menu-icon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+  transition: filter 0.2s ease-in-out;
 }
 
-/* Dark mode - make icons visible (except star and share which have currentColor) */
-[data-theme="dark"] .file-action-menu-icon:not(.star-icon):not(.share-icon) {
-  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+/* Dark mode - make all icons white/off-white */
+[data-theme="dark"] .file-action-menu-icon {
+  filter: var(--icon-filter, brightness(0) saturate(100%) invert(93%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(92%));
 }
 
-/* Star and share icons should maintain their natural color - no filter */
-.file-action-menu-icon.star-icon,
-.file-action-menu-icon.share-icon {
+/* Star icon maintains gold color */
+.file-action-menu-icon.star-icon {
   filter: none;
+}
+
+/* Share icon - ensure it's white in dark mode */
+[data-theme="dark"] .file-action-menu-icon.share-icon {
+  filter: var(--icon-filter, brightness(0) saturate(100%) invert(93%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(92%));
 }
 
 .file-action-menu-label {

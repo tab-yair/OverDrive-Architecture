@@ -81,11 +81,16 @@
 
 /* Danger button styling in toolbar */
 .selection-toolbar-actions .danger-button {
-  color: #d93025;
+  color: var(--danger-color, #d93025);
 }
 
 .selection-toolbar-actions .danger-button:hover:not(.disabled) {
   background-color: var(--hover-overlay-danger);
+}
+
+/* Dark mode danger button icon filter */
+[data-theme="dark"] .selection-toolbar-actions .danger-button .action-button-icon {
+  filter: brightness(0) saturate(100%) invert(73%) sepia(44%) saturate(594%) hue-rotate(314deg) brightness(101%) contrast(91%);
 }
 
 /* Responsive */

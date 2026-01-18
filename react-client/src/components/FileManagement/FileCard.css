@@ -99,14 +99,15 @@
   width: 64px;
   height: 64px;
   object-fit: contain;
-  transition: transform var(--transition-normal);
+  transition: transform var(--transition-normal), filter 0.2s ease-in-out;
   /* Icons use currentColor from SVG or have proper colors - no filters needed */
   color: var(--text-secondary);
 }
 
-/* Dark mode - icons automatically adjust via currentColor */
+/* Dark mode - file type icons should be white/off-white */
 [data-theme="dark"] .file-card-icon {
   color: var(--text-secondary);
+  filter: var(--icon-filter, brightness(0) saturate(100%) invert(93%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(92%)) !important;
 }
 
 .file-card:hover .file-card-icon {
@@ -119,6 +120,11 @@
   height: 28px;
   filter: grayscale(1) brightness(0.5);
   transform: none;
+}
+
+/* Dark mode - banner folder icons should be white */
+[data-theme="dark"] .file-card.folder-card:not(.uniform-square) .file-card-icon.folder-icon {
+  filter: var(--icon-filter, brightness(0) saturate(100%) invert(93%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(92%));
 }
 
 .file-card.folder-card:not(.uniform-square):hover .file-card-icon.folder-icon {
