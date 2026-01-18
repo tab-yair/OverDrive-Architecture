@@ -25,6 +25,7 @@ import AccountSettingsPage from '../pages/AccountSettingsPage';
 import GetMoreStoragePage from '../pages/GetMoreStoragePage';
 import LoginPage from '../pages/LoginPage';
 import SignupPage from '../pages/SignupPage';
+import NotFoundPage from '../pages/NotFoundPage';
 import FileManagementExample from '../components/FileManagement/FileManagementExample';
 
 import './App.css';
@@ -92,11 +93,8 @@ function AppRoutes() {
                     </Route>
                 </Route>
 
-                {/* Catch-all route */}
-                <Route
-                    path="*"
-                    element={isAuthenticated ? <Navigate to={userHomePath} replace /> : <Navigate to="/" replace />}
-                />
+                {/* Catch-all route for 404 */}
+                <Route path="*" element={<NotFoundPage />} />
             </Route>
         </Routes>
     );
