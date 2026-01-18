@@ -12,10 +12,6 @@ function GuestLandingPage() {
     return (
         <div className="page guest-landing-page">
             <div className="landing-hero">
-                <div className="landing-icon">
-                    <Logo size="xl" showText={false} />
-                </div>
-
                 <h1 className="landing-title">
                     Welcome to <Logo size="lg" />
                 </h1>

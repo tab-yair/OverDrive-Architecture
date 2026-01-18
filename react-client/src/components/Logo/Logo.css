@@ -47,25 +47,25 @@
 .logo--md {
     --logo-icon-size: 36px;
     --logo-font-size: 24px;
-    --logo-gap: 0;
+    --logo-gap: 5px;
     --logo-icon-margin-right: -6px;
-    --logo-icon-margin-top: -2px;
+    --logo-icon-margin-top: -7px;
 }
 
 /* Large - for landing page title */
 .logo--lg {
     --logo-icon-size: 58px;
     --logo-font-size: 48px;
-    --logo-gap: 0;
+    --logo-gap: 8px;
     --logo-icon-margin-right: -10px;
-    --logo-icon-margin-top: -4px;
+    --logo-icon-margin-top: -6px;
 }
 
 /* Extra large - for landing hero icon */
 .logo--xl {
     --logo-icon-size: 100px;
     --logo-font-size: 48px;
-    --logo-gap: 0;
+    --logo-gap: 8px;
     --logo-icon-margin-right: 0;
     --logo-icon-margin-top: 0;
 }
