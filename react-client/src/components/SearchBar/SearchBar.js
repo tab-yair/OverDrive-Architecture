@@ -99,7 +99,7 @@ function SearchBar() {
     const typeOptions = [
         { value: '', label: 'Any type' },
         { value: 'folder', label: 'Folders' },
-        { value: 'docs', label: 'Documents' },
+        { value: 'txt', label: 'Text Files' },
         { value: 'pdf', label: 'PDFs' },
         { value: 'image', label: 'Images' }
     ];
