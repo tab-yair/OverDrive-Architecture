@@ -16,6 +16,11 @@ const asyncHandler = (fn) => (req, res, next) => {
 const getStatusFromError = (error) => {
     const message = error.message.toLowerCase();
 
+    // 507 Insufficient Storage - check FIRST for storage limit errors
+    if (message.includes('storage limit')) {
+        return 507;
+    }
+
     // 401 Unauthorized - check BEFORE 400 since "invalid username or password" contains "invalid"
     if (message.includes('invalid username or password') || message.includes('unauthorized')) {
         return 401;
@@ -82,6 +87,15 @@ const errorHandler = (err, req, res, next) => {
     const message = status === 500 && process.env.NODE_ENV === 'production'
         ? 'Internal server error'
         : err.message;
+
+    // For storage limit errors, include additional metadata for frontend
+    if (status === 507) {
+        return res.status(status).json({
+            error: message,
+            errorType: 'STORAGE_LIMIT_EXCEEDED',
+            isStorageLimitError: true
+        });
+    }
 
     res.status(status).json({ error: message });
 };

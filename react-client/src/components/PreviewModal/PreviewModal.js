@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useFilesContext } from '../../context/FilesContext';
 import './PreviewModal.css';
 
@@ -97,7 +98,8 @@ const PreviewModal = ({ fileId, fileName, fileType, onClose }) => {
         setZoom(100);
     };
 
-    return (
+    // Render via portal to escape any parent transforms/stacking contexts
+    return createPortal(
         <div className="preview-modal-overlay" onClick={onClose}>
             <div className="preview-modal-header" onClick={(e) => e.stopPropagation()}>
                 <h2 className="preview-modal-title" title={fileName}>{fileName}</h2>
@@ -186,7 +188,8 @@ const PreviewModal = ({ fileId, fileName, fileType, onClose }) => {
                     )
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

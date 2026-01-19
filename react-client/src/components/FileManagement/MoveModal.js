@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import './MoveModal.css';
 import { useAuth } from '../../context/AuthContext';
 import { filesApi } from '../../services/api';
@@ -193,7 +194,8 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
 
   if (!isOpen) return null;
 
-  return (
+  // Render via portal to escape any parent transforms/stacking contexts
+  return createPortal(
     <div className="move-modal-overlay" onClick={onClose}>
       <div className="move-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
@@ -277,7 +279,8 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

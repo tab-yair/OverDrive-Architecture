@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { userApi, filesApi } from '../../services/api';
 import './ShareModal.css';
@@ -185,7 +186,8 @@ const ShareModal = ({ file, onShare, onClose }) => {
 
     if (!file) return null;
 
-    return (
+    // Render via portal to escape any parent transforms/stacking contexts
+    return createPortal(
         <div className="share-modal-overlay" onClick={handleOverlayClick}>
             <div className="share-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="share-modal__header">
@@ -278,7 +280,8 @@ const ShareModal = ({ file, onShare, onClose }) => {
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

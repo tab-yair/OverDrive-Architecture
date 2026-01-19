@@ -5,8 +5,10 @@ import { ThemeProvider } from '../context/ThemeContext';
 import { UserPreferencesProvider, useUserPreferences } from '../context/UserPreferencesContext';
 import { FilesProvider } from '../context/FilesContext';
 import { NavigationProvider } from '../context/NavigationContext';
+import { StorageErrorProvider, useStorageError } from '../context/StorageErrorContext';
 import Layout from '../components/Layout/Layout';
 import ProtectedRoute from '../components/ProtectedRoute/ProtectedRoute';
+import StorageLimitModal from '../components/StorageLimitModal';
 
 // Page imports
 import GuestLandingPage from '../pages/GuestLandingPage';
@@ -100,6 +102,23 @@ function AppRoutes() {
     );
 }
 
+/**
+ * Global Storage Limit Modal wrapper
+ * Uses the StorageErrorContext to show/hide the modal
+ */
+function GlobalStorageLimitModal() {
+    const { isModalOpen, errorDetails, hideStorageLimitError } = useStorageError();
+    
+    return (
+        <StorageLimitModal
+            isOpen={isModalOpen}
+            onClose={hideStorageLimitError}
+            errorMessage={errorDetails.message}
+            operation={errorDetails.operation}
+        />
+    );
+}
+
 function App() {
     return (
         <AuthProvider>
@@ -107,9 +126,12 @@ function App() {
                 <UserPreferencesProvider>
                     <FilesProvider>
                         <NavigationProvider>
-                            <div className="app">
-                                <AppRoutes />
-                            </div>
+                            <StorageErrorProvider>
+                                <div className="app">
+                                    <AppRoutes />
+                                    <GlobalStorageLimitModal />
+                                </div>
+                            </StorageErrorProvider>
                         </NavigationProvider>
                     </FilesProvider>
                 </UserPreferencesProvider>

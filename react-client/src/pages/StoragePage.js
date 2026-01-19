@@ -23,6 +23,7 @@ function StoragePage() {
 
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false); // Background refetch indicator
     const [error, setError] = useState(null);
     const [sortOrder, setSortOrder] = useState('desc'); // 'desc' = largest first, 'asc' = smallest first
 
@@ -33,10 +34,16 @@ function StoragePage() {
     });
 
     // Fetch files sorted by size using new /api/files/owned endpoint
-    const fetchFiles = useCallback(async () => {
+    // isBackgroundRefresh: if true, don't show loading spinner (stale-while-revalidate)
+    const fetchFiles = useCallback(async (isBackgroundRefresh = false) => {
         if (!token) return;
 
-        setFilesLoading(true);
+        // Only show loading spinner on initial load, not background refreshes
+        if (!isBackgroundRefresh || files.length === 0) {
+            setFilesLoading(true);
+        } else {
+            setIsRefreshing(true);
+        }
         setError(null);
 
         try {
@@ -60,22 +67,23 @@ function StoragePage() {
             setError(err.message);
         } finally {
             setFilesLoading(false);
+            setIsRefreshing(false);
         }
-    }, [token, sortOrder]);
+    }, [token, sortOrder, files.length]);
 
     // Fetch on mount and when token/user changes
     useEffect(() => {
-        fetchFiles();
+        fetchFiles(false); // Initial load - show loading spinner
     }, [fetchFiles]);
 
     // Listen for files updated events (file upload, delete, rename, etc.)
     useAppEvent(AppEvents.FILES_UPDATED, () => {
-        fetchFiles();
+        fetchFiles(true); // Background refresh - keep existing data visible
     }, [fetchFiles]);
 
     // Listen for storage updated events (file upload/delete that affects storage)
     useAppEvent(AppEvents.STORAGE_UPDATED, () => {
-        fetchFiles();
+        fetchFiles(true); // Background refresh - keep existing data visible
     }, [fetchFiles]);
 
     // Toggle sort order

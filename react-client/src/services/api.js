@@ -11,6 +11,41 @@ import { jwtDecode } from "jwt-decode";
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 /**
+ * Custom API Error class that preserves additional error metadata
+ */
+class ApiError extends Error {
+    constructor(message, options = {}) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = options.status;
+        this.isStorageLimitError = options.isStorageLimitError || false;
+        this.errorType = options.errorType;
+    }
+}
+
+/**
+ * Helper to throw appropriate error based on response
+ * @param {Response} response - Fetch response object
+ * @param {string} defaultMessage - Default error message
+ */
+async function handleErrorResponse(response, defaultMessage) {
+    const errorData = await response.json().catch(() => ({}));
+    const message = errorData.error || errorData.message || defaultMessage;
+    
+    // Check for storage limit error
+    const isStorageLimitError = response.status === 507 || 
+                                errorData.isStorageLimitError || 
+                                errorData.errorType === 'STORAGE_LIMIT_EXCEEDED' ||
+                                message.toLowerCase().includes('storage limit');
+    
+    throw new ApiError(message, {
+        status: response.status,
+        isStorageLimitError,
+        errorType: errorData.errorType
+    });
+}
+
+/**
  * Helper to generate authorization headers with Bearer token.
  * @param {string} token - JWT token
  */
@@ -373,8 +408,7 @@ export const filesApi = {
             body: JSON.stringify(data)
         });
         if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.message || 'Failed to create file');
+            await handleErrorResponse(response, 'Failed to create file');
         }
         
         // Server returns 201 with empty body - extract file ID from Location header
@@ -407,8 +441,7 @@ export const filesApi = {
             body: formData
         });
         if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.message || 'Failed to upload file');
+            await handleErrorResponse(response, 'Failed to upload file');
         }
         
         // Server returns 201 with empty body - extract file ID from Location header
@@ -520,8 +553,7 @@ export const filesApi = {
             body: JSON.stringify(options)
         });
         if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.message || 'Failed to copy file');
+            await handleErrorResponse(response, 'Failed to copy file');
         }
         return response.json();
     },

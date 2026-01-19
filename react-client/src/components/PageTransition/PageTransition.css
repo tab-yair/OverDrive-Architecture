@@ -1,0 +1,53 @@
+/* PageTransition - Smooth page entry animations */
+
+.page-transition {
+  animation: pageEnter 200ms ease-out forwards;
+  /* NOTE: Avoid transform and will-change:transform here!
+     They create a containing block for position:fixed elements,
+     breaking dropdown menus that use fixed positioning. */
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: pageFadeOnly 150ms ease-out forwards;
+  }
+  
+  @keyframes pageFadeOnly {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* Variant: Fade only (no vertical movement) */
+.page-transition.fade-only {
+  animation: pageFadeOnly 150ms ease-out forwards;
+}
+
+/* Variant: Faster transition for quick navigation */
+.page-transition.fast {
+  animation-duration: 100ms;
+}
+
+/* Variant: Slower transition for important content */
+.page-transition.slow {
+  animation-duration: 300ms;
+}
+
+/* Ensure content is visible after animation */
+.page-transition {
+  opacity: 1;
+}

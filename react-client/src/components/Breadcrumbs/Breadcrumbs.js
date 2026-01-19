@@ -144,7 +144,7 @@ const Breadcrumbs = () => {
     <div className="breadcrumbs" ref={containerRef}>
       <div className="breadcrumbs-path">
         {visibleCrumbs.map((crumb, index) => (
-          <React.Fragment key={crumb.path + index}>
+          <React.Fragment key={crumb.id || crumb.path}>
             {/* Overflow dropdown trigger */}
             {index === 1 && overflowItems.length > 0 && (
               <>

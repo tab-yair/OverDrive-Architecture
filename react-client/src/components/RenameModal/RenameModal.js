@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import './RenameModal.css';
 
 /**
@@ -84,7 +85,8 @@ const RenameModal = ({ file, onRename, onClose }) => {
 
     if (!file) return null;
 
-    return (
+    // Render via portal to escape any parent transforms/stacking contexts
+    return createPortal(
         <div className="rename-modal-overlay" onClick={handleOverlayClick}>
             <div className="rename-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="rename-modal__header">
@@ -143,7 +145,8 @@ const RenameModal = ({ file, onRename, onClose }) => {
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

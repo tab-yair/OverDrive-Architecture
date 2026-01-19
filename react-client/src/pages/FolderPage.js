@@ -22,6 +22,7 @@ const FolderPage = () => {
   
   const [folder, setFolder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false); // Background refetch indicator
   const [error, setError] = useState(null);
   const [effectivePermissionLevel, setEffectivePermissionLevel] = useState('viewer');
 
@@ -32,10 +33,16 @@ const FolderPage = () => {
   });
 
   // Fetch folder data function
-  const fetchFolderData = useCallback(async () => {
+  // isBackgroundRefresh: if true, don't show loading spinner (stale-while-revalidate)
+  const fetchFolderData = useCallback(async (isBackgroundRefresh = false) => {
     if (!token || !folderId) return;
 
-    setLoading(true);
+    // Only show loading spinner on initial load, not background refreshes
+    if (!isBackgroundRefresh) {
+      setLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     setError(null);
 
     try {
@@ -92,17 +99,18 @@ const FolderPage = () => {
       setError(err.message || 'Failed to load folder');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, [token, folderId, setCurrentFolderId, updateFilesInStore]);
 
   // Fetch on mount and when dependencies change
   useEffect(() => {
-    fetchFolderData();
+    fetchFolderData(false); // Initial load - show loading spinner
   }, [fetchFolderData]);
 
-  // Listen for file updates and refresh
+  // Listen for file updates and refresh in background (stale-while-revalidate)
   useAppEvent(AppEvents.FILES_UPDATED, () => {
-    fetchFolderData();
+    fetchFolderData(true); // Background refresh - keep existing data visible
   }, [fetchFolderData]);
 
   // Get files from FilesContext (always fresh, auto-updates on star/etc)

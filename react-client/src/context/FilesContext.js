@@ -1,9 +1,15 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { filesApi } from '../services/api';
 import { useUserChange } from '../hooks/useUserChange';
 import { useAppEvent } from '../hooks/useAppEvent';
 import { AppEvents, notifyStorageUpdated, notifyFilesUpdated } from '../utils/eventManager';
+import { 
+    FileStatus, 
+    generateTempId, 
+    createOptimisticItem, 
+    createMapOptimisticOperations 
+} from '../utils/optimisticUpdates';
 
 /**
  * FilesContext - Single Source of Truth (SSOT) for all file metadata
@@ -138,6 +144,15 @@ export function FilesProvider({ children }) {
             return hasChanges ? newMap : prev;
         });
     }, [normalizeFile]);
+
+    /**
+     * Create optimistic operations helper using the shared utility
+     * This provides consistent patterns for add/remove/update operations
+     */
+    const optimisticOps = useMemo(() => 
+        createMapOptimisticOperations(setFilesMap, normalizeFile),
+        [normalizeFile]
+    );
 
     /**
      * Fetch owner information for files and update the store
@@ -327,7 +342,7 @@ export function FilesProvider({ children }) {
     }, [token, filesMap, updateFilesInStore]);
 
     /**
-     * Toggle star (optimistic update)
+     * Toggle star (optimistic update) - using shared utility
      */
     const toggleStar = useCallback(async (fileId) => {
         if (!token) return { success: false, error: 'Not authenticated' };
@@ -337,58 +352,72 @@ export function FilesProvider({ children }) {
             return { success: false, error: 'File not found' };
         }
 
-        // Optimistic toggle
-        const optimisticFile = { ...originalFile, isStarred: !originalFile.isStarred };
-        updateFilesInStore([optimisticFile]);
+        const result = await optimisticOps.optimisticUpdate(
+            fileId,
+            originalFile,
+            { isStarred: !originalFile.isStarred, _status: FileStatus.RENAMING },
+            async () => {
+                const response = await filesApi.toggleStar(token, fileId);
+                return { ...originalFile, isStarred: response.isStarred };
+            },
+            () => {
+                // Invalidate starred cache to trigger refetch on starred page
+                setLoadedEndpoints(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete('starred');
+                    return newSet;
+                });
+            }
+        );
 
-        try {
-            const result = await filesApi.toggleStar(token, fileId);
-            
-            // Update with server response
-            updateFilesInStore([{
-                ...originalFile,
-                isStarred: result.isStarred
-            }]);
-            
-            // Invalidate starred cache to trigger refetch on starred page
-            setLoadedEndpoints(prev => {
-                const newSet = new Set(prev);
-                newSet.delete('starred');
-                return newSet;
-            });
-            
-            return { success: true, isStarred: result.isStarred, error: null };
-        } catch (error) {
-            // Rollback
-            updateFilesInStore([originalFile]);
-            const errorMsg = error.message || 'Failed to toggle star';
-            return { success: false, error: errorMsg };
+        if (result.success) {
+            return { success: true, isStarred: result.item?.isStarred, error: null };
         }
-    }, [token, filesMap, updateFilesInStore]);
+        return result;
+    }, [token, filesMap, optimisticOps]);
 
     /**
      * Copy a file (UI restricts to files, backend supports folders too)
+     * Uses optimistic update with shared utility
      */
     const copyFile = useCallback(async (fileId, options = {}) => {
         if (!token) return { success: false, error: 'Not authenticated' };
 
-        try {
-            const copied = await filesApi.copyFile(token, fileId, options);
-            updateFilesInStore([copied]);
-
-            // Copy increases storage
-            notifyStorageUpdated();
-            notifyFilesUpdated();
-
-            return { success: true, file: copied, error: null };
-        } catch (error) {
-            const errorMsg = error.message || 'Failed to copy file';
-            return { success: false, error: errorMsg };
+        const originalFile = filesMap.get(fileId);
+        if (!originalFile) {
+            return { success: false, error: 'File not found' };
         }
-    }, [token, updateFilesInStore]);
+
+        // Create optimistic copy using shared utilities
+        const tempId = generateTempId('copy');
+        const tempItem = createOptimisticItem(originalFile, FileStatus.COPYING, {
+            id: tempId,
+            name: options.newName || `Copy of ${originalFile.name}`,
+            parentId: options.parentId !== undefined ? options.parentId : originalFile.parentId,
+            ownerId: user?.id,
+            isOwner: true,
+            createdAt: new Date().toISOString(),
+            modifiedAt: new Date().toISOString(),
+        });
+
+        const result = await optimisticOps.optimisticAdd(
+            tempItem,
+            () => filesApi.copyFile(token, fileId, options),
+            () => {
+                notifyStorageUpdated();
+                notifyFilesUpdated();
+            }
+        );
+
+        if (result.success) {
+            return { success: true, file: result.item, error: null };
+        }
+        return result;
+    }, [token, filesMap, user, optimisticOps]);
 
     /**
      * Move multiple files/folders to a destination parentId (null = root)
+     * Uses optimistic bulk update with shared utility
      */
     const moveFiles = useCallback(async (fileIds, parentId) => {
         if (!token) return { success: false, error: 'Not authenticated' };
@@ -396,68 +425,63 @@ export function FilesProvider({ children }) {
             return { success: false, error: 'No files selected' };
         }
 
-        // Build optimistic updates for all files being moved
-        const optimisticUpdates = fileIds
-            .map(id => filesMap.get(id))
-            .filter(Boolean)
-            .map(file => ({ ...file, parentId }));
+        // Build items array for bulk optimistic update
+        const items = fileIds
+            .map(id => ({
+                id,
+                original: filesMap.get(id),
+                changes: { parentId, _status: FileStatus.MOVING }
+            }))
+            .filter(item => item.original);
         
-        // Apply optimistic updates immediately
-        updateFilesInStore(optimisticUpdates);
+        if (items.length === 0) {
+            return { success: false, error: 'No valid files to move' };
+        }
 
-        try {
-            // Execute moves in parallel - each file gets updated individually
-            const results = await Promise.all(
-                fileIds.map(id => filesApi.updateFile(token, id, { parentId }))
-            );
-            
-            // If any move failed, the optimistic update is wrong but we'll refetch
-            const hasFailures = results.some(r => r?.error);
-            if (hasFailures) {
-                // Fetch fresh data for all files being moved to correct any failures
+        const result = await optimisticOps.optimisticBulkUpdate(
+            items,
+            async () => {
+                // Execute moves in parallel
+                const results = await Promise.all(
+                    fileIds.map(id => filesApi.updateFile(token, id, { parentId }))
+                );
+                
+                // If any move failed, throw to trigger rollback
+                const hasFailures = results.some(r => r?.error);
+                if (hasFailures) {
+                    throw new Error('Some files failed to move');
+                }
+                
+                // Fetch fresh data from server to ensure location is correct
                 const freshFiles = await Promise.all(
                     fileIds.map(id => filesApi.getFile(token, id))
                 );
+                
+                // Update store with fresh data
                 updateFilesInStore(freshFiles.filter(Boolean));
-                return { success: false, error: 'Some files failed to move' };
-            }
-            
-            // CRITICAL: Fetch fresh data from server to ensure location is correct
-            // This is essential because getFile() computes location dynamically
-            // and we need the parent folder to be in the store for that computation
-            const freshFiles = await Promise.all(
-                fileIds.map(id => filesApi.getFile(token, id))
-            );
-            
-            // Update store with fresh data - ensures location is correctly computed
-            // when getFile() looks up the parent folder in filesMap
-            updateFilesInStore(freshFiles.filter(Boolean));
-            
-            // CRITICAL: Fetch parent folder if not already in store
-            // This ensures getFile() can compute location correctly
-            if (parentId && !filesMap.has(parentId)) {
-                try {
-                    const parentFolder = await filesApi.getFile(token, parentId);
-                    if (parentFolder) {
-                        updateFilesInStore([parentFolder]);
+                
+                // Fetch parent folder if not already in store
+                if (parentId && !filesMap.has(parentId)) {
+                    try {
+                        const parentFolder = await filesApi.getFile(token, parentId);
+                        if (parentFolder) {
+                            updateFilesInStore([parentFolder]);
+                        }
+                    } catch (err) {
+                        console.warn('[FilesContext] Failed to load parent folder:', err);
                     }
-                } catch (err) {
-                    console.warn('[FilesContext] Failed to load parent folder:', err);
-                    // Not critical - location will show folder name as "Unknown Folder"
                 }
+                
+                return results;
+            },
+            () => {
+                notifyStorageUpdated();
+                notifyFilesUpdated();
             }
-            
-            // Emit events to notify other parts of the app
-            notifyStorageUpdated(); // Might affect storage calculations
-            notifyFilesUpdated();   // Trigger refetch on other pages
-            
-            return { success: true, error: null };
-        } catch (error) {
-            const errorMsg = error.message || 'Failed to move files';
-            console.error('[FilesContext] Move error:', errorMsg);
-            return { success: false, error: errorMsg };
-        }
-    }, [token, filesMap, updateFilesInStore]);
+        );
+
+        return result;
+    }, [token, filesMap, optimisticOps, updateFilesInStore]);
 
     /**
      * Delete file (move to trash for Owner, remove from view for Editor/Viewer)
@@ -471,31 +495,21 @@ export function FilesProvider({ children }) {
             return { success: false, error: 'File not found' };
         }
 
-        // Optimistic: mark as trashed (will be corrected if action is 'hidden')
-        const optimisticFile = { ...originalFile, isTrashed: true };
-        updateFilesInStore([optimisticFile]);
+        // Optimistic: mark as deleting
+        optimisticOps.directUpdate(fileId, { isTrashed: true, _status: FileStatus.DELETING });
 
         try {
             const result = await filesApi.deleteFile(token, fileId);
             
             // If action was 'hidden' (Editor/Viewer local remove), remove from map entirely
             if (result.action === 'hidden') {
-                const newMap = new Map(filesMap);
-                newMap.delete(fileId);
-                setFilesMap(newMap);
-                
-                // Emit storage-updated event (delete affects storage)
+                optimisticOps.directRemove(fileId);
                 notifyStorageUpdated();
-                
                 // Do NOT emit files-updated - we don't want to refetch as it would re-add the file
-                // The file is hidden locally via isHiddenForUser in the backend
             } else {
-                // If action was 'trashed' (Owner global trash), keep the isTrashed flag
-                
-                // Emit storage-updated event (delete affects storage)
+                // If action was 'trashed' (Owner global trash), keep isTrashed flag but clear status
+                optimisticOps.directUpdate(fileId, { isTrashed: true, _status: null });
                 notifyStorageUpdated();
-                
-                // Emit files-updated to trigger refetch on relevant pages
                 notifyFilesUpdated();
             }
             
@@ -506,7 +520,7 @@ export function FilesProvider({ children }) {
             const errorMsg = error.message || 'Failed to delete file';
             return { success: false, error: errorMsg };
         }
-    }, [token, filesMap, updateFilesInStore]);
+    }, [token, filesMap, optimisticOps, updateFilesInStore]);
 
     /**
      * Restore file from trash (optimistic update)
@@ -519,48 +533,38 @@ export function FilesProvider({ children }) {
             return { success: false, error: 'File not found' };
         }
 
-        // Optimistic: mark as not trashed
-        const optimisticFile = { ...originalFile, isTrashed: false };
-        updateFilesInStore([optimisticFile]);
-
-        try {
-            await filesApi.restoreFromTrash(token, fileId);
-            
-            // Fetch fresh data from server to ensure all fields are correct
-            // This is especially important for nested folders to get correct star status
-            try {
+        const result = await optimisticOps.optimisticUpdate(
+            fileId,
+            originalFile,  // For rollback
+            { isTrashed: false, _status: FileStatus.RESTORING },
+            async () => {
+                await filesApi.restoreFromTrash(token, fileId);
+                
+                // Fetch fresh data from server to ensure all fields are correct
                 const freshFile = await filesApi.getFile(token, fileId);
                 if (freshFile) {
                     updateFilesInStore([freshFile]);
                 }
-            } catch (fetchError) {
-                console.warn('Failed to fetch fresh file data after restore:', fetchError);
+                
+                return freshFile;
+            },
+            () => {
+                notifyStorageUpdated();
+                notifyFilesUpdated();
+                
+                // Invalidate starred cache if file is starred
+                if (originalFile.isStarred) {
+                    setLoadedEndpoints(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete('starred');
+                        return newSet;
+                    });
+                }
             }
-            
-            // Emit events to trigger refetches across the app
-            notifyStorageUpdated(); // Storage may have changed
-            
-            // CRITICAL FIX: Emit FILES_UPDATED so FolderPage and all pages refetch
-            // This ensures nested folders get fresh data with correct star status
-            notifyFilesUpdated();
-            
-            // Invalidate starred cache if file is starred (so it appears in starred page)
-            if (originalFile.isStarred) {
-                setLoadedEndpoints(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete('starred');
-                    return newSet;
-                });
-            }
-            
-            return { success: true, error: null };
-        } catch (error) {
-            // Rollback
-            updateFilesInStore([originalFile]);
-            const errorMsg = error.message || 'Failed to restore file';
-            return { success: false, error: errorMsg };
-        }
-    }, [token, filesMap, updateFilesInStore]);
+        );
+
+        return result;
+    }, [token, filesMap, optimisticOps, updateFilesInStore]);
 
     /**
      * Permanently delete file from trash (optimistic removal)
@@ -569,29 +573,20 @@ export function FilesProvider({ children }) {
         if (!token) return { success: false, error: 'Not authenticated' };
 
         const originalFile = filesMap.get(fileId);
-        if (!originalFile) {
-            return { success: false, error: 'File not found' };
-        }
+        
+        const result = await optimisticOps.optimisticRemove(
+            fileId,
+            originalFile,  // For rollback
+            async () => {
+                await filesApi.permanentDelete(token, fileId);
+            },
+            () => {
+                notifyStorageUpdated();
+            }
+        );
 
-        // Optimistic: remove from store
-        const newMap = new Map(filesMap);
-        newMap.delete(fileId);
-        setFilesMap(newMap);
-
-        try {
-            await filesApi.permanentDelete(token, fileId);
-            
-            // Emit storage-updated event (permanent delete frees up storage)
-            notifyStorageUpdated();
-            
-            return { success: true, error: null };
-        } catch (error) {
-            // Rollback - restore to map
-            updateFilesInStore([originalFile]);
-            const errorMsg = error.message || 'Failed to permanently delete file';
-            return { success: false, error: errorMsg };
-        }
-    }, [token, filesMap, updateFilesInStore]);
+        return result;
+    }, [token, filesMap, optimisticOps]);
 
 
     /**

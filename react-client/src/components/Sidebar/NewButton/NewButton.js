@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigation } from '../../../context/NavigationContext';
+import { useStorageError } from '../../../context/StorageErrorContext';
 import { filesApi } from '../../../services/api';
 import { notifyFilesAndStorageUpdated } from '../../../utils/eventManager';
 import './NewButton.css';
@@ -14,6 +15,7 @@ import './NewButton.css';
 function NewButton({ parentId = null }) {
     const { token } = useAuth();
     const { currentFolderId, currentFolderPermissionLevel } = useNavigation();
+    const { showStorageLimitError } = useStorageError();
     const location = useLocation();
     
     // Determine if we're in a folder page with limited permissions
@@ -158,11 +160,17 @@ function NewButton({ parentId = null }) {
         } catch (error) {
             console.error('Failed to upload file:', error);
             const message = (error?.message || '').toLowerCase();
-            const permissionBlocked = message.includes('permission');
-            const friendlyMessage = permissionBlocked
-                ? 'You only have view access to this folder and cannot add files. Request edit permission from the owner.'
-                : 'Failed to upload file: ' + (error?.message || 'Unknown error');
-            alert(friendlyMessage);
+            
+            // Check for storage limit error
+            if (error?.isStorageLimitError || message.includes('storage limit')) {
+                showStorageLimitError(error?.message, 'upload');
+            } else {
+                const permissionBlocked = message.includes('permission');
+                const friendlyMessage = permissionBlocked
+                    ? 'You only have view access to this folder and cannot add files. Request edit permission from the owner.'
+                    : 'Failed to upload file: ' + (error?.message || 'Unknown error');
+                alert(friendlyMessage);
+            }
         } finally {
             setIsLoading(false);
             // Reset file input
@@ -205,11 +213,17 @@ function NewButton({ parentId = null }) {
         } catch (error) {
             console.error('Failed to create:', error);
             const message = (error?.message || '').toLowerCase();
-            const permissionBlocked = message.includes('permission');
-            const friendlyMessage = permissionBlocked
-                ? 'You only have view access to this folder and cannot add files or folders. Request edit permission from the owner.'
-                : 'Failed to create: ' + (error?.message || 'Unknown error');
-            alert(friendlyMessage);
+            
+            // Check for storage limit error
+            if (error?.isStorageLimitError || message.includes('storage limit')) {
+                showStorageLimitError(error?.message, showNamePrompt === 'folder' ? 'create folder' : 'create file');
+            } else {
+                const permissionBlocked = message.includes('permission');
+                const friendlyMessage = permissionBlocked
+                    ? 'You only have view access to this folder and cannot add files or folders. Request edit permission from the owner.'
+                    : 'Failed to create: ' + (error?.message || 'Unknown error');
+                alert(friendlyMessage);
+            }
         } finally {
             setIsLoading(false);
         }

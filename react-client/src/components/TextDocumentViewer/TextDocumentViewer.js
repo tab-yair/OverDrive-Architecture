@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useFilesContext } from '../../context/FilesContext';
 import { useDownload } from '../../hooks/useDownload';
 import './TextDocumentViewer.css';
@@ -201,7 +202,8 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
         onClose();
     };
 
-    return (
+    // Render via portal to escape any parent transforms/stacking contexts
+    return createPortal(
         <div className="text-doc-overlay" onClick={handleOverlayClick}>
             <div className="text-doc-modal" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
@@ -294,7 +296,8 @@ const TextDocumentViewer = ({ fileId, fileName, permissionLevel = 'viewer', onCl
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

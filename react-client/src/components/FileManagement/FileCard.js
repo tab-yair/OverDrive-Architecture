@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import ActionButton from './ActionButton';
 import FileActionMenu from './FileActionMenu';
 import { getAvailableActions } from './fileUtils';
+import { getFileItemClasses, isFileItemPending, getFileItemStatusText } from '../../utils/fileItemHelpers';
+import '../../styles/FileItemTransitions.css';
 import './FileCard.css';
 
 /**
@@ -99,14 +101,29 @@ const FileCard = ({
 
   // Remove handleCheckboxClick - no longer needed
 
+  // Determine if file has pending status using shared utility
+  const isPending = isFileItemPending(file);
+  const statusText = getFileItemStatusText(file);
+  
+  // Build additional classes for FileCard-specific styling
+  const additionalClasses = [
+    'file-card',
+    file.type === 'folder' ? 'folder-card' : '',
+    (pageContext === 'Recent' || pageContext === 'Shared') ? 'uniform-square' : ''
+  ].filter(Boolean).join(' ');
+  
+  // Get classes from shared utility
+  const itemClasses = getFileItemClasses(file, isSelected, { additionalClasses });
+
   return (
     <>
       <div
-        className={`file-card ${file.type === 'folder' ? 'folder-card' : ''} ${pageContext === 'Recent' || pageContext === 'Shared' ? 'uniform-square' : ''} ${isSelected ? 'selected' : ''}`}
+        className={itemClasses}
         onClick={handleCardClick}
         onDoubleClick={handleCardDoubleClick}
         role="button"
         tabIndex={0}
+        title={statusText || undefined}
       >
         {/* Card Header with Menu Button - For regular files and uniform-square folders */}
         {(file.type !== 'folder' || pageContext === 'Recent' || pageContext === 'Shared') && (

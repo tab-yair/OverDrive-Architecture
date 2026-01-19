@@ -4,6 +4,8 @@ import FileActionMenu from './FileActionMenu';
 import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatRecentActivity, getFallbackValue, getLocationDisplayName } from './fileUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useFilesContext } from '../../context/FilesContext';
+import { getFileItemClasses, isFileItemPending, getFileItemStatusText } from '../../utils/fileItemHelpers';
+import '../../styles/FileItemTransitions.css';
 import './FileRow.css';
 
 /**
@@ -246,14 +248,22 @@ const FileRow = ({
     return formatter ? formatter(value) : value;
   };
 
+  // Determine if file has pending status using shared utility
+  const isPending = isFileItemPending(file);
+  const statusText = getFileItemStatusText(file);
+  
+  // Get classes from shared utility
+  const itemClasses = getFileItemClasses(file, isSelected, { additionalClasses: 'file-row' });
+
   return (
     <>
       <div 
-        className={`file-row ${isSelected ? 'selected' : ''}`} 
+        className={itemClasses} 
         onClick={handleRowClick}
         onDoubleClick={handleRowDoubleClick}
         role="button" 
         tabIndex={0}
+        title={statusText || undefined}
       >
         {/* File Icon and Name */}
         <div className="file-row-name">

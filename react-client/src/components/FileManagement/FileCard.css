@@ -14,13 +14,29 @@
   border-radius: var(--radius-card);
   padding: 12px;
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: all var(--transition-normal), opacity var(--transition-normal), transform var(--transition-normal);
   overflow: hidden;
   /* Fixed size - square (1:1 aspect ratio) */
   width: var(--card-size);
   height: var(--card-size);
   box-shadow: var(--shadow);
+  /* Smooth entry animation */
+  animation: fileCardFadeIn 0.2s ease-out;
 }
+
+/* Entry animation for file cards */
+@keyframes fileCardFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* NOTE: Status styles (copying, moving, deleting, etc.) are in FileItemTransitions.css */
 
 .file-card:hover {
   box-shadow: var(--shadow-elevated);

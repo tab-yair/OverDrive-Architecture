@@ -3,6 +3,7 @@ import useFiles from '../../hooks/useFiles';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useFilesContext } from '../../context/FilesContext';
+import { useStorageError } from '../../context/StorageErrorContext';
 import { useDownload } from '../../hooks/useDownload';
 import { useRename } from '../../hooks/useRename';
 import { FileManager, InfoSidebar, MoveModal } from '../FileManagement';
@@ -12,6 +13,7 @@ import TextDocumentViewer from '../TextDocumentViewer/TextDocumentViewer';
 import RenameModal from '../RenameModal/RenameModal';
 import ShareModal from '../ShareModal/ShareModal';
 import FileTypeFilter from '../FileTypeFilter';
+import PageTransition from '../PageTransition';
 import './FilePageWrapper.css';
 
 /**
@@ -54,6 +56,7 @@ function FilePageWrapper({
     const { handleOpen } = useNavigation();
     const { user } = useAuth();
     const filesContext = useFilesContext();
+    const { showStorageLimitError } = useStorageError();
     const { downloadFile, downloadMultiple } = useDownload();
     const { renameFile } = useRename();
     
@@ -172,6 +175,12 @@ function FilePageWrapper({
                 parentId: item.parentId || null
             }).then((result) => {
                 if (!result.success) {
+                    // Check if it's a storage limit error
+                    if (result.isStorageLimitError) {
+                        showStorageLimitError(result.error, 'copy');
+                        return;
+                    }
+                    
                     const msg = (result.error || '').toLowerCase();
                     const permissionBlocked = msg.includes('permission');
                     const friendly = permissionBlocked
@@ -180,7 +189,20 @@ function FilePageWrapper({
                     alert(friendly);
                 }
             }).catch((err) => {
+                // Check if it's a storage limit error
+                if (err?.isStorageLimitError) {
+                    showStorageLimitError(err?.message, 'copy');
+                    return;
+                }
+                
                 const msg = (err?.message || '').toLowerCase();
+                
+                // Also check message for storage limit (fallback)
+                if (msg.includes('storage limit')) {
+                    showStorageLimitError(err?.message, 'copy');
+                    return;
+                }
+                
                 const permissionBlocked = msg.includes('permission');
                 const friendly = permissionBlocked
                     ? 'You do not have permission to add files to this folder'
@@ -329,38 +351,41 @@ function FilePageWrapper({
 
     if (loading) {
         return (
-            <div className={`file-page ${className}`}>
-                <div className="file-page-loading">
-                    <span className="material-symbols-outlined spinning">progress_activity</span>
-                    <p>{loadingMessage}</p>
+            <PageTransition transitionKey={`${endpoint || 'custom'}-loading`}>
+                <div className={`file-page ${className}`}>
+                    <div className="file-page-loading">
+                        <span className="material-symbols-outlined spinning">progress_activity</span>
+                        <p>{loadingMessage}</p>
+                    </div>
                 </div>
-            </div>
+            </PageTransition>
         );
     }
 
     return (
-        <div className={`file-page ${className}`}>
-            {/* Breadcrumbs Navigation - First element, aligned with content */}
-            <div className="file-page-breadcrumbs">
-                <Breadcrumbs />
-            </div>
+        <PageTransition transitionKey={endpoint || 'custom'}>
+            <div className={`file-page ${className}`}>
+                {/* Breadcrumbs Navigation - First element, aligned with content */}
+                <div className="file-page-breadcrumbs">
+                    <Breadcrumbs />
+                </div>
 
-            {/* Custom header component removed */}
-            {headerComponent}
-            
-            {/* File Type Filter - Show if enabled */}
-            {showFilter && (
-                <FileTypeFilter
-                    selectedType={fileTypeFilter}
-                    onFilterChange={setFileTypeFilter}
-                    viewMode={viewMode}
-                    onViewModeChange={setViewMode}
-                />
-            )}
-            
-            <FileManager
-                files={filteredFiles}
-                pageContext={pageContext}
+                {/* Custom header component removed */}
+                {headerComponent}
+                
+                {/* File Type Filter - Show if enabled */}
+                {showFilter && (
+                    <FileTypeFilter
+                        selectedType={fileTypeFilter}
+                        onFilterChange={setFileTypeFilter}
+                        viewMode={viewMode}
+                        onViewModeChange={setViewMode}
+                    />
+                )}
+                
+                <FileManager
+                    files={filteredFiles}
+                    pageContext={pageContext}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
                 onFileClick={onFileClick || defaultFileClick}
@@ -450,7 +475,8 @@ function FilePageWrapper({
                     }}
                 />
             )}
-        </div>
+            </div>
+        </PageTransition>
     );
 }
 

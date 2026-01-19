@@ -14,12 +14,28 @@
   align-items: center;
   padding: 0 32px 0 24px; /* Right buffer: 32px */
   border-bottom: 1px solid var(--border-color);
-  transition: background-color var(--transition-normal);
+  transition: background-color var(--transition-normal), opacity var(--transition-normal), transform var(--transition-normal);
   cursor: pointer;
   height: 52px; /* Fixed row height for consistency */
   position: relative;
   gap: 32px; /* Generous gap for readability */
+  /* Smooth entry animation */
+  animation: fileRowFadeIn 0.2s ease-out;
 }
+
+/* Entry animation for file rows */
+@keyframes fileRowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* NOTE: Status styles (copying, moving, deleting, etc.) are in FileItemTransitions.css */
 
 .file-row:hover {
   background-color: var(--bg-hover);
