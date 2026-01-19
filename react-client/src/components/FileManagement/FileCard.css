@@ -43,17 +43,13 @@
   border-color: var(--accent-color, #1a73e8);
 }
 
-/* Selected state */
+/* Selected state - just background color, subtle styling */
 .file-card.selected {
   background-color: rgba(26, 115, 232, 0.08);
-  border: 2px solid #1a73e8;
-  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.24);
 }
 
 [data-theme="dark"] .file-card.selected {
   background-color: rgba(138, 180, 248, 0.12);
-  border-color: #8ab4f8;
-  box-shadow: 0 2px 8px rgba(138, 180, 248, 0.24);
 }
 
 /* Folder cards in Default view - horizontal banner (short rectangle) */

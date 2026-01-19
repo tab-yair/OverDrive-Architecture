@@ -83,10 +83,12 @@
 }
 
 /* Deleting - file is being removed */
+/* Uses opacity fade-out so other items don't jump until deletion completes */
 .file-item-status-deleting {
-    opacity: 0.3;
-    transform: translateX(-10px);
+    opacity: 0;
+    transform: scale(0.95);
     pointer-events: none;
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out;
 }
 
 /* Restoring - file is being restored from trash */

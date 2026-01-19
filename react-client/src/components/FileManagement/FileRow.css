@@ -42,20 +42,16 @@
 }
 
 .file-row:focus {
-  outline: 2px solid var(--accent-color);
-  outline-offset: -2px;
+  outline: none;
 }
 
-/* Selected state */
+/* Selected state - just background color, no border */
 .file-row.selected {
   background-color: rgba(26, 115, 232, 0.12);
-  border-left: 3px solid #1a73e8;
-  padding-left: 13px;
 }
 
 [data-theme="dark"] .file-row.selected {
   background-color: rgba(138, 180, 248, 0.16);
-  border-left-color: #8ab4f8;
 }
 
 .file-row.selected:hover {

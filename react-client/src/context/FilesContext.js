@@ -404,8 +404,9 @@ export function FilesProvider({ children }) {
             tempItem,
             () => filesApi.copyFile(token, fileId, options),
             () => {
+                // Only notify storage updated - file is already in store via optimistic update
+                // Avoid notifyFilesUpdated() to prevent unnecessary refetches during rapid copies
                 notifyStorageUpdated();
-                notifyFilesUpdated();
             }
         );
 
