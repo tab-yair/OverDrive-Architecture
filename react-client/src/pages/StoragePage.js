@@ -1,13 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import { useFilesContext } from '../context/FilesContext';
+import { useStorageError } from '../context/StorageErrorContext';
 import { useUserChange } from '../hooks/useUserChange';
 import { useAppEvent } from '../hooks/useAppEvent';
 import { AppEvents } from '../utils/eventManager';
 import { formatBytes } from '../services/api';
-import { FileManager } from '../components/FileManagement';
+import { FileManager, InfoSidebar, MoveModal } from '../components/FileManagement';
 import { useNavigation } from '../context/NavigationContext';
 import { useDownload } from '../hooks/useDownload';
+import { useRename } from '../hooks/useRename';
+import PreviewModal from '../components/PreviewModal/PreviewModal';
+import TextDocumentViewer from '../components/TextDocumentViewer/TextDocumentViewer';
+import RenameModal from '../components/RenameModal/RenameModal';
+import ShareModal from '../components/ShareModal/ShareModal';
 import './Pages.css';
 import './StoragePage.css';
 
@@ -16,16 +23,28 @@ import './StoragePage.css';
  * Shows storage usage and files sorted by size
  */
 function StoragePage() {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const { storageInfo, storageLoading } = useUserPreferences();
+    const filesContext = useFilesContext();
+    const { showStorageLimitError } = useStorageError();
     const { handleOpen } = useNavigation();
-    const { downloadFile } = useDownload();
+    const { downloadFile, downloadMultiple } = useDownload();
+    const { renameFile } = useRename();
 
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false); // Background refetch indicator
     const [error, setError] = useState(null);
     const [sortOrder, setSortOrder] = useState('desc'); // 'desc' = largest first, 'asc' = smallest first
+    
+    // Modal states
+    const [selectedFileId, setSelectedFileId] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [previewFile, setPreviewFile] = useState(null);
+    const [renameFile_modal, setRenameFile_modal] = useState(null);
+    const [shareFile_modal, setShareFile_modal] = useState(null);
+    const [moveModalOpen, setMoveModalOpen] = useState(false);
+    const [moveTargets, setMoveTargets] = useState([]);
 
     // Clear files when user changes
     useUserChange(() => {
@@ -91,17 +110,136 @@ function StoragePage() {
         setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
     };
 
-    // Handle file actions
+    // Handle file actions - comprehensive handler like FilePageWrapper
     const handleFileAction = (action, fileOrFiles) => {
+        // Handle open action - folders navigate, files open in preview
         if (action === 'open') {
             const item = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
             if (item) {
                 if (item.type === 'folder') {
                     handleOpen(item);
                 } else {
-                    downloadFile(item.id, item.name);
+                    // Open in preview modal
+                    setPreviewFile(item);
                 }
             }
+            return;
+        }
+        
+        // Handle details action - open InfoSidebar
+        if (action === 'details') {
+            const fileId = Array.isArray(fileOrFiles) 
+                ? (fileOrFiles.length > 0 ? fileOrFiles[0].id : null)
+                : (fileOrFiles ? fileOrFiles.id : null);
+            
+            if (fileId) {
+                setSelectedFileId(fileId);
+                setIsSidebarOpen(true);
+            }
+            return;
+        }
+        
+        // Handle download action
+        if (action === 'download') {
+            if (Array.isArray(fileOrFiles)) {
+                if (fileOrFiles.length > 0) {
+                    downloadMultiple(fileOrFiles).catch(err => {
+                        console.error('Download failed:', err);
+                    });
+                }
+            } else if (fileOrFiles) {
+                downloadFile(fileOrFiles).catch(err => {
+                    console.error('Download failed:', err);
+                });
+            }
+            return;
+        }
+
+        // Handle copy action (files only)
+        if (action === 'copy') {
+            const filesToCopy = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            const validFiles = filesToCopy.filter(item => item && item.type !== 'folder');
+
+            if (validFiles.length === 0) {
+                console.warn('No valid files to copy');
+                return;
+            }
+
+            Promise.all(
+                validFiles.map(item => 
+                    filesContext.copyFile(item.id, { parentId: item.parentId || null })
+                )
+            ).then((results) => {
+                const failures = results.filter(r => !r.success);
+                if (failures.length > 0) {
+                    const storageLimitError = failures.find(r => r.isStorageLimitError);
+                    if (storageLimitError) {
+                        showStorageLimitError(storageLimitError.error, 'copy');
+                        return;
+                    }
+                    alert(failures[0].error || 'Copy failed');
+                }
+            }).catch((err) => {
+                if (err?.isStorageLimitError) {
+                    showStorageLimitError(err?.message, 'copy');
+                    return;
+                }
+                alert(err?.message || 'Copy failed');
+            });
+            return;
+        }
+        
+        // Handle rename action - only for single file
+        if (action === 'rename') {
+            const file = Array.isArray(fileOrFiles) 
+                ? (fileOrFiles.length === 1 ? fileOrFiles[0] : null)
+                : fileOrFiles;
+            
+            if (file) {
+                setRenameFile_modal(file);
+            }
+            return;
+        }
+        
+        // Handle share action
+        if (action === 'share') {
+            const filesToShare = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            if (filesToShare.length > 0) {
+                setShareFile_modal(filesToShare[0]);
+            }
+            return;
+        }
+        
+        // Handle star/unstar action
+        if (action === 'star' || action === 'unstar') {
+            const filesToToggle = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            Promise.all(
+                filesToToggle.map(file => filesContext.toggleStar(file.id))
+            ).catch(err => {
+                console.error('Star toggle failed:', err);
+            });
+            return;
+        }
+        
+        // Handle trash action
+        if (action === 'trash') {
+            const filesToTrash = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            Promise.all(
+                filesToTrash.map(file => filesContext.deleteFile(file.id))
+            ).catch(err => {
+                console.error('Trash operation failed:', err);
+            });
+            return;
+        }
+
+        // Handle move action
+        if (action === 'move') {
+            const filesToMove = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            const validTargets = filesToMove.filter(Boolean);
+            if (validTargets.length === 0) return;
+            setMoveTargets(validTargets);
+            setMoveModalOpen(true);
+            return;
         }
     };
 
@@ -110,7 +248,7 @@ function StoragePage() {
         if (file.type === 'folder') {
             handleOpen(file);
         } else {
-            downloadFile(file.id, file.name);
+            setPreviewFile(file);
         }
     };
 
@@ -197,6 +335,59 @@ function StoragePage() {
                     />
                 )}
             </div>
+            
+            {/* InfoSidebar */}
+            <InfoSidebar
+                fileId={selectedFileId}
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+            />
+
+            {/* Move Modal */}
+            <MoveModal
+                isOpen={moveModalOpen}
+                onClose={() => setMoveModalOpen(false)}
+                targets={moveTargets}
+                initialParentId={moveTargets[0]?.parentId || null}
+            />
+            
+            {/* Preview Modal for images and PDFs */}
+            {previewFile && (previewFile.type === 'image' || previewFile.type === 'pdf') && (
+                <PreviewModal
+                    fileId={previewFile.id}
+                    fileName={previewFile.name}
+                    fileType={previewFile.type}
+                    onClose={() => setPreviewFile(null)}
+                />
+            )}
+            
+            {/* Text Document Viewer for docs */}
+            {previewFile && previewFile.type === 'docs' && (
+                <TextDocumentViewer
+                    key={previewFile.id}
+                    fileId={previewFile.id}
+                    fileName={previewFile.name}
+                    permissionLevel={previewFile.ownerId === user?.id ? 'owner' : 'viewer'}
+                    onClose={() => setPreviewFile(null)}
+                />
+            )}
+            
+            {/* Rename Modal */}
+            {renameFile_modal && (
+                <RenameModal
+                    file={renameFile_modal}
+                    onRename={renameFile}
+                    onClose={() => setRenameFile_modal(null)}
+                />
+            )}
+            
+            {/* Share Modal */}
+            {shareFile_modal && (
+                <ShareModal
+                    file={shareFile_modal}
+                    onClose={() => setShareFile_modal(null)}
+                />
+            )}
         </div>
     );
 }

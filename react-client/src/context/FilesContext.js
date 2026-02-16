@@ -496,8 +496,9 @@ export function FilesProvider({ children }) {
             return { success: false, error: 'File not found' };
         }
 
-        // Optimistic: mark as deleting
-        optimisticOps.directUpdate(fileId, { isTrashed: true, _status: FileStatus.DELETING });
+        // Optimistic: mark as deleting (but keep isTrashed: false so CSS transition can play)
+        // The item stays visible during transition, then gets filtered out when isTrashed is set
+        optimisticOps.directUpdate(fileId, { _status: FileStatus.DELETING });
 
         try {
             const result = await filesApi.deleteFile(token, fileId);
@@ -508,16 +509,16 @@ export function FilesProvider({ children }) {
                 notifyStorageUpdated();
                 // Do NOT emit files-updated - we don't want to refetch as it would re-add the file
             } else {
-                // If action was 'trashed' (Owner global trash), keep isTrashed flag but clear status
+                // If action was 'trashed' (Owner global trash), now set isTrashed to filter from view
+                // The CSS transition has already played during the API call
                 optimisticOps.directUpdate(fileId, { isTrashed: true, _status: null });
                 notifyStorageUpdated();
-                notifyFilesUpdated();
             }
             
             return { success: true, error: null, action: result.action };
         } catch (error) {
-            // Rollback
-            updateFilesInStore([originalFile]);
+            // Rollback - clear status, keep file visible
+            optimisticOps.directUpdate(fileId, { _status: null });
             const errorMsg = error.message || 'Failed to delete file';
             return { success: false, error: errorMsg };
         }

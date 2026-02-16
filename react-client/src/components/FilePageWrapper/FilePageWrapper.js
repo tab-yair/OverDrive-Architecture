@@ -161,31 +161,46 @@ function FilePageWrapper({
             return;
         }
 
-        // Handle copy action (files only, same folder)
+        // Handle copy action (files only, same folder) - supports multiple files
         if (action === 'copy') {
-            const item = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
-            if (!item) return;
-            if (item.type === 'folder') {
-                console.warn('Copy is available for files only');
+            const filesToCopy = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+            const validFiles = filesToCopy.filter(item => {
+                if (!item) return false;
+                if (item.type === 'folder') {
+                    console.warn('Copy is available for files only, skipping folder:', item.name);
+                    return false;
+                }
+                return true;
+            });
+
+            if (validFiles.length === 0) {
+                console.warn('No valid files to copy');
                 return;
             }
 
-            // Server defaults to "Copy of {name}" if newName not provided
-            filesContext.copyFile(item.id, {
-                parentId: item.parentId || null
-            }).then((result) => {
-                if (!result.success) {
-                    // Check if it's a storage limit error
-                    if (result.isStorageLimitError) {
-                        showStorageLimitError(result.error, 'copy');
+            // Copy each file
+            Promise.all(
+                validFiles.map(item => 
+                    filesContext.copyFile(item.id, {
+                        parentId: item.parentId || null
+                    })
+                )
+            ).then((results) => {
+                const failures = results.filter(r => !r.success);
+                if (failures.length > 0) {
+                    // Check if any are storage limit errors
+                    const storageLimitError = failures.find(r => r.isStorageLimitError);
+                    if (storageLimitError) {
+                        showStorageLimitError(storageLimitError.error, 'copy');
                         return;
                     }
                     
-                    const msg = (result.error || '').toLowerCase();
+                    const firstError = failures[0];
+                    const msg = (firstError.error || '').toLowerCase();
                     const permissionBlocked = msg.includes('permission');
                     const friendly = permissionBlocked
                         ? 'You do not have permission to add files to this folder'
-                        : (result.error || 'Copy failed');
+                        : (firstError.error || 'Copy failed');
                     alert(friendly);
                 }
             }).catch((err) => {
@@ -285,8 +300,7 @@ function FilePageWrapper({
                 if (failures.length > 0) {
                     console.error('[FilePageWrapper] Some files failed to trash:', failures);
                 }
-                // Refetch to update the view
-                setTimeout(() => refetch(), 300);
+                // No refetch needed - optimistic update with isTrashed: true already filters from view
             }).catch(err => {
                 console.error('[FilePageWrapper] Trash operation failed:', err);
             });
@@ -317,8 +331,7 @@ function FilePageWrapper({
                 if (failures.length > 0) {
                     console.error('[FilePageWrapper] Some files failed to restore:', failures);
                 }
-                // Refetch to update the view
-                setTimeout(() => refetch(), 300);
+                // No explicit refetch needed - notifyFilesUpdated in restoreFile triggers background refresh
             }).catch(err => {
                 console.error('[FilePageWrapper] Restore operation failed:', err);
             });
@@ -339,8 +352,7 @@ function FilePageWrapper({
                 if (failures.length > 0) {
                     console.error('[FilePageWrapper] Some files failed to permanently delete:', failures);
                 }
-                // Refetch to update the view
-                setTimeout(() => refetch(), 300);
+                // No refetch needed - optimisticRemove already removed from store
             }).catch(err => {
                 console.error('[FilePageWrapper] Permanent delete operation failed:', err);
             });
@@ -408,8 +420,7 @@ function FilePageWrapper({
                 isOpen={moveModalOpen}
                 onClose={() => {
                     setMoveModalOpen(false);
-                    // Refetch after move to update the view
-                    setTimeout(() => refetch(), 300);
+                    // No refetch needed - moveFiles already triggers notifyFilesUpdated
                 }}
                 targets={moveTargets}
                 initialParentId={moveTargets[0]?.parentId || null}
@@ -456,8 +467,7 @@ function FilePageWrapper({
                     onRename={renameFile}
                     onClose={() => {
                         setRenameFile_modal(null);
-                        // Refetch after rename to update file list
-                        setTimeout(() => refetch(), 300);
+                        // No refetch needed - updateFile already triggers notifyFilesUpdated
                     }}
                 />
             )}
