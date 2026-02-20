@@ -17,6 +17,7 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [selectedBreadcrumbs, setSelectedBreadcrumbs] = useState([]);
   const [error, setError] = useState(null);
+  const [isMoving, setIsMoving] = useState(false);
 
   // Reset state when modal is closed
   useEffect(() => {
@@ -34,6 +35,7 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
     setSelectedFolder(null);
     setSelectedBreadcrumbs([]);
     setError(null);
+    setIsMoving(false);
   };
 
   // Handle search - triggered only on Enter key
@@ -134,19 +136,24 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
       alert('Please select a destination folder');
       return;
     }
+    if (isMoving) return; // Prevent double-click
 
     const destination = selectedFolder.id;
     const idsToMove = targets
       .map((t) => t.id)
       .filter((id) => id !== undefined && id !== null);
 
+    setIsMoving(true);
     try {
       const result = await moveFiles(idsToMove, destination);
       if (!result.success) {
         const msg = (result.error || '').toLowerCase();
         const permissionBlocked = msg.includes('permission');
+        const circularRef = msg.includes('subfolder') || msg.includes('itself');
         const friendly = permissionBlocked
           ? 'You do not have permission to add files to this folder'
+          : circularRef
+          ? 'Cannot move a folder into one of its own subfolders'
           : (result.error || 'Move failed');
         alert(friendly);
         return;
@@ -155,21 +162,28 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
     } catch (err) {
       const msg = (err?.message || '').toLowerCase();
       const permissionBlocked = msg.includes('permission');
+      const circularRef = msg.includes('subfolder') || msg.includes('itself');
       const friendly = permissionBlocked
         ? 'You do not have permission to add files to this folder'
+        : circularRef
+        ? 'Cannot move a folder into one of its own subfolders'
         : (err?.message || 'Move failed');
       alert(friendly);
+    } finally {
+      setIsMoving(false);
     }
   };
 
   // Move directly to My Drive (parentId = null)
   const handleMoveToMyDrive = async () => {
     if (!targets || targets.length === 0) return;
+    if (isMoving) return; // Prevent double-click
 
     const idsToMove = targets
       .map((t) => t.id)
       .filter((id) => id !== undefined && id !== null);
 
+    setIsMoving(true);
     try {
       const result = await moveFiles(idsToMove, null);
       if (!result.success) {
@@ -189,6 +203,8 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
         ? 'You do not have permission to add files to this location'
         : (err?.message || 'Move failed');
       alert(friendly);
+    } finally {
+      setIsMoving(false);
     }
   };
 
@@ -222,6 +238,7 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
             className="move-modal__my-drive-btn"
             title="Move to My Drive"
             onClick={handleMoveToMyDrive}
+            disabled={isMoving}
           >
             <span className="material-symbols-outlined">home</span>
             <span className="move-modal__my-drive-text">My Drive</span>
@@ -269,13 +286,13 @@ function MoveModal({ isOpen, onClose, targets = [], initialParentId = null }) {
 
         {/* Action Buttons */}
         <div className="move-modal__actions">
-          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn" onClick={onClose} disabled={isMoving}>Cancel</button>
           <button
             className="btn primary"
             onClick={handleConfirm}
-            disabled={!selectedFolder || targets.length === 0}
+            disabled={!selectedFolder || targets.length === 0 || isMoving}
           >
-            Move here
+            {isMoving ? 'Moving…' : 'Move here'}
           </button>
         </div>
       </div>

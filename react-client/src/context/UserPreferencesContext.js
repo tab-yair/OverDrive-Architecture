@@ -13,28 +13,36 @@ const UserPreferencesContext = createContext(null);
  */
 export function UserPreferencesProvider({ children }) {
     const { user, token, isAuthenticated, refreshUser, notifyUserUpdate } = useAuth();
-    const [preferences, setPreferences] = useState({ theme: 'system', startPage: 'home' });
+    const [preferences, setPreferences] = useState({ theme: 'light', startPage: 'home' });
+    const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
     // Storage info state
     const [storageInfo, setStorageInfo] = useState(null);
     const [storageLoading, setStorageLoading] = useState(false);
     const [storageError, setStorageError] = useState(null);
 
-    // Load preferences when user logs in
-    // Prioritize server preferences (landingPage from Preference table)
+    // Fetch preferences from server when user logs in
     useEffect(() => {
-        if (isAuthenticated && user) {
-            if (user.preferences) {
-                const serverStartPage = user.preferences.landingPage || user.preferences.startPage || 'home';
-                setPreferences({
-                    theme: user.preferences.theme || 'system',
-                    startPage: serverStartPage
-                });
-            } 
-        } else if (!isAuthenticated) {
-            setPreferences({ theme: 'system', startPage: 'home' });
-        }
-    }, [isAuthenticated, user]);
+        const fetchPreferences = async () => {
+            if (isAuthenticated && user?.id && token) {
+                try {
+                    const serverPrefs = await userApi.getPreferences(token, user.id);
+                    setPreferences(serverPrefs);
+                    setPreferencesLoaded(true);
+                } catch (error) {
+                    console.error('Failed to fetch preferences:', error);
+                    // Keep default preferences on error
+                    setPreferences({ theme: 'light', startPage: 'home' });
+                    setPreferencesLoaded(true);
+                }
+            } else if (!isAuthenticated) {
+                setPreferences({ theme: 'light', startPage: 'home' });
+                setPreferencesLoaded(false);
+            }
+        };
+
+        fetchPreferences();
+    }, [isAuthenticated, user?.id, token]);
 
     // Fetch storage info when authenticated
     const refreshStorage = useCallback(async () => {
@@ -114,6 +122,7 @@ export function UserPreferencesProvider({ children }) {
     // Context value to provide to consumers
     const value = {
         preferences,
+        preferencesLoaded,
         storageInfo,
         storageLoading,
         storageError,

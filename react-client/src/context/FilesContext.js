@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { filesApi } from '../services/api';
 import { useUserChange } from '../hooks/useUserChange';
@@ -32,6 +32,10 @@ export function FilesProvider({ children }) {
     const [loadedEndpoints, setLoadedEndpoints] = useState(new Set());
     const [loading, setLoading] = useState({});
     const [errors, setErrors] = useState({});
+
+    // Ref for stable access to filesMap inside callbacks (avoids stale closure without re-creating callbacks)
+    const filesMapRef = useRef(filesMap);
+    useEffect(() => { filesMapRef.current = filesMap; }, [filesMap]);
 
     /**
      * Clear all files when user changes (login/logout/user switch)
@@ -203,7 +207,7 @@ export function FilesProvider({ children }) {
             const parentIds = new Set();
             if (result) {
                 result.forEach(file => {
-                    if (file.parentId && !filesMap.has(file.parentId)) {
+                    if (file.parentId && !filesMapRef.current.has(file.parentId)) {
                         parentIds.add(file.parentId);
                     }
                 });
@@ -232,7 +236,7 @@ export function FilesProvider({ children }) {
         } finally {
             setLoading(prev => ({ ...prev, [cacheKey]: false }));
         }
-    }, [token, updateFilesInStore, filesMap]);
+    }, [token, updateFilesInStore]);
 
     /**
      * Fetch single file with content (triggers VIEW interaction)
@@ -508,11 +512,24 @@ export function FilesProvider({ children }) {
                 optimisticOps.directRemove(fileId);
                 notifyStorageUpdated();
                 // Do NOT emit files-updated - we don't want to refetch as it would re-add the file
+                // Invalidate 'recent' so it re-filters without this file
+                setLoadedEndpoints(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete('recent');
+                    return newSet;
+                });
             } else {
                 // If action was 'trashed' (Owner global trash), now set isTrashed to filter from view
                 // The CSS transition has already played during the API call
                 optimisticOps.directUpdate(fileId, { isTrashed: true, _status: null });
                 notifyStorageUpdated();
+                // Invalidate 'recent' endpoint so it refetches from server (trashed files are excluded server-side)
+                // Other pages (myDrive, starred) filter client-side on isTrashed=true so they update automatically
+                setLoadedEndpoints(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete('recent');
+                    return newSet;
+                });
             }
             
             return { success: true, error: null, action: result.action };
@@ -734,7 +751,7 @@ export function FilesProvider({ children }) {
         setErrors({});
     }, []);
 
-    const value = {
+    const value = useMemo(() => ({
         // Store access
         filesMap,
         getFile,
@@ -762,7 +779,12 @@ export function FilesProvider({ children }) {
         // Loading/error states
         loading,
         errors
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [filesMap, loadedEndpoints, loading, errors,
+        getFile, getFilesFromStore, updateFilesInStore,
+        fetchFiles, fetchFileContent, updateFile, toggleStar,
+        deleteFile, restoreFile, permanentlyDeleteFile, copyFile, moveFiles,
+        invalidateEndpoint, clearAllFiles]);
 
     return (
         <FilesContext.Provider value={value}>

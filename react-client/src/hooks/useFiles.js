@@ -19,27 +19,33 @@ import { getFilterHeaders, getDefaultFilters } from '../utils/filterUtils';
  */
 export const useFiles = (endpoint, initialFilters = null) => {
     const { user } = useAuth();
-    const filesContext = useFilesContext();
+    const {
+        filesMap,
+        loadedEndpoints,
+        loading: ctxLoading,
+        errors: ctxErrors,
+        fetchFiles: ctxFetchFiles,
+        getFilesFromStore,
+        invalidateEndpoint,
+    } = useFilesContext();
     const [files, setFiles] = useState([]);
     const [filters, setFilters] = useState(
         initialFilters || getDefaultFilters(endpoint)
     );
 
     const cacheKey = `${endpoint}:${JSON.stringify(filters)}`;
-    const loading = filesContext.loading[cacheKey] || false;
-    const error = filesContext.errors[cacheKey] || null;
+    const loading = ctxLoading[cacheKey] || false;
+    const error = ctxErrors[cacheKey] || null;
 
     /**
      * Fetch files from context and update local state
      */
     const fetchFiles = useCallback(async () => {
         const filterHeaders = getFilterHeaders(filters);
-        const { files: fetchedFiles } = await filesContext.fetchFiles(endpoint, { headers: filterHeaders });
-        
-        // Get files from store (synchronized with all components)
-        const storeFiles = filesContext.getFilesFromStore(endpoint);
+        await ctxFetchFiles(endpoint, { headers: filterHeaders });
+        const storeFiles = getFilesFromStore(endpoint);
         setFiles(storeFiles);
-    }, [filesContext, endpoint, filters]);
+    }, [ctxFetchFiles, getFilesFromStore, endpoint, filters]);
 
     /**
      * Fetch on mount and when dependencies change
@@ -47,38 +53,29 @@ export const useFiles = (endpoint, initialFilters = null) => {
      */
     useEffect(() => {
         if (!user?.id) {
-            // No user - clear files
             setFiles([]);
             return;
         }
 
-        // Check if endpoint is loaded
-        const isLoaded = filesContext.loadedEndpoints.has(endpoint);
-        
+        const isLoaded = loadedEndpoints.has(endpoint);
         if (!isLoaded) {
-            // Endpoint not loaded - fetch from server
             fetchFiles();
         } else {
-            // Endpoint loaded - get from store
-            const storeFiles = filesContext.getFilesFromStore(endpoint);
-            setFiles(storeFiles);
+            setFiles(getFilesFromStore(endpoint));
         }
-    }, [user?.id, endpoint, filesContext.loadedEndpoints, fetchFiles, filesContext]);
+    // loadedEndpoints reference changes when an endpoint is added/removed (new Set)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id, endpoint, loadedEndpoints]);
 
     /**
      * Subscribe to filesMap updates to get new data immediately
-     * CRITICAL: Use filesMap reference as dependency to detect ANY changes
-     * (not just size - property changes like isTrashed also need to trigger updates)
      */
-    const { filesMap } = filesContext;
-    
     useEffect(() => {
-        // Update files whenever filesMap changes (new reference = new Map)
-        if (filesContext.loadedEndpoints.has(endpoint)) {
-            const storeFiles = filesContext.getFilesFromStore(endpoint);
-            setFiles(storeFiles);
+        if (loadedEndpoints.has(endpoint)) {
+            setFiles(getFilesFromStore(endpoint));
         }
-    }, [filesMap, endpoint, filesContext]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filesMap, endpoint]);
 
     /**
      * Update filters and trigger refetch
@@ -88,16 +85,16 @@ export const useFiles = (endpoint, initialFilters = null) => {
             ...prevFilters,
             ...newFilters
         }));
-        filesContext.invalidateEndpoint(endpoint);
-    }, [filesContext, endpoint]);
+        invalidateEndpoint(endpoint);
+    }, [invalidateEndpoint, endpoint]);
 
     /**
      * Clear all filters to defaults
      */
     const resetFilters = useCallback(() => {
         setFilters(getDefaultFilters(endpoint));
-        filesContext.invalidateEndpoint(endpoint);
-    }, [endpoint, filesContext]);
+        invalidateEndpoint(endpoint);
+    }, [endpoint, invalidateEndpoint]);
 
     return {
         files,

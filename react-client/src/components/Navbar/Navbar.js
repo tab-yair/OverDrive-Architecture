@@ -16,9 +16,23 @@ import './Navbar.css';
  */
 function Navbar() {
     const { isAuthenticated, user } = useAuth();
-    const { isDarkMode, toggleTheme } = useTheme(); 
-    const { preferences } = useUserPreferences();
+    const { isDarkMode, themeMode, setThemeMode } = useTheme(); 
+    const { preferences, updatePreference } = useUserPreferences();
     const navigate = useNavigate();
+    
+    // Handle theme toggle with server sync
+    const handleThemeToggle = () => {
+        // Calculate new theme mode (toggle between light and dark)
+        const newMode = themeMode === 'dark' ? 'light' : 'dark';
+        
+        // Update local theme immediately for instant UI response
+        setThemeMode(newMode);
+        
+        // Sync with server (only if authenticated)
+        if (isAuthenticated && user?.id) {
+            updatePreference('theme', newMode);
+        }
+    };
     
     const getStartPageRoute = () => {
         if (!isAuthenticated) return '/';
@@ -53,7 +67,7 @@ function Navbar() {
                         {/* Theme toggle button */}
                         <button
                             className="navbar-icon-btn"
-                            onClick={toggleTheme}
+                            onClick={handleThemeToggle}
                             title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                             aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                         >

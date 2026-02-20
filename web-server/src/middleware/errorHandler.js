@@ -32,8 +32,19 @@ const getStatusFromError = (error) => {
         message.includes('must be') ||
         message.includes('is not in trash') ||
         message.includes('cannot modify content') ||
-        message.includes('before permanent deletion')) {
+        message.includes('before permanent deletion') ||
+        message.includes('cannot move') ||
+        message.includes('subfolder') ||
+        message.includes('into itself') ||
+        message.includes('destination') ||
+        message.includes('not a folder') ||
+        message.includes('circular')) {
         return 400;
+    }
+
+    // 409 Conflict
+    if (message.includes('modified by another')) {
+        return 409;
     }
 
     // 403 Forbidden

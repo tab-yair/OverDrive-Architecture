@@ -174,32 +174,43 @@ export const userApi = {
     },
 
     /**
-     * Local storage fallback for user preferences.
+     * Fetch user preferences from server
+     * GET /api/users/:id/preference
      */
-    getPreferences(userId) {
-        const stored = localStorage.getItem(`preferences_${userId}`);
-        if (stored) {
-            try {
-                return JSON.parse(stored);
-            } catch {
-                return { theme: 'system', startPage: 'home' };
+    async getPreferences(token, userId) {
+        const response = await fetch(`${API_BASE_URL}/api/users/${userId}/preference`, {
+            headers: getAuthHeaders(token)
+        });
+        
+        if (!response.ok) {
+            // If preferences not found, return defaults
+            if (response.status === 404) {
+                return { theme: 'light', landingPage: 'home' };
             }
+            throw new Error('Failed to fetch preferences');
         }
-        return { theme: 'system', startPage: 'home' };
+        
+        const data = await response.json();
+        // Map server response to client format
+        return {
+            theme: data.theme || 'light',
+            startPage: data.landingPage || 'home'
+        };
     },
 
-    updatePreferences: async (token, userId, preferences) => {
-        // Build payload with preferences object containing theme and landingPage
+    /**
+     * Update user preferences on server
+     * PATCH /api/users/:id/preference
+     */
+    async updatePreferences(token, userId, preferences) {
+        // Build payload with flat fields (theme and landingPage)
+        // Map client 'startPage' to server 'landingPage'
         const payload = {
-            preferences: {
-                theme: preferences.theme || 'system',
-                landingPage: preferences.startPage || 'home'
-            }
+            theme: preferences.theme || 'light',
+            landingPage: preferences.startPage || 'home'
         };
         
-        console.log('Payload being sent:', payload);
-        
-        const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/users/${userId}/preference`, {
             method: 'PATCH',
             headers: getAuthHeaders(token),
             body: JSON.stringify(payload)
@@ -207,13 +218,14 @@ export const userApi = {
         
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.log('Server Error:', errorData);
-            throw new Error(errorData.message || 'Failed to update preferences');
+            throw new Error(errorData.error || 'Failed to update preferences');
         }
         
-        // Store scoped to user ID to prevent data leakage
-        localStorage.setItem(`preferences_${userId}`, JSON.stringify(preferences));
-        return preferences;
+        // Return updated preferences in client format
+        return {
+            theme: payload.theme,
+            startPage: payload.landingPage
+        };
     }
 };
 

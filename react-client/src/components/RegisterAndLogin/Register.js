@@ -33,6 +33,23 @@ function Register() {
         if (error) setError(''); 
     };
 
+    // Handle Enter key to move to next field instead of submitting
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            
+            // Get all form inputs
+            const form = e.target.form;
+            const inputs = Array.from(form.querySelectorAll('input[type="text"], input[type="password"]'));
+            const currentIndex = inputs.indexOf(e.target);
+            
+            // Move to next input if exists
+            if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
+                inputs[currentIndex + 1].focus();
+            }
+        }
+    };
+
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -101,13 +118,13 @@ function Register() {
 
                 <form onSubmit={handleSubmit}>
                     <div className="input-group">
-                        <input name="firstName" type="text" placeholder="First Name" value={formData.firstName} onChange={handleChange} required />
+                        <input name="firstName" type="text" placeholder="First Name" value={formData.firstName} onChange={handleChange} onKeyDown={handleKeyDown} required />
                     </div>
                     <div className="input-group">
-                        <input name="lastName" type="text" placeholder="Last Name (Optional)" value={formData.lastName} onChange={handleChange} />
+                        <input name="lastName" type="text" placeholder="Last Name (Optional)" value={formData.lastName} onChange={handleChange} onKeyDown={handleKeyDown} />
                     </div>
                     <div className="input-group">
-                        <input name="username" type="text" placeholder="Username" value={formData.username} onChange={handleChange} required />
+                        <input name="username" type="text" placeholder="Username" value={formData.username} onChange={handleChange} onKeyDown={handleKeyDown} required />
                     </div>
                     
                     <div className="input-group password-group">
@@ -116,7 +133,8 @@ function Register() {
                             type={showPassword ? "text" : "password"} 
                             placeholder="Password" 
                             value={formData.password} 
-                            onChange={handleChange} 
+                            onChange={handleChange}
+                            onKeyDown={handleKeyDown}
                             required 
                         />
                         <button 
@@ -136,7 +154,8 @@ function Register() {
                             type={showConfirmPassword ? "text" : "password"} 
                             placeholder="Confirm Password" 
                             value={formData.confirmPassword} 
-                            onChange={handleChange} 
+                            onChange={handleChange}
+                            onKeyDown={handleKeyDown}
                             required 
                         />
                         <button 
