@@ -13,7 +13,7 @@ export function ThemeProvider({ children }) {
     const { user, token, isAuthenticated } = useAuth();
 
     // Theme mode: 'light' | 'dark' | 'system'
-    const [themeMode, setThemeModeState] = useState('light');
+    const [themeMode, setThemeModeState] = useState('system');
     const [themeModeLoaded, setThemeModeLoaded] = useState(false);
 
     // Track system preference
@@ -38,9 +38,8 @@ export function ThemeProvider({ children }) {
                     setThemeModeLoaded(true);
                 }
             } else if (!isAuthenticated) {
-                // For logged out users, use localStorage
-                const savedMode = localStorage.getItem('themeMode_general');
-                setThemeModeState(savedMode || 'light');
+                // For logged out screens (login/signup/landing), always follow the system/browser preference
+                setThemeModeState('system');
                 setThemeModeLoaded(true);
             }
         };
@@ -81,13 +80,6 @@ export function ThemeProvider({ children }) {
             }
         };
     }, []);
-
-    // Persist theme mode preference when it changes (only for logged out users)
-    useEffect(() => {
-        if (!isAuthenticated) {
-            localStorage.setItem('themeMode_general', themeMode);
-        }
-    }, [themeMode, isAuthenticated]);
 
     /**
      * Set theme mode
