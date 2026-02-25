@@ -43,6 +43,8 @@ services:
   react-client:
     build:
       context: ./react-client
+      args:
+        - REACT_APP_API_BASE_URL=http://localhost:3000
     container_name: overdrive-react-client
     ports:
       - "3001:3001"

@@ -1,9 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useUserPreferences } from '../../context/UserPreferencesContext'; 
 import Logo from '../Logo/Logo';
 import SearchBar from '../SearchBar/SearchBar';
 import ProfileDropdown from '../ProfileDropdown/ProfileDropdown';
+import NewButton from '../Sidebar/NewButton/NewButton';
 import './Navbar.css';
 
 /**
@@ -13,17 +15,41 @@ import './Navbar.css';
  * - Authenticated: Logo + SearchBar + Theme toggle + Settings + User profile dropdown
  */
 function Navbar() {
-    const { isAuthenticated, mockLogin } = useAuth();
-    const { isDarkMode, toggleTheme } = useTheme();
+    const { isAuthenticated, user } = useAuth();
+    const { isDarkMode, themeMode, setThemeMode } = useTheme(); 
+    const { preferences, updatePreference } = useUserPreferences();
     const navigate = useNavigate();
-
+    
+    // Handle theme toggle with server sync
+    const handleThemeToggle = () => {
+        // Calculate new theme mode (toggle between light and dark)
+        const newMode = themeMode === 'dark' ? 'light' : 'dark';
+        
+        // Update local theme immediately for instant UI response
+        setThemeMode(newMode);
+        
+        // Sync with server (only if authenticated)
+        if (isAuthenticated && user?.id) {
+            updatePreference('theme', newMode);
+        }
+    };
+    
+    const getStartPageRoute = () => {
+        if (!isAuthenticated) return '/';
+        // Use landingPage from user preferences (from server)
+        const landingPage = user?.preferences?.landingPage || 
+                           user?.preferences?.startPage || 
+                           preferences?.startPage || 
+                           'home';
+        return landingPage === 'mydrive' ? '/mydrive' : '/home';
+    };
     return (
         <nav className="navbar">
-            {/* Logo section - always visible */}
+            {/* Logo section - dynamic based on preferences */}
             <div className="navbar-left">
                 <Logo
                     size="sm"
-                    to={isAuthenticated ? '/home' : '/'}
+                    to={getStartPageRoute()}
                 />
             </div>
 
@@ -41,7 +67,7 @@ function Navbar() {
                         {/* Theme toggle button */}
                         <button
                             className="navbar-icon-btn"
-                            onClick={toggleTheme}
+                            onClick={handleThemeToggle}
                             title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                             aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                         >
@@ -53,7 +79,7 @@ function Navbar() {
                         {/* Settings button */}
                         <button
                             className="navbar-icon-btn navbar-settings-btn"
-                            onClick={() => navigate('/settings')}
+                            onClick={() => navigate('/settings/general')}
                             title="Settings"
                             aria-label="Settings"
                         >

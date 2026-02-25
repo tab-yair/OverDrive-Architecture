@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import ActionButton from './ActionButton';
 import FileActionMenu from './FileActionMenu';
 import { getAvailableActions } from './fileUtils';
+import { getFileItemClasses, isFileItemPending, getFileItemStatusText } from '../../utils/fileItemHelpers';
+import '../../styles/FileItemTransitions.css';
 import './FileCard.css';
 
 /**
@@ -12,6 +14,7 @@ import './FileCard.css';
  * @param {string} props.permissionLevel - User's permission level
  * @param {boolean} props.isOwner - Whether current user is the owner
  * @param {boolean} props.isSelected - Whether this file is selected
+ * @param {number} props.selectedCount - Number of selected files
  * @param {Function} props.onSelect - Callback when selection changes
  * @param {Function} props.onAction - Callback for action events
  * @param {Function} props.onClick - Callback when card is clicked
@@ -22,13 +25,14 @@ const FileCard = ({
   permissionLevel = 'viewer', 
   isOwner = true, 
   isSelected = false,
+  selectedCount = 0,
   onSelect,
   onAction, 
-  onClick 
+  onClick,
+  onDoubleClick
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const [isStarred, setIsStarred] = useState(file.starred || false);
   const menuButtonRef = useRef(null);
 
   // Helper to get file icon
@@ -39,10 +43,21 @@ const FileCard = ({
       image: 'image.svg',
       docs: 'Docs.svg',
     };
-    return `${process.env.PUBLIC_URL}/assets/${iconMap[type] || 'Docs.svg'}`;
+    const iconFile = iconMap[type] || 'Docs.svg';
+    const iconPath = `${process.env.PUBLIC_URL}/assets/${iconFile}`;
+    
+    return iconPath;
   };
 
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred });
+  // CRITICAL: Use file-specific permission level, not global prop
+  // For Shared page: file.sharedPermissionLevel or file.permissionLevel
+  // For other pages: file.permissionLevel or fallback to prop
+  const effectivePermissionLevel = file.sharedPermissionLevel || file.permissionLevel || permissionLevel;
+  
+  // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
+  // It represents actions for THIS specific file, independent of global selection state
+  // Only SelectionToolbar should use actual selectedCount for bulk operations
+  const availableActions = getAvailableActions(pageContext, file, 1, effectivePermissionLevel);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();
@@ -55,20 +70,9 @@ const FileCard = ({
   };
 
   const handleActionSelected = (actionId) => {
-    if (actionId === 'star' || actionId === 'unstar') {
-      setIsStarred(actionId === 'star');
-    }
+    // No local state update needed - FilesContext will update and trigger re-render
     if (onAction) {
       onAction(actionId, file);
-    }
-  };
-
-  const handleStarClick = (event) => {
-    event.stopPropagation();
-    const newStarredState = !isStarred;
-    setIsStarred(newStarredState);
-    if (onAction) {
-      onAction(newStarredState ? 'star' : 'unstar', file);
     }
   };
 
@@ -80,25 +84,50 @@ const FileCard = ({
       onSelect(file, event);
     }
     
-    // If it's a normal click (not Ctrl/Cmd), also open the file
+    // If it's a normal click (not Ctrl/Cmd), also call onClick if provided
     if (!event.ctrlKey && !event.metaKey && onClick) {
       onClick(file);
     }
   };
 
+  const handleCardDoubleClick = (event) => {
+    event.stopPropagation();
+    
+    // Double-click opens the file/folder
+    if (onDoubleClick) {
+      onDoubleClick(file);
+    }
+  };
+
   // Remove handleCheckboxClick - no longer needed
+
+  // Determine if file has pending status using shared utility
+  const isPending = isFileItemPending(file);
+  const statusText = getFileItemStatusText(file);
+  
+  // Build additional classes for FileCard-specific styling
+  const additionalClasses = [
+    'file-card',
+    file.type === 'folder' ? 'folder-card' : '',
+    (pageContext === 'Recent' || pageContext === 'Shared') ? 'uniform-square' : ''
+  ].filter(Boolean).join(' ');
+  
+  // Get classes from shared utility
+  const itemClasses = getFileItemClasses(file, isSelected, { additionalClasses });
 
   return (
     <>
       <div
-        className={`file-card ${file.type === 'folder' ? 'folder-card' : ''} ${pageContext === 'Recent' || pageContext === 'Shared' ? 'uniform-square' : ''} ${isSelected ? 'selected' : ''}`}
+        className={itemClasses}
         onClick={handleCardClick}
+        onDoubleClick={handleCardDoubleClick}
         role="button"
         tabIndex={0}
+        title={statusText || undefined}
       >
         {/* Card Header with Menu Button - For regular files and uniform-square folders */}
         {(file.type !== 'folder' || pageContext === 'Recent' || pageContext === 'Shared') && (
-          <div className="file-card-header" onClick={(e) => e.stopPropagation()}>
+          <div className="file-card-header" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
             <div ref={menuButtonRef}>
               <ActionButton
                 iconSrc={`${process.env.PUBLIC_URL}/assets/more_vert.svg`}
@@ -128,7 +157,7 @@ const FileCard = ({
 
         {/* Folder Menu Button (on right side of banner) - Only for banner-style folders */}
         {file.type === 'folder' && pageContext !== 'Recent' && pageContext !== 'Shared' && (
-          <div className="folder-menu-button" onClick={(e) => e.stopPropagation()}>
+          <div className="folder-menu-button" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
             <div ref={menuButtonRef}>
               <ActionButton
                 iconSrc={`${process.env.PUBLIC_URL}/assets/more_vert.svg`}

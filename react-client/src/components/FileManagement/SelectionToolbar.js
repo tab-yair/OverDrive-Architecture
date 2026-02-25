@@ -81,11 +81,11 @@ const SelectionToolbar = ({
   }
 
   // Get toolbar actions using centralized logic (with per-file permission handling)
-  const toolbarActions = getToolbarActions(pageContext, selectedFiles);
+  const toolbarActions = getToolbarActions(pageContext, selectedFiles, permissionLevel);
   
   // Get all available actions for the "More" menu using bulk intersection logic
   // Only shows actions that ALL selected items support
-  const allActions = getBulkMenuActions(pageContext, selectedFiles);
+  const allActions = getBulkMenuActions(pageContext, selectedFiles, permissionLevel);
 
   const handleActionClick = (actionId) => {
     if (onAction) {

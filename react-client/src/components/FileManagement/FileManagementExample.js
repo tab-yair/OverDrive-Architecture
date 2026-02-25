@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileManager } from '../FileManagement';
+import InfoSidebar from './InfoSidebar';
+import { FilesProvider } from '../../context/FilesContext';
 
 /**
  * Example usage of FileManager component
  * This demonstrates how to use the file management components in your pages
+ * 
+ * NOTE: Wrapped in FilesProvider for SSOT demonstration
  */
 const FileManagementExample = () => {
   const [viewMode, setViewMode] = useState('list');
+  const [selectedFileId, setSelectedFileId] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Example file data - replace with your API data
   // Includes test cases for today, yesterday, last week, last month, and older
@@ -16,51 +22,78 @@ const FileManagementExample = () => {
       type: 'folder',
       name: 'PDF',
       owner: 'John Doe',
+      ownerUsername: 'john.doe@gmail.com',
       lastModified: new Date('2026-01-07T14:30:00'),
+      created: new Date('2025-06-15T10:00:00'),
       size: null,
       starred: false,
+      location: { parentName: null, isRoot: true },
+      currentUserRole: 'owner',
     },
     {
       id: 'images-folder',
       type: 'folder',
       name: 'Images',
       owner: 'John Doe',
+      ownerUsername: 'john.doe@gmail.com',
       lastModified: new Date('2026-01-07T14:30:00'),
+      created: new Date('2025-08-20T09:30:00'),
       size: null,
       starred: false,
+      location: { parentName: null, isRoot: true },
+      currentUserRole: 'editor',
     },
     {
       id: 'docs-folder',
       type: 'folder',
       name: 'Docs',
       owner: 'John Doe',
+      ownerUsername: 'john.doe@gmail.com',
       lastModified: new Date('2026-01-07T14:30:00'),
+      created: new Date('2025-05-10T14:15:00'),
       size: null,
       starred: false,
+      currentUserRole: 'viewer',
+      location: { parentName: null, isRoot: true },
     },
     {
       id: '1',
       type: 'folder',
       name: 'Projects',
       owner: 'John Doe',
+      ownerUsername: 'john.doe@gmail.com',
       lastModified: new Date('2026-01-07T14:30:00'),
+      created: new Date('2025-03-01T08:00:00'),
       size: null,
       starred: true,
+      location: { parentName: null, isRoot: true },
     },
     {
       id: '2',
       type: 'pdf',
       name: 'Project Report Q4 2024.pdf',
       owner: 'Jane Smith',
+      ownerUsername: 'jane.smith@gmail.com',
       lastModified: new Date('2026-01-06T14:20:00'),
+      created: new Date('2025-12-20T11:30:00'),
+      lastOpened: new Date('2026-01-06T14:20:00'),
       size: 2048576, // 2MB
       starred: false,
+      currentUserRole: 'owner',
+      location: { parentName: 'Projects', isRoot: false },
+      sharedWith: [
+        { id: 'u2', name: 'Sarah Johnson', username: 'sarah.johnson@gmail.com', role: 'editor', isInherited: false },
+        { id: 'u3', name: 'Mike Chen', username: 'mike.chen@gmail.com', role: 'editor', isInherited: true },
+        { id: 'u4', name: 'Emma Davis', username: 'emma.davis@gmail.com', role: 'viewer', isInherited: false },
+        { id: 'u5', name: 'Alex Wilson', username: 'alex.wilson@gmail.com', role: 'viewer', isInherited: true },
+      ],
     },
     {
       id: '3',
       type: 'docs',
       name: 'Meeting Notes - January.docx',
       owner: 'John Doe',
+      ownerUsername: 'john.doe@gmail.com',
       lastModified: new Date('2026-01-02T09:15:00'),
       size: 45056,
       starred: false,
@@ -70,6 +103,7 @@ const FileManagementExample = () => {
       type: 'image',
       name: 'Screenshot 2026-01-07.png',
       owner: 'John Doe',
+      ownerUsername: 'john.doe@gmail.com',
       lastModified: new Date('2026-01-07T11:45:00'),
       size: 1024000, // 1MB
       starred: true,
@@ -79,6 +113,7 @@ const FileManagementExample = () => {
       type: 'folder',
       name: 'Documents',
       owner: 'Jane Smith',
+      ownerUsername: 'jane.smith@gmail.com',
       lastModified: new Date('2025-12-24T16:00:00'),
       size: null,
       starred: false,
@@ -88,6 +123,7 @@ const FileManagementExample = () => {
       type: 'pdf',
       name: 'Invoice_2024_12.pdf',
       owner: 'Accounting Dept',
+      ownerUsername: 'accounting@gmail.com',
       lastModified: new Date('2025-12-15T23:59:00'),
       size: 512000,
       starred: false,
@@ -97,6 +133,7 @@ const FileManagementExample = () => {
       type: 'docs',
       name: 'Archive 2025.docx',
       owner: 'Records Dept',
+      ownerUsername: 'records@gmail.com',
       lastModified: new Date('2025-11-10T10:00:00'),
       size: 127890,
       starred: false,
@@ -110,6 +147,7 @@ const FileManagementExample = () => {
       type: 'folder',
       name: 'PDF',
       owner: 'Finance Team',
+      ownerUsername: 'finance@gmail.com',
       size: null,
       shareDate: new Date('2026-01-07T14:30:00'),
       sharer: {
@@ -123,6 +161,7 @@ const FileManagementExample = () => {
       type: 'folder',
       name: 'Images',
       owner: 'Finance Team',
+      ownerUsername: 'finance@gmail.com',
       size: null,
       shareDate: new Date('2026-01-07T14:30:00'),
       sharer: {
@@ -136,6 +175,7 @@ const FileManagementExample = () => {
       type: 'folder',
       name: 'Docs',
       owner: 'Finance Team',
+      ownerUsername: 'finance@gmail.com',
       size: null,
       shareDate: new Date('2026-01-07T14:30:00'),
       sharer: {
@@ -149,6 +189,7 @@ const FileManagementExample = () => {
       type: 'pdf',
       name: 'Q4 Financial Report.pdf',
       owner: 'Finance Team',
+      ownerUsername: 'finance@gmail.com',
       size: 3145728,
       shareDate: new Date('2026-01-07T10:00:00'),
       sharer: {
@@ -162,6 +203,7 @@ const FileManagementExample = () => {
       type: 'docs',
       name: 'Budget Plan 2026.docx',
       owner: 'Finance Team',
+      ownerUsername: 'finance@gmail.com',
       size: 256000,
       shareDate: new Date('2026-01-06T14:30:00'),
       sharer: {
@@ -175,6 +217,7 @@ const FileManagementExample = () => {
       type: 'pdf',
       name: 'Monthly Report Dec.pdf',
       owner: 'HR Department',
+      ownerUsername: 'hr@gmail.com',
       size: 1024000,
       shareDate: new Date('2025-12-24T09:00:00'),
       sharer: {
@@ -192,6 +235,7 @@ const FileManagementExample = () => {
       type: 'folder',
       name: 'PDF',
       owner: 'John Doe',
+      ownerUsername: 'john.doe@gmail.com',
       size: null,
       lastActions: [
         { date: new Date('2026-01-07T14:30:00'), action: 'opened' },
@@ -207,6 +251,7 @@ const FileManagementExample = () => {
       type: 'folder',
       name: 'Images',
       owner: 'John Doe',
+      ownerUsername: 'john.doe@gmail.com',
       size: null,
       lastActions: [
         { date: new Date('2026-01-07T14:30:00'), action: 'opened' },
@@ -222,6 +267,7 @@ const FileManagementExample = () => {
       type: 'folder',
       name: 'Docs',
       owner: 'John Doe',
+      ownerUsername: 'john.doe@gmail.com',
       size: null,
       lastActions: [
         { date: new Date('2026-01-06T10:30:00'), action: 'opened' },
@@ -433,64 +479,54 @@ const FileManagementExample = () => {
 
   // Handle file actions
   const handleAction = (actionId, file) => {
-    console.log(`Action triggered: ${actionId}`, file);
-    
     // Implement your action handlers here
     switch (actionId) {
       case 'download':
-        console.log('Downloading file:', file.name);
         // Implement download logic
         // e.g., window.open(`/api/files/${file.id}/download`)
         break;
         
       case 'star':
-        console.log('Starring file:', file.name);
         // Implement star logic
         // e.g., api.starFile(file.id)
         break;
         
       case 'unstar':
-        console.log('Unstarring file:', file.name);
         // Implement unstar logic
         break;
         
       case 'share':
-        console.log('Opening share dialog for:', file.name);
         // Open share dialog
         break;
         
       case 'move':
-        console.log('Opening move dialog for:', file.name);
         // Open move dialog
         break;
         
       case 'rename':
-        console.log('Opening rename dialog for:', file.name);
         // Open rename dialog
         break;
         
       case 'trash':
-        console.log('Moving to trash:', file.name);
         // Implement trash logic
         break;
         
       case 'restore':
-        console.log('Restoring from trash:', file.name);
         // Implement restore logic
         break;
         
       case 'delete':
-        console.log('Permanently deleting:', file.name);
         // Implement permanent delete (with confirmation)
         break;
         
       case 'view':
-        console.log('Viewing file details:', file.name);
-        // Open file details panel
+      case 'details':
+        // Open file details panel with fileId (SSOT pattern)
+        setSelectedFileId(file.id);
+        setIsSidebarOpen(true);
         break;
         
       case 'copy':
-        console.log('Making a copy of:', file.name);
         // Implement copy logic
         break;
         
@@ -502,11 +538,9 @@ const FileManagementExample = () => {
   // Handle file/folder click
   const handleFileClick = (file) => {
     if (file.type === 'folder') {
-      console.log('Opening folder:', file.name);
       // Navigate into the folder
       // e.g., navigate(`/drive/folder/${file.id}`)
     } else {
-      console.log('Opening file preview:', file.name);
       // Open file preview/viewer
       // e.g., navigate(`/drive/file/${file.id}`)
     }
@@ -714,6 +748,13 @@ const FileManagementExample = () => {
           />
         </div>
       </section>
+
+      {/* Info Sidebar - Uses FilesContext (SSOT) via fileId */}
+      <InfoSidebar
+        fileId={selectedFileId}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
     </div>
   );
 };

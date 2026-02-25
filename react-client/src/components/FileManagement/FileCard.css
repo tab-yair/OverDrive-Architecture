@@ -14,30 +14,50 @@
   border-radius: var(--radius-card);
   padding: 12px;
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: all var(--transition-normal), opacity var(--transition-normal), transform var(--transition-normal);
   overflow: hidden;
   /* Fixed size - square (1:1 aspect ratio) */
   width: var(--card-size);
   height: var(--card-size);
   box-shadow: var(--shadow);
+  /* Smooth entry animation */
+  animation: fileCardFadeIn 0.2s ease-out;
 }
+
+/* Entry animation for file cards */
+@keyframes fileCardFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* NOTE: Status styles (copying, moving, deleting, etc.) are in FileItemTransitions.css */
 
 .file-card:hover {
   box-shadow: var(--shadow-elevated);
   border-color: var(--accent-color, #1a73e8);
 }
 
-/* Selected state */
+/* Selected state - just background color, subtle styling */
 .file-card.selected {
-  background-color: rgba(26, 115, 232, 0.08);
-  border: 2px solid #1a73e8;
-  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.24);
+  background-color: rgba(26, 115, 232, 0.12);
 }
 
 [data-theme="dark"] .file-card.selected {
-  background-color: rgba(138, 180, 248, 0.12);
-  border-color: #8ab4f8;
-  box-shadow: 0 2px 8px rgba(138, 180, 248, 0.24);
+  background-color: rgba(138, 180, 248, 0.16);
+}
+
+.file-card.selected:hover {
+  background-color: rgba(26, 115, 232, 0.16);
+}
+
+[data-theme="dark"] .file-card.selected:hover {
+  background-color: rgba(138, 180, 248, 0.20);
 }
 
 /* Folder cards in Default view - horizontal banner (short rectangle) */
@@ -48,6 +68,23 @@
   height: var(--folder-banner-height);
   padding: 12px 16px;
   background: var(--bg-secondary);
+}
+
+/* CRITICAL: Selected folder banners must override the default background */
+.file-card.folder-card:not(.uniform-square).selected {
+  background-color: rgba(26, 115, 232, 0.12);
+}
+
+[data-theme="dark"] .file-card.folder-card:not(.uniform-square).selected {
+  background-color: rgba(138, 180, 248, 0.16);
+}
+
+.file-card.folder-card:not(.uniform-square).selected:hover {
+  background-color: rgba(26, 115, 232, 0.16);
+}
+
+[data-theme="dark"] .file-card.folder-card:not(.uniform-square).selected:hover {
+  background-color: rgba(138, 180, 248, 0.20);
 }
 
 /* Uniform square folders in Recent/Shared - inherit default square styling */
@@ -99,12 +136,15 @@
   width: 64px;
   height: 64px;
   object-fit: contain;
-  transition: transform var(--transition-normal);
+  transition: transform var(--transition-normal), filter 0.2s ease-in-out;
+  /* Icons use currentColor from SVG or have proper colors - no filters needed */
+  color: var(--text-secondary);
 }
 
-/* Dark mode - make icons visible */
-[data-theme="dark"] .file-card-icon:not(.folder-icon) {
-  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+/* Dark mode - file type icons should be white/off-white */
+[data-theme="dark"] .file-card-icon {
+  color: var(--text-secondary);
+  filter: var(--icon-filter, brightness(0) saturate(100%) invert(93%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(92%)) !important;
 }
 
 .file-card:hover .file-card-icon {
@@ -117,6 +157,11 @@
   height: 28px;
   filter: grayscale(1) brightness(0.5);
   transform: none;
+}
+
+/* Dark mode - banner folder icons should be white */
+[data-theme="dark"] .file-card.folder-card:not(.uniform-square) .file-card-icon.folder-icon {
+  filter: var(--icon-filter, brightness(0) saturate(100%) invert(93%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(92%));
 }
 
 .file-card.folder-card:not(.uniform-square):hover .file-card-icon.folder-icon {

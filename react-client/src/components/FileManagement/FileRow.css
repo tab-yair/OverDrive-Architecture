@@ -14,32 +14,44 @@
   align-items: center;
   padding: 0 32px 0 24px; /* Right buffer: 32px */
   border-bottom: 1px solid var(--border-color);
-  transition: background-color var(--transition-normal);
+  transition: background-color var(--transition-normal), opacity var(--transition-normal), transform var(--transition-normal);
   cursor: pointer;
   height: 52px; /* Fixed row height for consistency */
   position: relative;
   gap: 32px; /* Generous gap for readability */
+  /* Smooth entry animation */
+  animation: fileRowFadeIn 0.2s ease-out;
 }
+
+/* Entry animation for file rows */
+@keyframes fileRowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* NOTE: Status styles (copying, moving, deleting, etc.) are in FileItemTransitions.css */
 
 .file-row:hover {
   background-color: var(--bg-hover);
 }
 
 .file-row:focus {
-  outline: 2px solid var(--accent-color);
-  outline-offset: -2px;
+  outline: none;
 }
 
-/* Selected state */
+/* Selected state - just background color, no border */
 .file-row.selected {
   background-color: rgba(26, 115, 232, 0.12);
-  border-left: 3px solid #1a73e8;
-  padding-left: 13px;
 }
 
 [data-theme="dark"] .file-row.selected {
   background-color: rgba(138, 180, 248, 0.16);
-  border-left-color: #8ab4f8;
 }
 
 .file-row.selected:hover {
@@ -63,16 +75,15 @@
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  transition: filter 0.2s ease-in-out;
+  /* Icons use currentColor from SVG or have proper colors - no filters needed */
+  color: var(--text-secondary);
 }
 
-/* Dark mode - make icons visible */
-[data-theme="dark"] .file-row-icon:not(.folder-icon) {
-  filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
-}
-
-/* Folder icon uses its natural color from SVG - gray (#5f6368) */
-.folder-icon {
-  filter: none;
+/* Dark mode - file type icons should be white/off-white */
+[data-theme="dark"] .file-row-icon {
+  color: var(--text-secondary);
+  filter: var(--icon-filter, brightness(0) saturate(100%) invert(93%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(100%) contrast(92%)) !important;
 }
 
 .file-name-text {
@@ -126,6 +137,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.owner-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-circle);
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .owner-avatar-placeholder {

@@ -1,7 +1,11 @@
 import React, { useState, useRef } from 'react';
 import ActionButton from './ActionButton';
 import FileActionMenu from './FileActionMenu';
-import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatSmartDate, formatRecentActivity, getFallbackValue } from './fileUtils';
+import { getMetadataConfig, getAvailableActions, getRowActionButtons, formatFileSize, formatRecentActivity, getFallbackValue, getLocationDisplayName } from './fileUtils';
+import { useAuth } from '../../context/AuthContext';
+import { useFilesContext } from '../../context/FilesContext';
+import { getFileItemClasses, isFileItemPending, getFileItemStatusText } from '../../utils/fileItemHelpers';
+import '../../styles/FileItemTransitions.css';
 import './FileRow.css';
 
 /**
@@ -12,24 +16,32 @@ import './FileRow.css';
  * @param {string} props.permissionLevel - User's permission level
  * @param {boolean} props.isOwner - Whether current user is the owner
  * @param {boolean} props.isSelected - Whether this file is selected
+ * @param {number} props.selectedCount - Number of selected files
  * @param {Function} props.onSelect - Callback when selection changes
  * @param {Function} props.onAction - Callback for action events
  * @param {Function} props.onClick - Callback when row is clicked
  */
 const FileRow = ({ 
-  file, 
+  file: fileProp, 
   pageContext = 'MyDrive', 
   permissionLevel = 'viewer', 
   isOwner = true, 
   isSelected = false,
+  selectedCount = 0,
   onSelect,
   onAction, 
-  onClick 
+  onClick,
+  onDoubleClick
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const [isStarred, setIsStarred] = useState(file.starred || false);
   const menuButtonRef = useRef(null);
+  const { user } = useAuth();
+  const filesContext = useFilesContext();
+  
+  // CRITICAL: Always use fresh data from FilesContext like InfoSidebar does
+  // This ensures location is computed with the latest parent folder data
+  const file = filesContext.getFile(fileProp.id) || fileProp;
 
   // Helper to get file icon
   const getFileIconSrc = (type) => {
@@ -39,16 +51,27 @@ const FileRow = ({
       image: 'image.svg',
       docs: 'Docs.svg',
     };
-    return `${process.env.PUBLIC_URL}/assets/${iconMap[type] || 'Docs.svg'}`;
+    const iconFile = iconMap[type] || 'Docs.svg';
+    const iconPath = `${process.env.PUBLIC_URL}/assets/${iconFile}`;
+    
+    return iconPath;
   };
 
   const metadataConfig = getMetadataConfig(pageContext);
   
-  // Get actions using the single source of truth (ACTION_REGISTRY)
-  const availableActions = getAvailableActions(pageContext, { ...file, starred: isStarred });
+  // CRITICAL: Use file-specific permission level, not global prop
+  // For Shared page: file.sharedPermissionLevel or file.permissionLevel
+  // For other pages: file.permissionLevel or fallback to prop
+  const effectivePermissionLevel = file.sharedPermissionLevel || file.permissionLevel || permissionLevel;
+  
+  // CRITICAL: Row/Card context menu is ALWAYS evaluated for single item (selectedCount=1)
+  // It represents actions for THIS specific file, independent of global selection state
+  // Only SelectionToolbar should use actual selectedCount for bulk operations
+  // Always include permissionLevel to ensure correct permission evaluation (especially for owners)
+  const availableActions = getAvailableActions(pageContext, file, 1, effectivePermissionLevel);
   
   // Get row buttons using the ACTION_REGISTRY
-  const rowButtons = getRowActionButtons(pageContext, { ...file, starred: isStarred });
+  const rowButtons = getRowActionButtons(pageContext, file, effectivePermissionLevel);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();
@@ -63,22 +86,16 @@ const FileRow = ({
   const handleActionClick = (actionId) => (event) => {
     event.stopPropagation();
     
-    // Handle star/unstar locally for immediate UI feedback
-    if (actionId === 'star' || actionId === 'unstar') {
-      setIsStarred(actionId === 'star');
-    }
-    
+    // No local state update needed - FilesContext will update and trigger re-render
     if (onAction) {
       onAction(actionId, file);
+    } else {
+      console.warn('⚠️ FileRow: onAction handler is missing!');
     }
   };
 
   const handleActionSelected = (actionId) => {
-    // Handle star/unstar locally for immediate UI feedback
-    if (actionId === 'star' || actionId === 'unstar') {
-      setIsStarred(actionId === 'star');
-    }
-    
+    // No local state update needed - FilesContext will update and trigger re-render
     if (onAction) {
       onAction(actionId, file);
     }
@@ -92,9 +109,18 @@ const FileRow = ({
       onSelect(file, event);
     }
     
-    // If it's a normal click (not Ctrl/Cmd), also open the file
+    // If it's a normal click (not Ctrl/Cmd), also call onClick if provided
     if (!event.ctrlKey && !event.metaKey && onClick) {
       onClick(file);
+    }
+  };
+
+  const handleRowDoubleClick = (event) => {
+    event.stopPropagation();
+    
+    // Double-click opens the file/folder
+    if (onDoubleClick) {
+      onDoubleClick(file);
     }
   };
 
@@ -107,15 +133,15 @@ const FileRow = ({
     if (isSharer) {
       if (file.sharer) {
         return (
-          <div className="metadata-sharer">
+          <div className="metadata-sharer" title={file.sharer.username}>
             {file.sharer.avatarUrl ? (
               <img src={file.sharer.avatarUrl} alt="" className="sharer-avatar" />
             ) : (
               <div className="sharer-avatar-placeholder">
-                {file.sharer.displayName.charAt(0).toUpperCase()}
+                {file.sharer.username.charAt(0).toUpperCase()}
               </div>
             )}
-            <span>{file.sharer.displayName}</span>
+            <span>{file.sharer.username}</span>
           </div>
         );
       }
@@ -128,6 +154,21 @@ const FileRow = ({
         const action = file.lastActions[0]; // Show most recent action
         return formatRecentActivity(action);
       }
+
+      // Fallback: use lastEditedAt / lastViewedAt if lastActions not provided by server
+      // Use the MOST RECENT action, not preference for Edit
+      if (file.lastEditedAt || file.lastViewedAt) {
+        const editDate = file.lastEditedAt ? new Date(file.lastEditedAt).getTime() : 0;
+        const viewDate = file.lastViewedAt ? new Date(file.lastViewedAt).getTime() : 0;
+        const mostRecentIsEdit = editDate >= viewDate && editDate > 0;
+        
+        const derivedAction = {
+          date: mostRecentIsEdit ? file.lastEditedAt : file.lastViewedAt,
+          action: mostRecentIsEdit ? 'Edit' : 'Open',
+        };
+        return formatRecentActivity(derivedAction);
+      }
+
       return getFallbackValue('lastActions');
     }
 
@@ -135,10 +176,12 @@ const FileRow = ({
     if (isLocation) {
       const locationData = file.location || file.originalLocation;
       if (locationData) {
+        // Use SSOT function from fileUtils for location display
+        const displayName = getLocationDisplayName(file);
         return (
-          <div className="metadata-location">
+          <div className="metadata-location" title={displayName}>
             <img src={`${process.env.PUBLIC_URL}/assets/folder.svg`} alt="" className="location-icon" />
-            <span>{locationData.isRoot ? 'My Drive' : locationData.parentName}</span>
+            <span>{displayName}</span>
           </div>
         );
       }
@@ -165,14 +208,34 @@ const FileRow = ({
       return formatter(value);
     }
     
-    // Handle owner with avatar
-    if (key === 'owner' && value) {
+    // Handle owner with avatar (using owner object from API, same as sharer)
+    if (key === 'owner') {
+      // Check if current user is owner
+      const isCurrentUserOwner = file.ownerId === user?.id;
+      
+      // Get display name and avatar
+      const displayName = isCurrentUserOwner 
+        ? 'Me' 
+        : (file.owner?.username || 'Unknown');
+      
+      const avatarUrl = isCurrentUserOwner 
+        ? user?.profileImage 
+        : file.owner?.avatarUrl;
+      
       return (
-        <div className="metadata-owner">
-          <div className="owner-avatar-placeholder">
-            {value.charAt(0).toUpperCase()}
-          </div>
-          <span>{value}</span>
+        <div className="metadata-owner" title={displayName}>
+          {avatarUrl ? (
+            <img 
+              src={avatarUrl} 
+              alt={displayName}
+              className="owner-avatar"
+            />
+          ) : (
+            <div className="owner-avatar-placeholder">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span>{displayName}</span>
         </div>
       );
     }
@@ -185,9 +248,23 @@ const FileRow = ({
     return formatter ? formatter(value) : value;
   };
 
+  // Determine if file has pending status using shared utility
+  const isPending = isFileItemPending(file);
+  const statusText = getFileItemStatusText(file);
+  
+  // Get classes from shared utility
+  const itemClasses = getFileItemClasses(file, isSelected, { additionalClasses: 'file-row' });
+
   return (
     <>
-      <div className={`file-row ${isSelected ? 'selected' : ''}`} onClick={handleRowClick} role="button" tabIndex={0}>
+      <div 
+        className={itemClasses} 
+        onClick={handleRowClick}
+        onDoubleClick={handleRowDoubleClick}
+        role="button" 
+        tabIndex={0}
+        title={statusText || undefined}
+      >
         {/* File Icon and Name */}
         <div className="file-row-name">
           <img
@@ -195,7 +272,7 @@ const FileRow = ({
             alt=""
             className={`file-row-icon ${file.type === 'folder' ? 'folder-icon' : ''}`}
           />
-          <span className="file-name-text">{file.name}</span>
+          <span className="file-name-text" title={file.name}>{file.name}</span>
         </div>
 
         {/* Dynamic Metadata Columns */}
@@ -209,7 +286,7 @@ const FileRow = ({
         ))}
 
         {/* Action Buttons - Driven by single source of truth */}
-        <div className="file-row-actions" onClick={(e) => e.stopPropagation()}>
+        <div className="file-row-actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
           {rowButtons.map((action) => (
             <ActionButton
               key={action.id}

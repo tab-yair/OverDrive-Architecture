@@ -114,8 +114,12 @@ class UserService {
         }
 
         // Validate individual fields if provided
-        if (updates.password !== undefined && updates.password.length < 8) {
-            throw new Error("Password must be at least 8 characters");
+        if (updates.password !== undefined) {
+            // Validate password strength: minimum 8 characters with at least one letter and one number
+            const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+            if (!passwordRegex.test(updates.password)) {
+                throw new Error("Password must contain both letters and numbers (minimum 8 characters)");
+            }
         }
 
         if (updates.firstName !== undefined && !updates.firstName) {
@@ -169,6 +173,12 @@ class UserService {
         // Validate new password
         if (!newPassword || newPassword.length < 8) {
             throw new Error("Password must be at least 8 characters");
+        }
+        // Validate password contains both numbers and letters
+        const hasNumber = /\d/.test(newPassword);
+        const hasLetter = /[a-zA-Z]/.test(newPassword);
+        if (!hasNumber || !hasLetter) {
+            throw new Error("Password must contain both letters and numbers");
         }
 
         // Update password

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import './FileActionMenu.css';
 
 /**
@@ -69,7 +70,8 @@ const FileActionMenu = ({ actions, position, onActionSelected, onClose }) => {
 
   if (!actions || actions.length === 0) return null;
 
-  return (
+  // Render via portal to escape any parent transforms/stacking contexts
+  return createPortal(
     <div
       ref={menuRef}
       className="file-action-menu"
@@ -95,7 +97,8 @@ const FileActionMenu = ({ actions, position, onActionSelected, onClose }) => {
           <span className="file-action-menu-label">{action.label}</span>
         </button>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 };
 

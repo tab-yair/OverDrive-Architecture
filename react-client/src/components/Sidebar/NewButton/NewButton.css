@@ -30,10 +30,18 @@
     font-size: 14px;
     text-align: left;
     transition: background-color 0.2s ease;
+    border: none;
+    cursor: pointer;
 }
 
 .new-button-item:hover {
     background-color: var(--bg-hover);
+}
+
+.new-button-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .new-button-item .material-symbols-outlined {
@@ -99,10 +107,22 @@
     to { transform: rotate(360deg); }
 }
 
-/* Responsive - collapsed sidebar */
+/*
+   This part only triggers when the screen is smaller than 1024px 
+*/
 @media (max-width: 1024px) {
     .new-button-dropdown {
-        left: 50%;
-        transform: translateX(-50%);
+        /* Move the menu to the right of the narrow sidebar (72px) */
+        /* 72px is the sidebar width, so 76px ensures it's fully clear of it */
+        left: 76px; 
+        
+        /* Keep it aligned with the top of the button for a cleaner look */
+        top: 0;
+        
+        /* Maintain all the original styles below */
+        transform: none;
+        min-width: 200px;
+        box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.4);
+        border-radius: 12px;
     }
 }

@@ -1,7 +1,7 @@
 const { EmailValidator } = require('./EmailValidator.js');
 
 class User {
-    constructor(id, username, password, firstName, lastName = null, profileImage) {
+    constructor(id, username, password, firstName, lastName = null, profileImage, preferences = null) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -12,6 +12,7 @@ class User {
         const now = new Date().toISOString();
         this.createdAt = now;
         this.modifiedAt = now;
+        this.preferences = preferences || { theme: 'system', startPage: 'home' };
     }
     
     // Basic user data validation
@@ -21,8 +22,13 @@ class User {
         if (!emailResult.valid) {
             return `Invalid email: ${emailResult.reason}`;
         }
-        if (!data.password || data.password.length < 8) {
-            return "Password must be at least 8 characters";
+        if (!data.password) {
+            return "Password is required";
+        }
+        // Validate password strength: minimum 8 characters with at least one letter and one number
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        if (!passwordRegex.test(data.password)) {
+            return "Password must contain both letters and numbers (minimum 8 characters)";
         }
         if (!data.firstName) {
             return "First name is required";
@@ -43,6 +49,10 @@ class User {
     static toSafeObject(user) {
         if (!user) return null;
         const { password, ...safeUser } = user;
+        // Ensure preferences are included
+        if (!safeUser.preferences) {
+            safeUser.preferences = { theme: 'system', startPage: 'home' };
+        }
         return Object.freeze(safeUser); // now immutable
     }
 }

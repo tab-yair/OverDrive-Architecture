@@ -1,128 +1,197 @@
-import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { validatePassword, convertToBase64, DEFAULT_IMAGE } from '../../utils/authUtils';
-import apiService from '../../services/api';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../Logo/Logo';
+import apiService from '../../services/api';
+// Importing the original default image from your utils
+import { DEFAULT_IMAGE } from '../../utils/authUtils';
 import './Auth.css';
 
 /**
- * Register Component
- * Handles user sign-up, input validation, and automatic profile image handling.
+ * Register Component - Complete with Password Toggle and Image Logic
  */
-const Register = () => {
-  const navigate = useNavigate();
-  const fileInputRef = useRef(null);
+function Register() {
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        username: '',
+        password: '',
+        confirmPassword: ''
+    });
+    
+    // Password visibility states
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    
+    const [error, setError] = useState('');
+    // Initialize with the original Base64 default image
+    const [previewUrl, setPreviewUrl] = useState(DEFAULT_IMAGE);
+    const navigate = useNavigate();
 
-  // State for all required fields
-  const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    profileImage: DEFAULT_IMAGE // Default image is pre-filled to satisfy "all fields required"
-  });
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+        if (error) setError(''); 
+    };
 
-  const [error, setError] = useState('');
+    // Handle Enter key to move to next field instead of submitting
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            
+            // Get all form inputs
+            const form = e.target.form;
+            const inputs = Array.from(form.querySelectorAll('input[type="text"], input[type="password"]'));
+            const currentIndex = inputs.indexOf(e.target);
+            
+            // Move to next input if exists
+            if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
+                inputs[currentIndex + 1].focus();
+            }
+        }
+    };
 
-  // Updates text fields in the state
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
-  // Handles image selection and converts to Base64
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      try {
-        const base64 = await convertToBase64(file);
-        setFormData({ ...formData, profileImage: base64 });
-      } catch (err) {
-        setError("Failed to process image.");
-      }
-    }
-  };
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+        // 1. Password Match Validation
+        if (formData.password !== formData.confirmPassword) {
+            setError('Passwords do not match');
+            return;
+        }
 
-    // 1. Validate that all fields are filled
-    if (!formData.username || !formData.password || !formData.firstName || !formData.lastName) {
-      setError("All fields are mandatory.");
-      return;
-    }
+        // 2. Password Strength Validation - minimum 8 chars with letters and numbers
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        if (!passwordRegex.test(formData.password)) {
+            setError('Password must contain both letters and numbers and contain minimum 8 characters');
+            return;
+        }
 
-    // 2. Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
+        try {
+            const registrationData = {
+                username: formData.username,
+                password: formData.password,
+                firstName: formData.firstName,
+                lastName: formData.lastName || null,
+                profileImage: previewUrl || DEFAULT_IMAGE 
+            };
 
-    // 3. Validate password strength (minimum 8 chars, letters and numbers)
-    if (!validatePassword(formData.password)) {
-      setError("Password must be at least 8 characters long and include both letters and numbers.");
-      return;
-    }
+            await apiService.register(registrationData);
 
-    try {
-      // Remove confirmPassword before sending to server
-      const { confirmPassword, ...dataToSend } = formData;
+            // Navigate to login with a success message in state
+            navigate('/login', { state: { message: 'Account created! Please sign in.' } });
+        } catch (err) {
+            // Extract specific error message from server response
+            let errorMessage = err.message || 'Registration failed.';
+            
+            // If the error object has more detailed information, use it
+            if (err.response?.data?.error) {
+                errorMessage = err.response.data.error;
+            }
+            
+            setError(errorMessage);
+        }
+    };
 
-      // 4. Send request to server (POST /api/users)
-      await apiService.register(dataToSend);
-      
-      // 5. Success: Redirect to login page
-      navigate('/login');
-    } catch (err) {
-      // Capture server-side errors (e.g., "User already exists")
-      setError(err.message);
-    }
-  };
+    const registerContent = (
+        <div className="auth-overlay">
+            <div className="auth-card">
+                <div className="auth-logo-container">
+                    <Logo size="md" />
+                </div>
 
-  return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-logo-container">
-          <Logo size="lg" />
+                <h1 className="auth-title">Create account</h1>
+                <p className="auth-subtitle">Enter your details to join OverDrive</p>
+
+                {error && <div className="error-alert">{error}</div>}
+
+                <form onSubmit={handleSubmit}>
+                    <div className="input-group">
+                        <input name="firstName" type="text" placeholder="First Name" value={formData.firstName} onChange={handleChange} onKeyDown={handleKeyDown} required />
+                    </div>
+                    <div className="input-group">
+                        <input name="lastName" type="text" placeholder="Last Name (Optional)" value={formData.lastName} onChange={handleChange} onKeyDown={handleKeyDown} />
+                    </div>
+                    <div className="input-group">
+                        <input name="username" type="text" placeholder="Username" value={formData.username} onChange={handleChange} onKeyDown={handleKeyDown} required />
+                    </div>
+                    
+                    <div className="input-group password-group">
+                        <input 
+                            name="password" 
+                            type={showPassword ? "text" : "password"} 
+                            placeholder="Password" 
+                            value={formData.password} 
+                            onChange={handleChange}
+                            onKeyDown={handleKeyDown}
+                            required 
+                        />
+                        <button 
+                            type="button" 
+                            className="password-toggle"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            <span className="material-symbols-outlined">
+                                {showPassword ? 'visibility_off' : 'visibility'}
+                            </span>
+                        </button>
+                    </div>
+
+                    <div className="input-group password-group">
+                        <input 
+                            name="confirmPassword" 
+                            type={showConfirmPassword ? "text" : "password"} 
+                            placeholder="Confirm Password" 
+                            value={formData.confirmPassword} 
+                            onChange={handleChange}
+                            onKeyDown={handleKeyDown}
+                            required 
+                        />
+                        <button 
+                            type="button" 
+                            className="password-toggle"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                            <span className="material-symbols-outlined">
+                                {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                            </span>
+                        </button>
+                    </div>
+
+                    <div className="image-preview-container">
+                        <label htmlFor="profile-upload" className="link-btn">
+                            {previewUrl !== DEFAULT_IMAGE ? 'Change Photo' : 'Upload Profile Picture (Optional)'}
+                        </label>
+                        <input id="profile-upload" type="file" accept="image/*" onChange={handleImageChange} style={{display: 'none'}} />
+                        
+                        <img 
+                            src={previewUrl} 
+                            alt="Profile Preview" 
+                            className="profile-preview" 
+                        />
+                    </div>
+
+                    <div className="auth-footer">
+                        <Link to="/login" className="link-btn">Sign in instead</Link>
+                        <button type="submit" className="next-btn">Create</button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <h2>Create account</h2>
-        <p>Enter your details to join OverDrive</p>
+    );
 
-        {/* Error message display */}
-        {error && <div className="error-alert">{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            <input name="firstName" placeholder="First Name" onChange={handleChange} required />
-          </div>
-          <div className="input-group">
-            <input name="lastName" placeholder="Last Name" onChange={handleChange} required />
-          </div>
-          <div className="input-group">
-            <input name="username" placeholder="Username" onChange={handleChange} required />
-          </div>
-          <div className="input-group">
-            <input name="password" type="password" placeholder="Password" onChange={handleChange} required />
-          </div>
-          <div className="input-group">
-            <input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required />
-          </div>
-
-          <div className="image-preview-container">
-            <label>Profile Picture (Optional)</label>
-            <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" />
-            <img src={formData.profileImage} alt="Preview" className="profile-preview" />
-          </div>
-
-          <div className="auth-footer">
-            <button type="button" onClick={() => navigate('/login')} className="link-btn">Sign in instead</button>
-            <button type="submit" className="next-btn">Next</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+    return createPortal(registerContent, document.body);
+}
 
 export default Register;

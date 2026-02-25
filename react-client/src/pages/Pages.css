@@ -129,7 +129,7 @@
     align-items: center;
     justify-content: center;
     min-height: calc(100vh - 64px);
-    padding: 48px 24px;
+    padding: 120px 24px 48px 24px;
 }
 
 .landing-hero {
@@ -219,6 +219,105 @@
 }
 
 /* ===========================================
+   404 NOT FOUND PAGE
+   =========================================== */
+
+.not-found-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 64px);
+    padding: 24px 24px 0px 24px;
+}
+
+.not-found-content {
+    text-align: center;
+    max-width: 500px;
+}
+
+.not-found-icon {
+    margin-bottom: 24px;
+}
+
+.not-found-icon .material-symbols-outlined {
+    font-size: 80px;
+    color: var(--border-color);
+}
+
+.not-found-title {
+    font-size: 72px;
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.not-found-subtitle {
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.not-found-description {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.not-found-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 48px;
+}
+
+.not-found-suggestions {
+    padding-top: 32px;
+    border-top: 1px solid var(--border-color);
+}
+
+.not-found-suggestions > p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.not-found-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.not-found-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.not-found-link:hover {
+    background-color: var(--bg-hover);
+    color: var(--accent-color);
+}
+
+.not-found-link .material-symbols-outlined {
+    font-size: 20px;
+}
+
+/* ===========================================
    RESPONSIVE
    =========================================== */
 
@@ -248,5 +347,32 @@
         bottom: 10px;
         font-size: 10px;
         padding: 6px 12px;
+    }
+
+    /* 404 Page Responsive */
+    .not-found-title {
+        font-size: 56px;
+    }
+
+    .not-found-subtitle {
+        font-size: 22px;
+    }
+
+    .not-found-description {
+        font-size: 14px;
+    }
+
+    .not-found-icon .material-symbols-outlined {
+        font-size: 64px;
+    }
+
+    .not-found-links {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .not-found-link {
+        width: 100%;
+        justify-content: center;
     }
 }

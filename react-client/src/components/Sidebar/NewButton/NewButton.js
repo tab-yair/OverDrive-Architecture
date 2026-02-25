@@ -1,22 +1,46 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { useNavigation } from '../../../context/NavigationContext';
+import { useStorageError } from '../../../context/StorageErrorContext';
 import { filesApi } from '../../../services/api';
+import { notifyFilesAndStorageUpdated } from '../../../utils/eventManager';
 import './NewButton.css';
 
 /**
  * NewButton Component
  * Dropdown menu for creating new files/folders and uploading
+ * @param {string} parentId - Optional parent folder ID (null for root)
  */
-function NewButton() {
+function NewButton({ parentId = null }) {
     const { token } = useAuth();
+    const { currentFolderId, currentFolderPermissionLevel } = useNavigation();
+    const { showStorageLimitError } = useStorageError();
+    const location = useLocation();
+    
+    // Determine if we're in a folder page with limited permissions
+    const isInFolderPage = location.pathname.startsWith('/folders/');
+    const isFolderWithViewOnly = isInFolderPage && currentFolderPermissionLevel === 'viewer';
+    
+    // Calculate effective parent ID for file operations
+    const effectiveParentId = parentId || (isInFolderPage ? currentFolderId : null);
+    
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [showNamePrompt, setShowNamePrompt] = useState(null); // 'folder' | 'file' | null
     const [newName, setNewName] = useState('');
+    const [isDisabled, setIsDisabled] = useState(false);
     const buttonRef = useRef(null);
     const dropdownRef = useRef(null);
     const fileInputRef = useRef(null);
     const nameInputRef = useRef(null);
+
+    // Update disabled state when folder page or permission changes
+    useEffect(() => {
+        const inFolder = location.pathname.startsWith('/folders/');
+        const viewOnly = currentFolderPermissionLevel === 'viewer';
+        setIsDisabled(inFolder && viewOnly);
+    }, [location.pathname, currentFolderPermissionLevel]);
 
     // Close dropdown when clicking outside the button and dropdown
     useEffect(() => {
@@ -65,15 +89,88 @@ function NewButton() {
         const file = e.target.files?.[0];
         if (!file || !token) return;
 
+        // Check file size (10MB limit)
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > MAX_FILE_SIZE) {
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            alert(`File is too large (${fileSizeMB}MB). Maximum allowed size is 10MB.`);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        // Determine file type
+        const isPdf = file.type === 'application/pdf';
+        const isImage = file.type.startsWith('image/');
+        const isTxt = file.name.endsWith('.txt') || file.type === 'text/plain';
+        
+        if (!isPdf && !isImage && !isTxt) {
+            alert('Only PDF, image, or .txt files can be uploaded.');
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
         setIsLoading(true);
         try {
-            await filesApi.uploadFile(token, file);
-            // Emit event so file lists can refresh
-            window.dispatchEvent(new CustomEvent('files-updated'));
+            let fileData;
+            
+            if (isTxt) {
+                // For .txt files: Read as plain text and send as docs type
+                const textContent = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsText(file); // Read as text (preserves \n)
+                });
+                
+                fileData = {
+                    name: file.name, // Keep original .txt extension
+                    type: 'docs',
+                    content: textContent // Plain text with newlines
+                };
+                
+                // Add parentId if provided
+                if (effectiveParentId) {
+                    fileData.parentId = effectiveParentId;
+                }
+            } else {
+                // For PDF/Image: Convert to Base64
+                const base64Content = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                
+                fileData = {
+                    name: file.name, // Keep original extension (.pdf, .jpg, etc)
+                    type: isPdf ? 'pdf' : 'image',
+                    content: base64Content
+                };
+                
+                // Add parentId if provided
+                if (effectiveParentId) {
+                    fileData.parentId = effectiveParentId;
+                }
+            }
+
+            await filesApi.createFile(token, fileData);
+            // Emit events so file lists and storage can refresh
+            notifyFilesAndStorageUpdated();
             setIsOpen(false);
         } catch (error) {
             console.error('Failed to upload file:', error);
-            alert('Failed to upload file: ' + error.message);
+            const message = (error?.message || '').toLowerCase();
+            
+            // Check for storage limit error
+            if (error?.isStorageLimitError || message.includes('storage limit')) {
+                showStorageLimitError(error?.message, 'upload');
+            } else {
+                const permissionBlocked = message.includes('permission');
+                const friendlyMessage = permissionBlocked
+                    ? 'You only have view access to this folder and cannot add files. Request edit permission from the owner.'
+                    : 'Failed to upload file: ' + (error?.message || 'Unknown error');
+                alert(friendlyMessage);
+            }
         } finally {
             setIsLoading(false);
             // Reset file input
@@ -89,26 +186,44 @@ function NewButton() {
 
         setIsLoading(true);
         try {
+            // Use name as-is - server uses type metadata, not extension
+            const fileName = newName.trim();
+
             const data = {
-                name: showNamePrompt === 'file' && !newName.includes('.')
-                    ? `${newName.trim()}.txt`
-                    : newName.trim(),
-                type: showNamePrompt === 'folder' ? 'folder' : 'file'
+                name: fileName,
+                type: showNamePrompt === 'folder' ? 'folder' : 'docs'
             };
 
+            // For docs files, include empty content
             if (showNamePrompt === 'file') {
                 data.content = '';
             }
+            
+            // Add parentId if provided
+            if (effectiveParentId) {
+                data.parentId = effectiveParentId;
+            }
 
             await filesApi.createFile(token, data);
-            // Emit event so file lists can refresh
-            window.dispatchEvent(new CustomEvent('files-updated'));
+            // Emit events so file lists and storage can refresh
+            notifyFilesAndStorageUpdated();
             setIsOpen(false);
             setShowNamePrompt(null);
             setNewName('');
         } catch (error) {
             console.error('Failed to create:', error);
-            alert('Failed to create: ' + error.message);
+            const message = (error?.message || '').toLowerCase();
+            
+            // Check for storage limit error
+            if (error?.isStorageLimitError || message.includes('storage limit')) {
+                showStorageLimitError(error?.message, showNamePrompt === 'folder' ? 'create folder' : 'create file');
+            } else {
+                const permissionBlocked = message.includes('permission');
+                const friendlyMessage = permissionBlocked
+                    ? 'You only have view access to this folder and cannot add files or folders. Request edit permission from the owner.'
+                    : 'Failed to create: ' + (error?.message || 'Unknown error');
+                alert(friendlyMessage);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -132,7 +247,6 @@ function NewButton() {
                 onClick={() => setIsOpen(!isOpen)}
                 aria-label="Create new file or folder"
                 aria-expanded={isOpen}
-                disabled={isLoading}
             >
                 {isLoading ? (
                     <span className="material-symbols-outlined spinning">progress_activity</span>
@@ -166,7 +280,7 @@ function NewButton() {
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder={showNamePrompt === 'folder' ? 'Untitled folder' : 'Untitled.txt'}
+                                placeholder={showNamePrompt === 'folder' ? 'Untitled folder' : 'Untitled'}
                             />
                             <div className="new-button-prompt-actions">
                                 <button
@@ -190,16 +304,31 @@ function NewButton() {
                     ) : (
                         // Menu items
                         <>
-                            <button className="new-button-item" onClick={handleNewFolderClick}>
+                            <button 
+                                className={`new-button-item ${isLoading ? 'disabled' : ''} ${isDisabled ? 'disabled' : ''}`} 
+                                onClick={handleNewFolderClick} 
+                                disabled={isLoading || isDisabled}
+                                title={isDisabled ? 'You have view-only access to this folder' : ''}
+                            >
                                 <span className="material-symbols-outlined">create_new_folder</span>
                                 <span>New folder</span>
                             </button>
-                            <button className="new-button-item" onClick={handleNewFileClick}>
+                            <button 
+                                className={`new-button-item ${isLoading ? 'disabled' : ''} ${isDisabled ? 'disabled' : ''}`} 
+                                onClick={handleNewFileClick} 
+                                disabled={isLoading || isDisabled}
+                                title={isDisabled ? 'You have view-only access to this folder' : ''}
+                            >
                                 <span className="material-symbols-outlined">note_add</span>
                                 <span>New text file</span>
                             </button>
                             <div className="new-button-divider" />
-                            <button className="new-button-item" onClick={handleUploadClick}>
+                            <button 
+                                className={`new-button-item ${isLoading ? 'disabled' : ''} ${isDisabled ? 'disabled' : ''}`} 
+                                onClick={handleUploadClick} 
+                                disabled={isLoading || isDisabled}
+                                title={isDisabled ? 'You have view-only access to this folder' : ''}
+                            >
                                 <span className="material-symbols-outlined">upload_file</span>
                                 <span>Upload file</span>
                             </button>

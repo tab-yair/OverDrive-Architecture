@@ -1,37 +1,41 @@
 /* Shared styles for Login and Register pages */
 
-.auth-card {
+/* Fullscreen overlay for portal-mounted auth flows (separate name to avoid conflict
+   with in-page .auth-container used by Pages.css) */
+.auth-overlay {
+    /* Fullscreen overlay using fixed positioning to bypass parent constraints */
     position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
+    inset: 0 !important;
+    width: 100% !important; /* prefer 100% to avoid 100vw scrollbar issues */
+    height: 100% !important;
+    background-color: var(--bg-primary) !important;
+    z-index: 2147483647 !important;
     
+    /* Flexbox centering with scroll support */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important; /* keep flex-start so content scrolls from top */
+    overflow-y: auto !important; 
+    padding: 40px 20px !important;
+    margin: 0 !important;
+    transform: none !important; /* remove transforms */
+}
+
+.auth-card {
+    position: relative !important; 
     background: var(--bg-secondary) !important;
     padding: 40px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
     width: 450px;
-    max-width: 90vw;
-    text-align: center;
+    max-width: 100%;
     box-shadow: var(--shadow-elevated);
-    z-index: 99999 !important;
-}
-
-.auth-container {
-    position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
     
-    background: var(--bg-secondary) !important;
-    padding: 40px;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    width: 300px;
-    max-width: 90vw;
+    /* Centers the card while allowing it to grow beyond screen height */
+    margin: auto !important;
+    color: var(--text-primary) !important;
     text-align: center;
-    box-shadow: var(--shadow-elevated);
-    z-index: 99999 !important;
 }
 
 .auth-logo-container {
@@ -43,25 +47,37 @@
 .auth-title {
     font-size: 24px;
     margin-bottom: 8px;
-    color: var(--text-primary);
+    color: var(--text-primary) !important;
 }
 
 .auth-subtitle {
-    margin-bottom: 24px;
-    color: var(--text-secondary);
+    margin-bottom: 30px;
+    color: var(--text-secondary) !important;
 }
 
-.auth-card h2 { font-size: 24px; font-weight: 400; margin-bottom: 10px; }
-.auth-card p { font-size: 16px; margin-bottom: 40px; color: #202124; }
+.auth-card h2 { 
+    font-size: 24px; 
+    font-weight: 400; 
+    margin-bottom: 10px; 
+    color: var(--text-primary) !important; 
+}
+
+.auth-card p { 
+    font-size: 16px; 
+    margin-bottom: 40px; 
+    color: var(--text-secondary) !important; 
+}
 
 .input-group { margin-bottom: 15px; text-align: left; }
+
 .input-group input {
     width: 100%;
-    padding: 13px 15px;
-    border: 1px solid #dadce0;
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    font-size: 16px;
-    box-sizing: border-box;
+    background-color: var(--bg-input);
+    color: var(--text-primary);
 }
 
 .input-group input:focus {
@@ -86,7 +102,21 @@
     margin-top: 40px;
 }
 
-.link-btn { color: #1a73e8; text-decoration: none; font-weight: 500; font-size: 14px; }
+.link-btn { 
+    color: #1a73e8 !important; 
+    text-decoration: none; 
+    font-weight: 500; 
+    font-size: 14px; 
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    cursor: pointer;
+}
+
+.link-btn:hover {
+    text-decoration: underline;
+}
+
 .next-btn {
     background-color: #1a73e8;
     color: white;
@@ -97,7 +127,6 @@
     font-weight: 500;
 }
 
-/* Specific styling for the registration image preview */
 .image-preview-container {
     margin-top: 20px;
     display: flex;
@@ -112,4 +141,57 @@
     border-radius: 50%;
     object-fit: cover;
     border: 1px solid #dadce0;
+}
+
+.input-group input[type="password"] {
+    padding-right: 40px !important; /* Make room for the eye icon */
+}
+
+input::-ms-reveal,
+input::-ms-clear {
+    display: none;
+}
+
+.password-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-group input {
+    padding-right: 45px !important; /* Make room for the eye */
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
+    padding: 8px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: var(--text-primary) !important;
+}
+
+.success-alert {
+    color: #1e8e3e;
+    background: #e6f4ea;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Dark mode adjustment for alerts */
+[data-theme="dark"] .success-alert {
+    background: rgba(30, 142, 62, 0.2);
+    color: #81c995;
 }

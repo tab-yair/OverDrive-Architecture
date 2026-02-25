@@ -1,0 +1,205 @@
+/**
+ * FileItemTransitions.css
+ * 
+ * SINGLE SOURCE OF TRUTH for all file item transition states.
+ * Import this file in both FileRow.css and FileCard.css.
+ * 
+ * Status classes:
+ * - .file-item-status-copying
+ * - .file-item-status-uploading
+ * - .file-item-status-moving
+ * - .file-item-status-deleting
+ * - .file-item-status-restoring
+ * - .file-item-status-renaming
+ */
+
+/* ═══════════════════════════════════════════════════════════════════
+   BASE TRANSITION - Apply to all file items
+   ═══════════════════════════════════════════════════════════════════ */
+
+.file-item-base {
+    transition: 
+        opacity 0.2s ease-out, 
+        transform 0.2s ease-out, 
+        background-color var(--transition-normal, 0.2s ease-in-out),
+        box-shadow var(--transition-normal, 0.2s ease-in-out);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ENTRY ANIMATION - For newly added items
+   ═══════════════════════════════════════════════════════════════════ */
+
+@keyframes fileItemFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fileItemScaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.file-item-enter {
+    animation: fileItemFadeIn 0.2s ease-out;
+}
+
+.file-item-enter-scale {
+    animation: fileItemScaleIn 0.2s ease-out;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATUS STATES - Visual feedback during operations
+   All pending operations show reduced opacity and disable interactions
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Copying - file is being duplicated */
+.file-item-status-copying {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Uploading - file is being uploaded */
+.file-item-status-uploading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Moving - file is being moved to another folder */
+.file-item-status-moving {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Deleting - file is being removed */
+/* Uses opacity fade-out so other items don't jump until deletion completes */
+.file-item-status-deleting {
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+}
+
+/* Restoring - file is being restored from trash */
+.file-item-status-restoring {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Renaming - file name is being updated */
+.file-item-status-renaming {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LOADING INDICATOR - Subtle progress bar for operations
+   ═══════════════════════════════════════════════════════════════════ */
+
+@keyframes fileItemLoadingBar {
+    0% { width: 0%; left: 0; }
+    50% { width: 60%; left: 20%; }
+    100% { width: 0%; left: 100%; }
+}
+
+.file-item-status-copying::after,
+.file-item-status-uploading::after,
+.file-item-status-moving::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: var(--accent-color, #1a73e8);
+    border-radius: 1px;
+    animation: fileItemLoadingBar 1.5s ease-in-out infinite;
+}
+
+/* Dark mode loading bar */
+[data-theme="dark"] .file-item-status-copying::after,
+[data-theme="dark"] .file-item-status-uploading::after,
+[data-theme="dark"] .file-item-status-moving::after {
+    background: var(--accent-color-dark, #8ab4f8);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DATA REFRESH TRANSITIONS
+   Smooth transitions when data updates via event listeners
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Container for file lists/grids with smooth child updates */
+.file-list-container,
+.file-grid-container {
+    /* Prevent layout jumps during data updates */
+    min-height: 100px;
+}
+
+/* Smooth opacity transition for new/updated items */
+.file-item-updated {
+    animation: itemUpdate 300ms ease-out forwards;
+}
+
+@keyframes itemUpdate {
+    0% {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Background refresh indicator (subtle) */
+.is-refreshing {
+    position: relative;
+}
+
+.is-refreshing::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+    animation: refreshBar 1s ease-in-out infinite;
+    opacity: 0.6;
+}
+
+@keyframes refreshBar {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Reduce motion support */
+@media (prefers-reduced-motion: reduce) {
+    .file-item-updated {
+        animation: none;
+    }
+    .is-refreshing::before {
+        animation: none;
+        opacity: 0.3;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LEGACY SUPPORT - Map old class names to new system
+   Remove these after full migration
+   ═══════════════════════════════════════════════════════════════════ */
+
+.is-copying {
+    opacity: 0.6;
+    pointer-events: none;
+}

@@ -1,30 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { FilePageWrapper } from '../components/FilePageWrapper';
+import { useNavigation } from '../context/NavigationContext';
 import './Pages.css';
 
 /**
  * MyDrivePage Component
- * Displays user's personal files and folders
+ * Displays user's personal files and folders (owned items only)
+ * Endpoint: GET /api/files with x-filter-ownership: owned
  */
 function MyDrivePage() {
+    const { setCurrentFolderId } = useNavigation();
+    
+    // Reset current folder when entering MyDrive (root level)
+    useEffect(() => {
+        setCurrentFolderId(null);
+    }, [setCurrentFolderId]);
+    
     return (
-        <div className="page mydrive-page">
-            <h1 className="page-title">My Drive</h1>
-            <p className="page-description">
-                All your personal files and folders are stored here.
-            </p>
-
-            {/* TODO: Implement file/folder listing */}
-            {/* TODO: Add file upload functionality */}
-            {/* TODO: Add folder creation functionality */}
-            {/* TODO: Add file/folder context menu */}
-
-            <div className="page-placeholder">
-                <span className="material-symbols-outlined page-placeholder-icon">
-                    folder_open
-                </span>
-                <p>Your files and folders will appear here</p>
-            </div>
-        </div>
+        <FilePageWrapper
+            endpoint="mydrive"
+            pageContext="MyDrive"
+            isOwner={true}
+            permissionLevel="owner"
+            className="mydrive-page"
+            loadingMessage="Loading your files..."
+        />
     );
 }
 

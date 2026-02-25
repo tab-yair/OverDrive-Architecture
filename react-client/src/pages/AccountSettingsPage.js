@@ -5,10 +5,10 @@ import './SettingsPage.css';
 
 /**
  * AccountSettingsPage Component
- * Account settings: profile, password
+ * Account settings: profile, password with Base64 image support
  */
 function AccountSettingsPage() {
-    const { user, token, login } = useAuth();
+    const { user, token, refreshUser, notifyUserUpdate } = useAuth();
     const fileInputRef = useRef(null);
 
     // Profile editing state
@@ -52,10 +52,12 @@ function AccountSettingsPage() {
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (file) {
-            // For now, create a local URL - in production would upload to server
-            const url = URL.createObjectURL(file);
-            setProfileImage(url);
-            // TODO: Upload to server when implementing file upload for profile images
+            // Handle file selection and convert to Base64 to match server requirement
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfileImage(reader.result);
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -90,18 +92,13 @@ function AccountSettingsPage() {
 
             await userApi.updateUser(token, user.id, updates);
 
-            // Update local user data
-            const newDisplayName = lastName.trim()
-                ? `${firstName.trim()} ${lastName.trim()}`
-                : firstName.trim();
+            await refreshUser();
+            
+            // Notify other tabs about the update if the function exists
+            if (notifyUserUpdate) {
+                notifyUserUpdate();
+            }
 
-            const updatedUser = {
-                ...user,
-                displayName: newDisplayName,
-                profileImage: profileImage
-            };
-
-            login(token, updatedUser);
             setIsEditing(false);
         } catch (err) {
             console.error('Failed to update profile:', err);
@@ -116,7 +113,7 @@ function AccountSettingsPage() {
         setPasswordError(null);
         setPasswordSuccess(false);
 
-        // Validation
+        // Client-side Validation
         if (!currentPassword) {
             setPasswordError('Current password is required');
             return;
@@ -125,10 +122,15 @@ function AccountSettingsPage() {
             setPasswordError('New password is required');
             return;
         }
-        if (newPassword.length < 6) {
-            setPasswordError('New password must be at least 6 characters');
+
+        // Updated password strength regex and message
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            // FIXED: Updated error message as requested
+            setPasswordError('Password must contain both letters and numbers and contain minimum 8 characters');
             return;
         }
+
         if (newPassword !== confirmPassword) {
             setPasswordError('Passwords do not match');
             return;
@@ -137,9 +139,10 @@ function AccountSettingsPage() {
         setPasswordSaving(true);
 
         try {
+            // Sending request to server - the server will now verify currentPassword
             await userApi.updateUser(token, user.id, {
+                currentPassword: currentPassword,
                 password: newPassword
-                // Note: Server should verify currentPassword before allowing change
             });
 
             setPasswordSuccess(true);
@@ -153,11 +156,20 @@ function AccountSettingsPage() {
             setShowNewPassword(false);
             setShowConfirmPassword(false);
 
-            // Clear success message after 3 seconds
             setTimeout(() => setPasswordSuccess(false), 3000);
         } catch (err) {
             console.error('Failed to change password:', err);
-            setPasswordError(err.message || 'Failed to change password');
+            
+            // handles "Incorrect current password" and specific validation errors
+            let errorMessage = 'Failed to update password';
+            
+            if (err.response && err.response.data && err.response.data.error) {
+                errorMessage = err.response.data.error;
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+            
+            setPasswordError(errorMessage);
         } finally {
             setPasswordSaving(false);
         }

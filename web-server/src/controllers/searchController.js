@@ -5,11 +5,13 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * GET /api/search/:query
  * Search with optional filters via HTTP headers:
  * - X-Search-In: Where to search - 'name', 'content', or 'both' (default: 'both')
+ * - X-Filter-Contains-Words: Additional content search term (optional)
  * - X-Filter-Type: File type (image, folder, pdf, docs)
  * - X-Filter-Owner: owned, shared
+ * - X-Filter-Owner-Email: Email of specific owner
  * - X-Filter-Date-Category: today, last7days, last30days, thisyear, lastyear
  * - X-Filter-Date-Start/End: Custom date range
- * - X-Filter-Shared-With: User ID to filter files shared with specific user
+ * - X-Filter-Shared-With: Email of user to filter files shared with
  * - X-Filter-Starred: true/false
  */
 const searchFiles = asyncHandler(async (req, res) => {
@@ -32,8 +34,22 @@ const searchFiles = asyncHandler(async (req, res) => {
     }
 
     const searchTerm = query.trim();
-    const searchName = (searchIn === 'name' || searchIn === 'both') ? searchTerm : null;
-    const searchContent = (searchIn === 'content' || searchIn === 'both') ? searchTerm : null;
+    let searchName = null;
+    let searchContent = null;
+    
+    // Check if we have additional content words filter
+    const containsWords = headers['x-filter-contains-words'];
+    
+    if (searchIn === 'name') {
+        searchName = searchTerm;
+        searchContent = containsWords || null;
+    } else if (searchIn === 'content') {
+        searchName = null;
+        searchContent = containsWords || searchTerm;
+    } else { // both
+        searchName = searchTerm;
+        searchContent = containsWords || searchTerm;
+    }
 
     // Parse type filter
     let type = null;
@@ -52,6 +68,7 @@ const searchFiles = asyncHandler(async (req, res) => {
 
     // Parse owner filter
     let owner = null;
+    let ownerEmail = null;
     if (headers['x-filter-owner']) {
         owner = headers['x-filter-owner'].toLowerCase();
         if (!['owned', 'shared'].includes(owner)) {
@@ -59,6 +76,12 @@ const searchFiles = asyncHandler(async (req, res) => {
             error.status = 400;
             throw error;
         }
+    }
+    // Specific owner by email
+    if (headers['x-filter-owner-email']) {
+        ownerEmail = headers['x-filter-owner-email'].trim();
+        // Override general owner filter if specific email provided
+        owner = null;
     }
 
     // Parse date range
@@ -103,7 +126,22 @@ const searchFiles = asyncHandler(async (req, res) => {
     }
 
     // Parse sharedWith filter
-    const sharedWith = headers['x-filter-shared-with'] || null;
+    let sharedWith = null;
+    if (headers['x-filter-shared-with']) {
+        const sharedWithEmail = headers['x-filter-shared-with'].trim();
+        console.log('SharedWith filter - email received:', sharedWithEmail);
+        // Convert email (username) to userId
+        const { usersStore } = require('../models/usersStore');
+        const sharedWithUser = await usersStore.getByUsername(sharedWithEmail);
+        if (sharedWithUser) {
+            sharedWith = sharedWithUser.id;
+            console.log('SharedWith filter - converted to userId:', sharedWith);
+        } else {
+            console.log('SharedWith filter - user not found for email:', sharedWithEmail);
+            // If user not found, return empty results (no files shared with non-existent user)
+            return res.status(200).json([]);
+        }
+    }
 
     // Parse starred filter
     let isStarred = null;
@@ -127,6 +165,7 @@ const searchFiles = asyncHandler(async (req, res) => {
         searchContent,
         type,
         owner,
+        ownerEmail,
         dateRange,
         sharedWith,
         isStarred,

@@ -2,7 +2,8 @@
 
 .storage-page {
     padding: 24px;
-    max-width: 900px;
+    max-width: 100%;
+    width: 100%;
 }
 
 /* Storage overview section */
@@ -69,26 +70,60 @@
     overflow: hidden;
 }
 
+.storage-files-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 16px;
+}
+
+.storage-files-header-text {
+    flex: 1;
+}
+
 .storage-files-title {
     font-size: 16px;
     font-weight: 500;
     color: var(--text-primary);
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color);
     margin: 0;
 }
 
-/* Files list */
-.storage-files-list {
-    max-height: calc(100vh - 400px);
-    overflow-y: auto;
+.storage-sort-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.storage-files-header {
+.storage-sort-toggle:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--accent-color);
+}
+
+.storage-sort-toggle .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.storage-sort-label {
+    white-space: nowrap;
+}
+
+/* Files list - FileManager handles layout */
+
+.storage-files-table-header {
     display: grid;
-    grid-template-columns: 1fr 140px 100px;
-    gap: 16px;
-    padding: 12px 20px;
+    grid-template-columns: 1fr 150px;
+    gap: 32px;
+    padding: 12px 32px;
     background-color: var(--bg-secondary);
     font-size: 12px;
     font-weight: 500;
@@ -100,12 +135,13 @@
 
 .storage-file-row {
     display: grid;
-    grid-template-columns: 1fr 140px 100px;
-    gap: 16px;
-    padding: 12px 20px;
+    grid-template-columns: 1fr 150px;
+    gap: 32px;
+    padding: 12px 32px;
     align-items: center;
     border-bottom: 1px solid var(--border-color);
     transition: background-color 0.2s ease;
+    cursor: pointer;
 }
 
 .storage-file-row:last-child {
@@ -114,6 +150,11 @@
 
 .storage-file-row:hover {
     background-color: var(--bg-hover);
+}
+
+.storage-file-size-header,
+.storage-file-size {
+    text-align: right;
 }
 
 .storage-file-name {

@@ -18,6 +18,7 @@ router.post('/trash/restore', fileController.restoreAllTrash);
 // File starred, recent, and shared
 router.get('/starred', fileController.getStarredFiles);
 router.get('/recent', fileController.getRecentFiles);
+router.get('/owned', fileController.getOwnedFiles);
 router.get('/shared', fileController.getSharedFiles);
 
 // File CRUD

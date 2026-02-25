@@ -20,7 +20,7 @@ echo ""
 
 # Start Docker in detached mode
 echo -e "${BLUE}➜${NC} Starting Docker services..."
-cd ../.. && docker compose up -d && cd web-server/tests
+docker compose up -d
 
 # Wait for services to be healthy
 echo -e "${BLUE}➜${NC} Waiting for services to start..."
@@ -33,7 +33,7 @@ echo "=========================================="
 echo ""
 
 # Loop through all test_*.sh files in tests folder
-for f in test_*.sh; do
+for f in ./test_*.sh; do
     # Skip the framework file
     [[ "$(basename "$f")" == "test_framework.sh" ]] && continue
     
@@ -57,11 +57,11 @@ done
 
 # Stop and remove Docker containers
 echo -e "${BLUE}➜${NC} Stopping Docker services..."
-cd ../.. && docker compose down && cd web-server/tests
+docker compose down
 
 # Clean up test server data
 echo -e "${BLUE}➜${NC} Cleaning up test data..."
-sudo rm -rf ../../server_data
+sudo rm -rf server_data
 
 echo ""
 echo "=========================================="
@@ -79,5 +79,4 @@ else
     echo -e "${RED}✗ $FAILED_TESTS test suite(s) failed${NC}"
     exit 1
 fi
-
 

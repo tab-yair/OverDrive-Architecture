@@ -1,35 +1,20 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { userApi } from '../services/api';
 
 // Create the theme context
 const ThemeContext = createContext(null);
 
 /**
  * Theme Provider Component
- * Manages dark/light/system mode state with per-user persistence
+ * Manages dark/light/system mode state with server-side persistence
  */
 export function ThemeProvider({ children }) {
-    const { user, isAuthenticated } = useAuth();
+    const { user, token, isAuthenticated } = useAuth();
 
     // Theme mode: 'light' | 'dark' | 'system'
-    const [themeMode, setThemeModeState] = useState(() => {
-        // Try to get user-specific preference if logged in
-        if (isAuthenticated && user?.id) {
-            const savedMode = localStorage.getItem(`themeMode_${user.id}`);
-            if (savedMode) {
-                return savedMode;
-            }
-        }
-
-        // Fall back to general preference
-        const generalMode = localStorage.getItem('themeMode_general');
-        if (generalMode) {
-            return generalMode;
-        }
-
-        // Default to system
-        return 'system';
-    });
+    const [themeMode, setThemeModeState] = useState('system');
+    const [themeModeLoaded, setThemeModeLoaded] = useState(false);
 
     // Track system preference
     const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
@@ -38,6 +23,29 @@ export function ThemeProvider({ children }) {
         }
         return false;
     });
+
+    // Fetch theme from server when user logs in
+    useEffect(() => {
+        const fetchTheme = async () => {
+            if (isAuthenticated && user?.id && token) {
+                try {
+                    const prefs = await userApi.getPreferences(token, user.id);
+                    setThemeModeState(prefs.theme || 'light');
+                    setThemeModeLoaded(true);
+                } catch (error) {
+                    console.error('Failed to fetch theme:', error);
+                    setThemeModeState('light');
+                    setThemeModeLoaded(true);
+                }
+            } else if (!isAuthenticated) {
+                // For logged out screens (login/signup/landing), always follow the system/browser preference
+                setThemeModeState('system');
+                setThemeModeLoaded(true);
+            }
+        };
+
+        fetchTheme();
+    }, [isAuthenticated, user?.id, token]);
 
     // Computed: actual dark mode state based on themeMode
     const isDarkMode = themeMode === 'system' ? systemPrefersDark : themeMode === 'dark';
@@ -72,27 +80,6 @@ export function ThemeProvider({ children }) {
             }
         };
     }, []);
-
-    // Persist theme mode preference when it changes
-    useEffect(() => {
-        // Save to user-specific key if logged in
-        if (isAuthenticated && user?.id) {
-            localStorage.setItem(`themeMode_${user.id}`, themeMode);
-        }
-
-        // Always save to general key as fallback
-        localStorage.setItem('themeMode_general', themeMode);
-    }, [themeMode, isAuthenticated, user?.id]);
-
-    // Load user-specific theme when user logs in
-    useEffect(() => {
-        if (isAuthenticated && user?.id) {
-            const savedMode = localStorage.getItem(`themeMode_${user.id}`);
-            if (savedMode) {
-                setThemeModeState(savedMode);
-            }
-        }
-    }, [isAuthenticated, user?.id]);
 
     /**
      * Set theme mode
@@ -131,6 +118,7 @@ export function ThemeProvider({ children }) {
     const value = {
         isDarkMode,
         themeMode,
+        themeModeLoaded,
         setThemeMode,
         toggleTheme,
         setTheme
