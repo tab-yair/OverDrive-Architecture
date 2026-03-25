@@ -38,60 +38,60 @@ Storage Server (C++ :5555)
 
 ### Step 1: Welcome Page
 The guest landing page shown when visiting the app for the first time, featuring OverDrive branding with options to sign up or log in.                          
-![Welcome Page](../Screenshots/1.png)
+![Welcome Page](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/1.png)
 
 ### Step 2: Registration
 New user registration form requiring a Gmail address, password (8+ characters with letters and numbers), first name, and profile image upload. Last name is optional. Includes client-side validation with clear visual feedback.               
-![Registration Page](../Screenshots/2.png)
+![Registration Page](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/2.png)
 
 ### Step 3: Login
 User authentication page where existing users enter their Gmail and password to receive a JWT token for session management.                                     
-![Login Page](../Screenshots/3.png)
+![Login Page](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/3.png)
 
 ### Step 4: Home Page (Dashboard)
 The main dashboard after login showing recently accessed files, starred files, and a storage overview. The sidebar provides navigation to My Drive, Shared, Starred, Recent, Trash, and Storage.                                                
-![Home Dashboard](../Screenshots/4.png)
+![Home Dashboard](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/4.png)
 
 ### Step 5: My Drive — File & Folder Management
 The main file management view where users can create folders, upload files (text, pdf, image), and organize their file hierarchy with list/grid views and action buttons.                                                                       
-![My Drive](../Screenshots/5.1.png)
-![My Drive2](../Screenshots/5.2.png)
+![My Drive](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/5.1.png)
+![My Drive2](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/5.2.png)
 
 ### Step 6: Creating a New File/Folder
 Demonstrates the creation dialog for new documents and folders, with type selection and content input.                                                          
-![Create File](../Screenshots/6.png)
+![Create File](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/6.png)
 
 ### Step 7: Moving & Organizing Files
 Moving files between folders using the move action. Demonstrates reorganizing the file hierarchy by changing a file's parent folder.                            
-![Moving Files](../Screenshots/7.png)
+![Moving Files](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/7.png)
 
 ### Step 8: File Preview & Details
 Previewing a file's content inline — document text, PDF rendering, or image display. File metadata (size, type, dates) is visible alongside the content.        
-![File Preview](../Screenshots/8.png)
+![File Preview](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/8.png)
 
 ### Step 9: Search Functionality
 The search bar in action, showing results filtered by name and/or content with advanced filtering options for type, date, and ownership.                        
-![Search](../Screenshots/9.png)
+![Search](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/9.png)
 
 ### Step 10: File Sharing & Permissions
 The share modal where users grant VIEWER or EDITOR permissions to other users, with a permissions management interface showing current collaborators.           
-![Sharing & Permissions](../Screenshots/10.png)
+![Sharing & Permissions](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/10.png)
 
 ### Step 11: Trash Management
 The trash page showing deleted files with options to restore individually, restore multiple, or permanently delete. Demonstrates the two-step deletion safety mechanism.                                                                        
-![Trash Management](../Screenshots/11.png)
+![Trash Management](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/11.png)
 
 ### Step 12: Settings & Preferences
 The settings page where users can manage their account details (name, profile image) and configure general preferences — theme (light/dark), default landing page (home/storage), and more.                                                     
-![Settings](../Screenshots/12.png)
+![Settings](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/12.png)
 
 ### Step 13: Dark Mode
 The application in dark mode, toggled via the theme switch. Theme preference persists across sessions via the user preferences API.                             
-![Dark Mode](../Screenshots/13.png)
+![Dark Mode](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/13.png)
 
 ### Step 14: Storage Management
 The storage page displaying used and available space with a visual progress indicator, demonstrating the owner-based quota system.                              
-![Storage Management](../Screenshots/14.png)
+![Storage Management](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Screenshots/14.png)
 
 ## API Reference
 

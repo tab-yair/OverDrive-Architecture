@@ -173,44 +173,44 @@ This section provides a visual, step-by-step demonstration of the entire OverDri
 
 ### 1. User Registration & Conflict Handling
 **POST /api/users** - Creating users Alicia and Robert with Gmail validation (6-30 character usernames). The system enforces duplicate prevention, returning **409 Conflict** when attempting to register an existing email.                    
-![User Registration](../Images/1.png)
+![User Registration](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/1.png)
 
 ### 2. Authentication & Profile Retrieval
 **POST /api/tokens** - Users authenticate and receive a unique `user-id` for session management. **GET /api/users/:id** - Verifying that user data (username, firstName, lastName) is correctly stored and retrieved.                           
-![Authentication](../Images/2.png)
+![Authentication](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/2.png)
 
 ### 3. File Hierarchy Creation
 **POST /api/files** - Alicia creates a folder named "Work_Project" and then uploads a file "notes.txt" inside it using `parentId` to establish the hierarchy.   
-![Folder and File Creation](../Images/3.png)
+![Folder and File Creation](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/3.png)
 
 ### 4. Root-Level Files & Listing
 **POST /api/files** - Alicia creates "readme.txt" at the root level (no parent).
 **GET /api/files** - Listing all files and folders to verify the current structure.                                                                            
-![File Listing](../Images/4.png)
+![File Listing](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/4.png)
 
 ### 5. File Updates - Name & Content
 **PATCH /api/files/:id** - Alicia renames "notes.txt" to "important_notes.txt" and then updates its content to text starting with "ZZZZZZZZZ". Both operations return **204 No Content**.                                                       
-![File Updates](../Images/5.png)
+![File Updates](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/5.png)
 
 ### 6. File Movement & Search Initialization
 **PATCH /api/files/:id** - Moving "important_notes.txt" from "Work_Project" to root by setting `parentId` to `null`. Introduction to **GET /api/search/:query** for content-based searching.                                                    
-![File Movement](../Images/6.png)
+![File Movement](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/6.png)
 
 ### 7. Deep Content Search in Compressed Data
 **GET /api/search/:query** - Demonstrating full-text search capabilities. Searching for "ZZZZZ" finds the file with that content, and searching "OverDrive" locates the readme file. The C++ backend performs decompression on-the-fly for content matching.                                                                    
-![Content Search](../Images/7.png)
+![Content Search](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/7.png)
 
 ### 8. Access Control & Permission Granting
 **GET /api/files/:id** - Robert attempts to access Alicia's file and receives **403 Forbidden**. **GET /api/files/:id/permissions** - Alicia checks current permissions. **POST /api/files/:id/permissions** - Alicia grants Robert **VIEWER** access (**201 Created**).                                                        
-![Access Control](../Images/8.png)
+![Access Control](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/8.png)
 
 ### 9. Authorized Access & Permission Upgrade
 **GET /api/files/:id** - Robert successfully reads the file content with his VIEWER permission. **PATCH /api/files/:id/permissions/:pId** - Alicia upgrades Robert from **VIEWER** to **EDITOR** (**204 No Content**).                          
-![Permission Upgrade](../Images/9.png)
+![Permission Upgrade](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/9.png)
 
 ### 10. Collaborative Editing & Final State
 **PATCH /api/files/:id** - Robert (now an EDITOR) modifies the file content to "Guest modified this content". **GET /api/files/:id/permissions** - Final verification shows Alicia as **OWNER** and Robert as **EDITOR**, demonstrating full RBAC functionality.                                                                
-![Collaborative Editing](../Images/10.png)
+![Collaborative Editing](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/10.png)
 
 ---
 

@@ -53,7 +53,7 @@ docker-compose down
 
 The screenshot below demonstrates multiple terminal windows running simultaneously — one server and multiple clients connected at the same time:                
 
-![Multiple Terminals Demo](../Images/running_example_proof.jpg)
+![Multiple Terminals Demo](https://raw.githubusercontent.com/tab-yair/OverDrive-Architecture/main/Images/running_example_proof.jpg)
 
 ---
 
