@@ -2,7 +2,7 @@
 
 OverDrive is a full-stack, distributed file storage system with a C++ storage engine, Node.js API layer, and React client — inspired by Google Drive.
 
-> **Note:** The complete documentation detailing all 4 phases of development has been migrated to the **[OverDrive Wiki](Wiki/Home.md)**!
+> **Note:** The complete documentation detailing all 4 phases of development, including architecture diagrams, REST API specs, and UI screenshots, is located in the **[OverDrive Wiki](https://github.com/tab-yair/OverDrive-Architecture/wiki)**!
 
 ## Quick Start
 
@@ -23,4 +23,4 @@ docker-compose run --rm tests
 
 ---
 
-*For full details on the REST API, Role-Based Access Control, Custom RLE Compression, and architecture diagrams from Parts 1-4, please refer to the **[Wiki Home](Wiki/Home.md)**.*
+*For full details on the REST API, Role-Based Access Control, Custom RLE Compression, and architecture diagrams from Parts 1-4, please refer to the **[Wiki](https://github.com/tab-yair/OverDrive-Architecture/wiki)**.*
